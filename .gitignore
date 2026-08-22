@@ -91,3 +91,10 @@ Support/ZenTomato-Info.plist
 # Build products and test results
 DerivedData/
 *.xcresult
+
+# Your Canva working file. Kept out of the tree deliberately: it is ~7MB of
+# embedded raster (not vector), it is a derivative of a CC BY-SA photo, and the
+# brush ring inside it is stock artwork whose licence forbids redistributing it
+# as a standalone file. The shipped icon is drawn from scratch instead — see
+# Design/icon/make-icon.sh.
+Design/ZenTomato.svg
