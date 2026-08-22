@@ -97,6 +97,14 @@ project.yml         the readable definition of the Xcode project
 Makefile            every command above
 ```
 
+## The app icon
+
+The icon is **drawn, not photographed**, and the script that draws it is in `Design/icon/`. Run `./Design/icon/make-icon.sh` after changing it; the PNGs it produces are committed, so a clone builds without needing the drawing tool.
+
+That is a licensing decision as much as an aesthetic one. This repository is public and GPL-3.0, which means everything it ships has to be something it can license onward to whoever clones it. A stock photograph usually cannot be — the first image considered here was an Unsplash+ photo whose licence is explicitly non-transferable, which would have made this repository's own licence a promise it could not keep.
+
+Drawing it also means the icon uses the same colours as the app, and can supply the separate light, dark and tinted versions iOS asks for — which a photograph cannot do well, because tinting works from brightness and a photograph is bright everywhere.
+
 ## The design system
 
 Colours, spacing and type sizes are not written into the screens. They live in `ZenTomato/DesignSystem/` in two layers: a set of raw colour ramps, and a set of *roles* built on top of them — "the page", "the ink on a button", "the boundary of a control". Screens may only name a role.
