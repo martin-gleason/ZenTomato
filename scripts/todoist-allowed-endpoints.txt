@@ -1,0 +1,38 @@
+# The complete list of Todoist endpoints this app is permitted to call.
+#
+# `scripts/check-todoist-writes.sh` reads this file, finds every Todoist URL in
+# the app's source, and fails if any of them is not listed here. That makes the
+# failure mode "a NEW endpoint appeared", which is the thing worth catching —
+# rather than a guess about which HTTP verb was used, which would be defeated
+# by the fact that signing in and completing a task are both POSTs.
+#
+# Adding a line to this file is therefore a deliberate, visible change that
+# shows up in the pull-request diff and in the adversarial reviewer's scope
+# check. That visibility IS the control. Do not add a line to make a build pass.
+#
+# THE RULE THIS ENFORCES, from CLAUDE.md, non-negotiable:
+#   Todoist is the only task hierarchy. The ONLY write to Todoist is
+#   *complete task*. Never call create, update, or comment endpoints.
+#
+# FORMAT
+#   METHOD<space>PATH        one per line; '#' starts a comment
+#
+#   PATH is written without the `https://api.todoist.com/api/v1` prefix — the
+#   checker strips that before comparing, so a base-URL constant plus a short
+#   path and a single full URL both normalise to the same entry.
+#
+#   `{id}` stands for any identifier the code substitutes in.
+#
+# STATUS AT F1: no Todoist code exists yet. This list is seeded so that F3
+# starts against a written contract rather than writing one to fit what it
+# already built. Todoist's REST v2 and Sync v9 were permanently removed on
+# 2026-02-10; API v1 is the only live surface (see docs/plans/00-deltas.md, D5).
+
+# --- Reads. The picker shows every project, section and task. -----------------
+GET  /projects
+GET  /sections
+GET  /tasks
+
+# --- The one and only write. ---------------------------------------------------
+# Completing a task. Nothing else on this side of the file, ever, in v0.1.
+POST /tasks/{id}/close

@@ -1,0 +1,18 @@
+// FIXTURE — Swift-shaped source containing a Todoist endpoint that is NOT on
+// scripts/todoist-allowed-endpoints.txt. scripts/tests/run-script-tests.sh
+// copies this into a temporary directory as a .swift file and runs
+// check-todoist-writes.sh against it, expecting a non-zero exit.
+//
+// A hook that has never been shown to FAIL is not known to work, and this one
+// guards a non-negotiable: the only write this app may make to Todoist is
+// completing a task.
+//
+// This is a fixture, not compiled code. It lives outside the app's source glob
+// and is never part of any target.
+
+// Commenting on a task. Explicitly forbidden by CLAUDE.md.
+let commentsURL = "https://api.todoist.com/api/v1/comments"
+
+// Moving a task is an UPDATE. Also forbidden, and listed second so the check
+// is shown to report every violation rather than stopping at the first.
+let moveURL = "https://api.todoist.com/api/v1/tasks/\(taskID)/move"

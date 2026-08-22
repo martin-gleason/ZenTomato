@@ -1,0 +1,33 @@
+// FIXTURE — Swift-shaped source whose forbidden Todoist endpoints are written
+// as BARE PATHS, with no host anywhere on the line.
+//
+// THIS IS THE REGRESSION THIS FIXTURE EXISTS FOR. The first version of
+// check-todoist-writes.sh matched bare paths only for the four nouns that were
+// already on the allowlist (`api/v1`, `projects`, `sections`, `tasks`). Every
+// line below therefore matched nothing at all, was examined by nothing, and
+// exited 0 — while the sibling file todoist-allowed.txt demonstrates that
+// `let projectsPath = "/projects"` is a shape this codebase genuinely uses.
+//
+// So the hook was blind to exactly the endpoints it exists to forbid, in the
+// exact form F3 is most likely to write them, while reporting success.
+//
+// The checker now knows the whole Todoist v1 noun set and fails closed.
+// scripts/tests/run-script-tests.sh expects a non-zero exit here.
+//
+// This is a fixture, not compiled code. It lives outside the app's source glob
+// and is never part of any target.
+
+// The host lives on its own line, exactly as a real client would write it.
+let todoistAPIBase = URL(string: "https://api.todoist.com/api/v1")
+
+// Commenting on a task. Explicitly forbidden by CLAUDE.md.
+let commentsPath = "/comments"
+
+// Creating a label is a WRITE, and nothing about the path says so — which is
+// the whole reason this check is an allowlist of paths rather than a guess
+// about HTTP verbs.
+let labelsPath = "/labels"
+
+// The Sync endpoint can perform every mutation Todoist supports in one request.
+// It is the single most important thing on this list.
+let syncPath = "/sync"

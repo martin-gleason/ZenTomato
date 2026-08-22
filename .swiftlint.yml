@@ -1,0 +1,146 @@
+# SwiftLint configuration — the lint gate.
+#
+# Run through `scripts/check-lint.sh`, which passes `--strict`. That promotes
+# every warning to an error, so there is no such thing as a violation that is
+# merely noted. The gate either passes or the build stops.
+#
+# Why bother, given a code review on every pull request? Because the owner
+# reviews every pull request and does not write Swift, so the review cannot be
+# the thing that catches a force unwrap. A linter can, in under a second, every
+# time, without anybody having to remember.
+
+included:
+  - ZenTomato
+  - ZenTomatoTests
+
+excluded:
+  # Generated, git-ignored, and not ours to lint.
+  - DerivedData
+  - ZenTomato.xcodeproj
+  - Support
+
+# --- Opt-in rules ----------------------------------------------------------
+#
+# SwiftLint already enables `force_try` and `force_cast` by default, so they
+# are not repeated here. These are the ones that must be asked for, chosen
+# because they match what the adversarial reviewer checks first under
+# "Swift hygiene".
+opt_in_rules:
+  # `foo!` — crashes the app when the value is nil. The reviewer's hygiene
+  # list opens with force unwraps; better a linter catches them than a review
+  # round-trip. The store-open path in this app is deliberately written as a
+  # `Result` with a failure screen precisely so that no `!` is needed.
+  - force_unwrapping
+
+  # `var foo: Foo!` — a force unwrap wearing a type annotation.
+  - implicitly_unwrapped_optional
+
+  # `[unowned self]` — crashes if the captured object has gone. `[weak self]`
+  # is the version that survives being wrong.
+  - unowned_variable_capture
+
+  # `Bool?` — three states where the author almost certainly meant two, and
+  # the third one is never handled.
+  - discouraged_optional_boolean
+
+  # Prefers `first(where:)` over `filter { }.first` and friends: same result,
+  # without building the intermediate array.
+  - first_where
+  - last_where
+  - contains_over_first_not_nil
+
+  # `.isEmpty` rather than `.count == 0` — O(1) instead of O(n) on some
+  # collections, and it reads as what it means.
+  - empty_count
+  - empty_string
+
+  # Keeps blank-line noise out of diffs, so a review shows changes and not
+  # whitespace.
+  - closure_spacing
+  - vertical_whitespace_closing_braces
+  - vertical_whitespace_opening_braces
+
+  # Explicit `self` only where the compiler requires it, per the Airbnb style
+  # guide this project follows.
+  - redundant_type_annotation
+  - toggle_bool
+
+  # A doc comment attached to nothing is a doc comment that has drifted away
+  # from what it described.
+  - orphaned_doc_comment
+
+# Rules that need a full compile to run. They are executed by
+# `swiftlint analyze`, not by the ordinary lint pass, so they are listed
+# separately rather than silently ignored.
+#
+#   unused_declaration — a private declaration nothing reads. In a codebase with
+#                        a hard scope fence, dead code is usually the residue of
+#                        something half-built.
+#   unused_import      — an import nothing in the file needs.
+analyzer_rules:
+  - unused_declaration
+  - unused_import
+
+# --- Rule configuration ----------------------------------------------------
+
+line_length:
+  # 120 is generous; this codebase's comments are wrapped at 80. The error
+  # threshold exists so a genuinely unbreakable line (a long URL in a comment)
+  # does not stop work.
+  warning: 120
+  error: 200
+  ignores_comments: false
+  ignores_urls: true
+
+identifier_name:
+  # SwiftUI and SwiftData produce short, conventional names.
+  min_length:
+    warning: 2
+    error: 1
+  excluded:
+    - id
+    - x
+    - y
+
+type_name:
+  min_length:
+    warning: 3
+    error: 2
+
+# A TODO or FIXME left in the tree is a violation here, not a note. The scope
+# fence in this project is explicit that a comment naming unbuilt work is
+# itself the work starting. `todo` is on by default; it is spelled out to say
+# that leaving it on is a decision.
+todo:
+  severity: warning
+
+nesting:
+  type_level:
+    warning: 2
+
+# --- Project-specific rules ------------------------------------------------
+
+custom_rules:
+  # THE TWO-LAYER RULE, WITH ACTUAL TEETH.
+  #
+  # The design system has raw colour ramps (`Palette`) and named roles
+  # (`ColorRole`) built on top of them. A screen may name a role and may never
+  # name a ramp step: that indirection is the entire reason the token layer is
+  # worth having, because it is what lets one colour decision be changed in one
+  # place instead of hunted through screens.
+  #
+  # In the SCSS source the rule is enforced by the primitives file being
+  # private. Swift's `private` does not reach across files, and `Palette` must
+  # be visible to `ColorRole.swift` and to the test target — so it is
+  # `internal`, and until this rule existed the doc comment on `Palette` claimed
+  # an enforcement that was not there. A comment claiming a guarantee nobody
+  # implemented is worse than claiming none, because the next author reads it
+  # and assumes they are covered.
+  palette_outside_token_layer:
+    name: "Palette outside the token layer"
+    included: "ZenTomato/(App|Views|Models)/.*\\.swift"
+    regex: "\\bPalette\\."
+    message: "Screens may only name a ColorRole, never a raw Palette step."
+    severity: error
+
+reporter: xcode

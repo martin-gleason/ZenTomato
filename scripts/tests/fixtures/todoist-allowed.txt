@@ -1,0 +1,24 @@
+// FIXTURE — Swift-shaped source containing ONLY endpoints that appear in
+// scripts/todoist-allowed-endpoints.txt. scripts/tests/run-script-tests.sh
+// copies this into a temporary directory as a .swift file and runs
+// check-todoist-writes.sh against it, expecting exit code 0.
+//
+// This is a fixture, not compiled code. It lives outside the app's source glob
+// and is never part of any target.
+//
+// It covers the three shapes a real call site takes:
+//   1. a base-URL constant, which normalises to the bare API root
+//   2. a short path appended to that base
+//   3. a path with an interpolated identifier, which normalises to {id}
+
+let todoistAPIBase = URL(string: "https://api.todoist.com/api/v1")
+
+let projectsPath = "/projects"
+let sectionsPath = "/sections"
+let tasksPath = "/tasks"
+
+// The one and only permitted write: completing a task.
+let closePath = "/tasks/\(taskID)/close"
+
+// The same call written out in full, to prove both forms normalise alike.
+let fullCloseURL = "https://api.todoist.com/api/v1/tasks/\(taskID)/close"

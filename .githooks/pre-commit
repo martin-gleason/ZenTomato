@@ -1,0 +1,62 @@
+#!/bin/bash
+#
+# .githooks/pre-commit — the fast half of the gate.
+#
+# ENABLE IT WITH:  make hooks
+# (which runs `git config core.hooksPath .githooks`). A hook nobody enabled is
+# prose, so that one command is in the README and in `make help`.
+#
+# WHAT RUNS HERE, AND WHAT DELIBERATELY DOES NOT
+#   runs:  the lint gate, the Todoist allowlist check, the secret scan
+#   never: the tests
+#
+# `xcodebuild test` takes minutes. A pre-commit hook that takes minutes gets
+# bypassed with `git commit --no-verify` within a day, and then none of the
+# other three run either. The tests are continuous integration's job, and
+# branch protection is what makes that binding.
+#
+# THIS HOOK IS A CONVENIENCE, NOT THE GATE. Every check below runs again in
+# `.github/workflows/ci.yml`, because `--no-verify` bypasses this file and
+# nothing bypasses branch protection. If you find yourself needing to skip a
+# check here, the check is either wrong or the commit is.
+
+set -euo pipefail
+
+readonly REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd -- "$REPO_ROOT"
+
+failed=0
+
+run_check() {
+  local label="$1"
+  shift
+  echo "pre-commit: ${label}…"
+  if ! "$@"; then
+    echo "pre-commit: ${label} FAILED" >&2
+    failed=1
+  fi
+}
+
+# Lint first: it is the fastest and the most likely to fire.
+run_check "lint" ./scripts/check-lint.sh
+
+# The two non-negotiables. `--staged` limits the secret scan to what is
+# actually being committed, which is both faster and the correct question at
+# this moment: "is this commit about to add a credential?"
+run_check "Todoist allowlist" ./scripts/check-todoist-writes.sh
+run_check "secret scan" ./scripts/check-secrets.sh --staged
+
+if [[ $failed -ne 0 ]]; then
+  cat <<'EOF' >&2
+
+pre-commit: commit refused.
+
+  Fix the failures above and commit again. If you are certain a check is wrong,
+  say so in the pull request rather than passing --no-verify: continuous
+  integration runs the same checks and branch protection will stop the merge
+  anyway, so bypassing here only moves the failure later.
+EOF
+  exit 1
+fi
+
+echo "pre-commit: all checks passed."

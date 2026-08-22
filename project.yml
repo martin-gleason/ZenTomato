@@ -1,0 +1,159 @@
+# ZenTomato — XcodeGen project definition.
+#
+# THIS FILE IS THE PROJECT. `ZenTomato.xcodeproj` is generated from it by
+# `make generate` and is git-ignored, so this YAML is the only reviewable
+# description of how the app is built. Four reasons that trade is right here:
+#
+#   1. The brief mandates XcodeGen and forbids committing a binary project.
+#   2. Two engineers share one working tree; a committed `.pbxproj` is a
+#      guaranteed merge-corruption source.
+#   3. The owner reviews every pull request and does not write Swift. A
+#      `.pbxproj` diff is unreadable to anyone; this YAML is not.
+#   4. CI regenerates from this file on every run, which proves this file
+#      actually builds. A committed project proves nothing about this file.
+#
+# Cost: a fresh clone must run `make generate` before opening Xcode. That is
+# one line in the README.
+
+name: ZenTomato
+
+options:
+  bundleIdPrefix: com.martingleason
+  deploymentTarget: { iOS: "26.0" }
+  minimumXcodeGenVersion: "2.46.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: false
+
+configs:
+  Debug: debug
+  Release: release
+
+settings:
+  base:
+    # Swift 6 language mode with the strictest data-race checking the compiler
+    # offers. Turning this on now is cheap; turning it on after the timer
+    # engine and audio callbacks exist would be a rewrite.
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    # `gen-secrets.sh` writes into the source directory, which Xcode's script
+    # sandbox denies by default.
+    ENABLE_USER_SCRIPT_SANDBOXING: "NO"
+    # The lint gate is `swiftlint --strict`, not the compiler. A future SDK
+    # deprecation warning must not be able to break the build gate.
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: "NO"
+    CODE_SIGN_STYLE: Automatic
+    # Supplied by the generated Support/Secrets.xcconfig. May legitimately be
+    # empty: simulator builds are made with code signing disabled entirely.
+    DEVELOPMENT_TEAM: $(DEVELOPMENT_TEAM)
+
+targets:
+
+  ZenTomato:
+    type: application
+    platform: iOS
+    # A DIRECTORY GLOB, never a per-file list. Adding a Swift file must not
+    # require editing this file, or the two would drift.
+    sources:
+      - path: ZenTomato
+    configFiles:
+      Debug: Support/Secrets.xcconfig
+      Release: Support/Secrets.xcconfig
+    info:
+      # Also generated and git-ignored, so the Info.plist keys below are
+      # reviewed as YAML here rather than as XML in a second file. It lives in
+      # Support/, deliberately OUTSIDE the ZenTomato/ source glob, so XcodeGen
+      # cannot mistake it for a bundled resource.
+      path: Support/ZenTomato-Info.plist
+      properties:
+        CFBundleDisplayName: ZenTomato
+        # These two must be written here, referring to the build settings
+        # below, or they do not reach the app at all. XcodeGen fills an
+        # unlisted key with its own default — which for the version is the
+        # literal string "1.0" — so setting MARKETING_VERSION alone left the
+        # app reporting itself as version 1.0 while this file said 0.1.0. That
+        # is exactly the drift the "one reviewable source of truth" argument at
+        # the top of this file exists to prevent, and version numbers stop
+        # being cosmetic the moment two builds are installed on one phone.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # Without a launch-screen declaration the app letterboxes on a modern
+        # iPhone. The dictionary is empty because the asset catalog holds no
+        # colour set: a launch screen is drawn by the system before any of this
+        # app's code runs, so it cannot read the design-token layer, and the
+        # only other way to colour it is to name a colour set here. The cost of
+        # leaving it empty is that a cold launch shows the system background
+        # rather than the app's warm stone ground for a fraction of a second.
+        # The blank screen iOS shows between the tap on the icon and the app's
+        # first frame. Left empty it is pure white (or pure black), which flashes
+        # against this app's warm stone page on every single launch. Naming a
+        # colour here makes the launch screen the same colour as the page, so
+        # there is nothing to see.
+        #
+        # LaunchBackground must stay equal to ColorRole.surfacePrimary. Nothing in
+        # the compiler can enforce that — an asset catalog is data, not code — so
+        # a test decodes this colour set and compares it against the role. If you
+        # change one, that test tells you to change the other.
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        # Portrait only. This is one glanceable single-column screen; shipping
+        # landscape would ship a layout nobody designed or tested.
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        # Avoids an export-compliance prompt every time a build is installed.
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.martingleason.ZenTomato
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        # 1 = iPhone. No iPad layout exists.
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    preBuildScripts:
+      # THE GUARD PATH, not the supply path. An .xcconfig is parsed when the
+      # project is LOADED, which is before any build phase runs — so this phase
+      # cannot put values into this build's settings, and pretending otherwise
+      # would be a mechanism that silently does nothing. What it does instead:
+      # verify .env is present and complete, rewrite Secrets.xcconfig, and fail
+      # the build if the file it just wrote differs from the one the project
+      # was loaded with. `make secrets` (run by `make generate`) is what
+      # actually supplies the values.
+      - name: Verify Secrets.xcconfig is current
+        script: '"$SRCROOT/scripts/gen-secrets.sh" --build-phase'
+        basedOnDependencyAnalysis: false
+        # SECURITY, NOT TIDINESS. Xcode exports every build setting into a
+        # script phase's environment and, with showEnvVars on, prints them
+        # verbatim into the build log — including the public CI log.
+        showEnvVars: false
+
+  ZenTomatoTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: ZenTomatoTests
+    dependencies:
+      - target: ZenTomato
+    settings:
+      base:
+        # The test bundle needs no Info.plist file on disk.
+        GENERATE_INFOPLIST_FILE: "YES"
+        PRODUCT_BUNDLE_IDENTIFIER: com.martingleason.ZenTomato.tests
+        # The tests run inside the app rather than on their own, so they
+        # exercise the app's code in the same process and environment it
+        # actually runs in — which for a database layer is the difference
+        # between testing the thing and testing a copy of it.
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/ZenTomato.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ZenTomato
+        BUNDLE_LOADER: $(TEST_HOST)
+
+schemes:
+  ZenTomato:
+    build:
+      targets:
+        ZenTomato: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: true
+      targets:
+        - ZenTomatoTests
