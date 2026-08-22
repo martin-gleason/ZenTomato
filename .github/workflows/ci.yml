@@ -1,0 +1,158 @@
+# ZenTomato — continuous integration. THIS IS THE GATE THAT ACTUALLY HOLDS.
+#
+# The pre-commit hook in .githooks/ runs three of these checks for fast local
+# feedback, but `git commit --no-verify` bypasses it in one keystroke. Nothing
+# bypasses branch protection, so every rule this project calls non-negotiable
+# is enforced here or it is enforced nowhere.
+#
+# EVERY STEP CALLS A MAKEFILE TARGET, NEVER A RAW COMMAND. If this file spelled
+# out its own xcodebuild invocation it would drift from the local one within a
+# month, and "works on my machine" would become a legitimate excuse. One
+# definition, in the Makefile, used by both.
+#
+# RUNNER IMAGE — VERIFIED, NOT ASSUMED (F1-T8 flagged this as a real risk).
+# Checked against actions/runner-images on 2026-08-21:
+#   * `macos-26` (arm64) is GENERALLY AVAILABLE — GA since 2026-02-26. It is
+#     also what `macos-latest` resolves to since 2026-06-15, but this file
+#     pins `macos-26` explicitly: `macos-latest` moving under us is exactly
+#     the kind of silent change that turns a green gate into a lie.
+#   * The image carries Xcode 26.0.1, 26.1.1, 26.2, 26.3, 26.4.1, 26.5 and
+#     26.6, each at /Applications/Xcode_<version>.app, with 26.6 the default.
+#   * iOS simulator runtimes on the image are 26.2, 26.4 and 26.5, and the
+#     device set includes iPhone 17. So `OS=latest` resolves to iOS 26.5,
+#     which is what the deployment target of iOS 26.0 needs.
+#
+# THERE IS NO /Applications/Xcode_26.app. Every Xcode is installed under its
+# full version number, so a hardcoded major-version path fails the run at step
+# two with "invalid developer directory". The Select Xcode step below therefore
+# DISCOVERS the newest installed 26.x rather than naming one — naming a
+# specific minor version would break on the next image refresh that retires it.
+#
+# If `macos-26` ever disappears, the fallback in order of preference is (1) a
+# newer macOS image, with the same discovery step widened to that major
+# version, (2) a self-hosted runner on the owner's Mac. Do not lower the
+# deployment target to fit a runner: iOS 26 is a ratified spec delta (D1), not
+# a convenience.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Only the newest run per branch matters. A superseded run holding a macOS
+# runner is expensive and tells nobody anything.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: Lint, hooks, build, test
+    runs-on: macos-26
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          # Full history: the secret scan looks at every commit, not just the
+          # tip. A credential that was committed and then "removed" in a later
+          # commit is still in the history and still compromised.
+          fetch-depth: 0
+
+      - name: Select Xcode 26
+        # Discovers the newest installed Xcode 26.x instead of naming a path.
+        # `sort -V` orders by version, so 26.10 would correctly beat 26.6 —
+        # a plain lexical sort would not, and would silently select an older
+        # toolchain than the one intended.
+        run: |
+          set -euo pipefail
+          selected=""
+          while IFS= read -r app; do
+            selected="$app"
+          done < <(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V)
+
+          if [[ -z "$selected" ]]; then
+            echo "::error::No Xcode 26.x on this runner. The iOS 26.0 deployment target (delta D1) cannot be built here."
+            echo "Xcode versions actually present:"
+            ls -d /Applications/Xcode*.app 2>/dev/null || echo "  (none)"
+            exit 1
+          fi
+
+          echo "Selecting ${selected}"
+          sudo xcode-select --switch "${selected}/Contents/Developer"
+          xcodebuild -version
+          swift --version
+
+      - name: Show available simulator runtimes
+        # Pure diagnostics, and deliberately not a gate. When a build fails on
+        # a destination, the first question is always "which runtimes did this
+        # runner actually have?" — answering it in the log costs nothing and
+        # saves a re-run with a debug commit.
+        run: |
+          xcrun simctl list runtimes
+          xcrun simctl list devices available
+
+      - name: Install the tools the gates need
+        # XcodeGen generates the project (it is not committed), SwiftLint is the
+        # lint gate, gitleaks is the secret scan. check-lint.sh and
+        # check-secrets.sh both hard-fail when CI=true and their tool is
+        # missing, so a runner without these reports red rather than a
+        # misleading green.
+        run: brew install xcodegen swiftlint gitleaks
+
+      - name: Write .env from repository secrets
+        # CI has no .env — it is git-ignored and never leaves a developer's
+        # machine. The same three keys come from GitHub Actions encrypted
+        # secrets instead, and `make secrets` turns them into
+        # Support/Secrets.xcconfig exactly as it does locally.
+        #
+        # The values are passed through the environment rather than
+        # interpolated into the shell command, so a value containing shell
+        # metacharacters cannot alter this script. GitHub masks secret values
+        # in the log; nothing here echoes one regardless.
+        env:
+          TODOIST_CLIENT_ID: ${{ secrets.TODOIST_CLIENT_ID }}
+          TODOIST_CLIENT_SECRET: ${{ secrets.TODOIST_CLIENT_SECRET }}
+          TODOIST_OAUTH_CALLBACK_SCHEME: ${{ secrets.TODOIST_OAUTH_CALLBACK_SCHEME }}
+        run: |
+          umask 077
+          {
+            printf '%s\n' "TODOIST_CLIENT_ID=${TODOIST_CLIENT_ID}"
+            printf '%s\n' "TODOIST_CLIENT_SECRET=${TODOIST_CLIENT_SECRET}"
+            printf '%s\n' "TODOIST_OAUTH_CALLBACK_SCHEME=${TODOIST_OAUTH_CALLBACK_SCHEME}"
+            printf '%s\n' "DEVELOPMENT_TEAM="
+          } > .env
+          echo "Wrote .env with $(grep -c '=' .env) keys."
+
+      - name: Generate the Xcode project
+        # Proves project.yml actually builds a project. A committed .xcodeproj
+        # would prove nothing about the file that is reviewed.
+        run: make generate
+
+      - name: Secret scan
+        run: make check-secrets
+
+      - name: Todoist allowlist
+        run: make check-todoist
+
+      - name: Lint
+        run: make lint
+
+      - name: Shell-level script tests
+        # The four tests from docs/plans/F1.md that cannot live in an iOS test
+        # bundle, because they launch subprocesses and Foundation.Process does
+        # not exist on iOS. Two of them prove the Todoist hook FAILS when it
+        # should — a hook never shown to fail is not known to work.
+        run: make script-tests
+
+      - name: Build
+        run: make build
+
+      - name: Test
+        run: make test
