@@ -1,0 +1,17 @@
+# FIXTURE — a complete .env that differs from env-complete in exactly one value,
+# used by scripts/tests/run-script-tests.sh to prove the --build-phase guard
+# still fires when the file it generates differs from the one already on disk.
+#
+# EVERY VALUE HERE IS FAKE AND IS NAMED SO THAT A HUMAN AND A SECRET SCANNER CAN
+# BOTH TELL AT A GLANCE. This file is committed; if a real credential is ever
+# pasted into it, that credential is compromised and must be rotated.
+#
+# Only TODOIST_OAUTH_CALLBACK_SCHEME differs from env-complete. One changed
+# value is the smallest thing the guard must notice, so it is what the test
+# gives it.
+
+TODOIST_CLIENT_ID=EXAMPLE_NOT_A_REAL_CLIENT_ID
+TODOIST_CLIENT_SECRET="EXAMPLE_NOT_A_REAL_CLIENT_SECRET"
+
+TODOIST_OAUTH_CALLBACK_SCHEME='zentomato-example-changed'
+DEVELOPMENT_TEAM=

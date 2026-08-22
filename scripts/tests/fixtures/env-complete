@@ -1,0 +1,15 @@
+# FIXTURE — a complete, well-formed .env, used by scripts/tests/run-script-tests.sh.
+#
+# EVERY VALUE HERE IS FAKE AND IS NAMED SO THAT A HUMAN AND A SECRET SCANNER CAN
+# BOTH TELL AT A GLANCE. This file is committed; if a real credential is ever
+# pasted into it, that credential is compromised and must be rotated.
+#
+# It exercises the three shapes gen-secrets.sh accepts — bare, double-quoted and
+# single-quoted — plus a comment line and a blank line, so the parser is tested
+# on the file shapes people actually write.
+
+TODOIST_CLIENT_ID=EXAMPLE_NOT_A_REAL_CLIENT_ID
+TODOIST_CLIENT_SECRET="EXAMPLE_NOT_A_REAL_CLIENT_SECRET"
+
+TODOIST_OAUTH_CALLBACK_SCHEME='zentomato-example'
+DEVELOPMENT_TEAM=

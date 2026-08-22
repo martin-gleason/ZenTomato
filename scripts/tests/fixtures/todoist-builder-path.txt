@@ -1,0 +1,32 @@
+// FIXTURE — Swift-shaped source whose forbidden Todoist endpoints are built
+// with `URL.appending(path:)` and `URL.appendingPathComponent(_:)`.
+//
+// THIS IS THE REGRESSION THIS FIXTURE EXISTS FOR. Both of those APIs take the
+// path component WITHOUT a leading slash — that is their calling convention —
+// so a line reading `base.appending(path: "sync")` contains no `/sync`
+// anywhere. check-todoist-writes.sh matched only full URLs and bare paths
+// beginning with a slash, so every line below matched nothing at all, was
+// examined by nothing, and exited 0 while the script printed
+// "OK — no Todoist endpoint outside the allowlist".
+//
+// It is the most idiomatic modern way to build a URL in Swift, and therefore
+// the exact shape F3 is most likely to be written in. `/sync` is the endpoint
+// that can perform every mutation Todoist supports, and `/comments` is
+// explicitly forbidden by CLAUDE.md; both slipped straight through.
+//
+// scripts/tests/run-script-tests.sh expects a non-zero exit here, and expects
+// both /comments and /sync to be named in the output.
+//
+// This is a fixture, not compiled code. It lives outside the app's source glob
+// and is never part of any target.
+
+let todoistAPIBase = URL(string: "https://api.todoist.com/api/v1")
+
+// Commenting on a task. Explicitly forbidden by CLAUDE.md.
+let commentsURL = todoistAPIBase?.appending(path: "comments")
+
+// The Sync endpoint, written with the older spelling of the same call.
+let syncURL = todoistAPIBase?.appendingPathComponent("sync")
+
+// Creating a label is a WRITE, and nothing about the path says so.
+let labelsURL = todoistAPIBase?.appending(path: "labels")
