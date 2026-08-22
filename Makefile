@@ -1,18 +1,15 @@
 # ZenTomato — the only sanctioned way to build this project.
 #
 # WHY A MAKEFILE AT ALL
-# Three of these steps must happen in a fixed order, and getting the order
-# wrong fails in a confusing way rather than an obvious one:
+# So that there is exactly one definition of what "building" and "passing"
+# mean. Continuous integration calls these same targets rather than repeating
+# their commands, so the build server and a developer's machine cannot drift
+# apart — if `make ci` passes here it is running the identical steps CI runs.
 #
-#     .env  ──▶ Support/Secrets.xcconfig ──▶ ZenTomato.xcodeproj ──▶ build/test
-#            (make secrets)              (make generate)
-#
-# `xcodegen generate` reads project.yml, which names Secrets.xcconfig as the
-# target's configuration file — so XcodeGen FAILS if that file does not exist
-# yet. And an .xcconfig is parsed when the project is loaded, so generating it
-# after the project exists changes nothing about the current build. This file
-# encodes that ordering once, and continuous integration calls these same
-# targets, so local and CI cannot drift apart.
+# Configuration needs no step at all. Xcode reads Config/App.xcconfig directly
+# when it loads the project, and that file optionally includes the git-ignored
+# Config/Secrets.xcconfig if one exists. There is nothing to generate and
+# nothing to keep in step.
 #
 # NO XCODE GUI IS EVER REQUIRED. `make generate && make test` from a clean
 # clone is the contract.
@@ -37,7 +34,7 @@ DERIVED_DATA := DerivedData
 
 # Simulator builds are never signed. Without these, a machine with no
 # development team configured cannot build at all — and DEVELOPMENT_TEAM is
-# deliberately optional in .env.
+# deliberately optional in Config/Secrets.xcconfig.
 XCODEBUILD_FLAGS := \
 	-project $(PROJECT) \
 	-scheme $(SCHEME) \
@@ -48,7 +45,7 @@ XCODEBUILD_FLAGS := \
 
 .DEFAULT_GOAL := help
 
-.PHONY: help secrets generate simulator build test script-tests lint \
+.PHONY: help generate simulator build test device script-tests lint \
         check-todoist check-secrets checks ci hooks clean
 
 # --- Entry points ----------------------------------------------------------
@@ -60,17 +57,13 @@ help: ## Show this help
 		| awk 'BEGIN { FS = ":.*?## " } { printf "  \033[1m%-16s\033[0m %s\n", $$1, $$2 }'
 	@echo
 	@echo "First time here:"
-	@echo "  cp .env.example .env   # then fill it in"
 	@echo "  make hooks             # enable the pre-commit checks"
 	@echo "  make generate          # create ZenTomato.xcodeproj"
-	@echo "  make test"
+	@echo "  make test              # nothing to configure — see Config/App.xcconfig"
 	@echo
 	@echo "Simulator: $(DESTINATION)"
 
-secrets: ## Regenerate Support/Secrets.xcconfig from .env
-	@./scripts/gen-secrets.sh
-
-generate: secrets ## Generate ZenTomato.xcodeproj from project.yml
+generate: ## Generate ZenTomato.xcodeproj from project.yml
 	@command -v xcodegen >/dev/null 2>&1 || { \
 		echo "make generate: xcodegen is not installed."; \
 		echo "               brew install xcodegen"; \
@@ -107,6 +100,9 @@ check-todoist: ## Fail if any Todoist endpoint is not on the allowlist
 check-secrets: ## Fail if a credential is in the tree
 	@./scripts/check-secrets.sh
 
+device: generate ## Build and install on a connected iPhone (needs DEVELOPMENT_TEAM)
+	@./scripts/install-device.sh
+
 script-tests: ## Run the shell-level tests for the secrets and hook scripts
 	@./scripts/tests/run-script-tests.sh
 
@@ -125,4 +121,4 @@ hooks: ## Enable the pre-commit hooks in .githooks
 clean: ## Remove build products and the generated project
 	@rm -rf $(DERIVED_DATA) $(PROJECT)
 	@echo "make clean: removed $(DERIVED_DATA) and $(PROJECT)."
-	@echo "            Support/Secrets.xcconfig was kept; 'make secrets' rebuilds it."
+	@echo "            Config/Secrets.xcconfig was kept — it is yours, not a build product."
