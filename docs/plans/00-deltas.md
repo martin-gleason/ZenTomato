@@ -534,3 +534,58 @@ Expanding writes makes **D9** sharper, not softer. The Todoist client secret is 
 today it can only ever complete a task. A build that can create, edit and delete on the user's behalf
 with a published secret is a materially different risk. **D9 should be decided before write scope
 grows, not after.**
+
+---
+
+## D17 — A session plan: several Todoist items, in the order you will work them
+
+**Ratified 2026-08-23**, from the owner's use case: *"I want to select a project AND some
+non-in-project tasks and break them down."*
+
+**Currently:** `SPEC.md` line 16 — *"A pomodoro is attached to exactly one Todoist task (or, if no
+task is chosen, to a project)."*
+**Proposed:** keep that sentence — it stays true of every individual pomodoro — and add:
+
+> Before a sprint, the user may build a **session plan**: an ordered list of Todoist tasks and
+> projects, drawn from the cache, which the timer works through. Each pomodoro attaches to the plan's
+> current item, so the one-task-per-pomodoro rule is unchanged. A plan creates nothing and writes
+> nothing.
+
+**Why it belongs in v0.1.** Choosing what to work on is a planning act, and doing it eight times an
+afternoon at the start of each block is the wrong moment for it — you are trying to begin, not decide.
+Deciding once, up front, is what makes the timer something you run rather than something you operate.
+"Breaking them down" happens in Todoist, which is where task-shaping belongs.
+
+### The fence, which matters more than the feature
+
+An ordered list of tasks is one bad decision away from being exactly the local task model D16 and
+`CLAUDE.md` forbid. So, precisely:
+
+**A plan item stores two things: a Todoist id, and a title snapshot for display.** Nothing else.
+
+It does **not** store, and must never gain: task content, notes, due dates, priority, labels, parent
+or child links, completion state, or any editable field. It defines no hierarchy — a plan is flat,
+even when it contains a project and tasks from inside it. It is a **queue of references**, in the
+sense a playlist is a queue of references and not a music library.
+
+The plan is replaced when a new one is made. It is not history: what actually happened is already
+recorded on `PomodoroSession`, and a plan that outlived its session would be a second, competing
+account of the day.
+
+**The test from D16 applies here too.** A plan item with a field that is nil today and meaningful
+after sync lands is preparation, and fails.
+
+### Ordering, and what happens when reality diverges
+
+The order is the user's, set when the plan is built. The timer takes the next item at each block.
+
+A planned task may be completed in Todoist, renamed, or deleted between planning and working it. The
+plan does not chase those changes: the id stops resolving, the item shows its snapshot title with a
+note that it is gone, and it can be skipped over. **The plan is a record of intent, and intent is not
+invalidated by the world moving.** This is also why the snapshot exists rather than a live lookup.
+
+### Where it lands
+
+**F3**, which already builds the picker and the cache. The picker gains multi-select and an ordered
+list; the attach step takes the plan's current item instead of a single chosen task. No new feature
+gate — but F3's own gate does not pass until this fence is demonstrably held.
