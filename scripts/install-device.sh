@@ -119,6 +119,16 @@ then
         "If Developer Mode is already on, unplug and replug the cable — the" \
         "phone must be unlocked when it connects for the disk image to mount."
   fi
+  if grep -qi 'No Accounts: Add a new account' "$build_log"; then
+    die "Xcode has no Apple ID signed in, so it cannot create a signing profile." \\
+        "" \\
+        "Xcode > Settings > Accounts > + > Apple ID" \\
+        "" \\
+        "This is only needed if no usable provisioning profile already exists." \\
+        "Check first — a wildcard profile covers every bundle id on its team:" \\
+        "  ls ~/Library/Developer/Xcode/UserData/Provisioning\\ Profiles/"
+  fi
+
   if grep -qi 'no profiles for\|requires a development team\|failed to register bundle identifier' "$build_log"; then
     # The team ID is not secret, but it is a value read out of the private
     # xcconfig and nothing else in this repository prints one. Kept out.
