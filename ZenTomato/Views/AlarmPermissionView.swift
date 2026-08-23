@@ -152,14 +152,29 @@ struct AlarmPermissionView: View {
   /// its sentence rather than becoming its own element, so VoiceOver reads the
   /// instruction as one continuous sentence.
   private var howToFixIt: some View {
-    (
-      Text("To switch it back on: open Settings, tap ZenTomato, and turn on ")
-        .font(Typography.body)
-        + Text("Alarms").font(Typography.bodyEmphasis)
-        + Text(". Then come back to this screen — it'll let you through by itself.")
-        .font(Typography.body)
+    Text(howToFixItText)
+      .font(Typography.body)
+      .foregroundStyle(Color(.textPrimary))
+  }
+
+  /// The instruction, built as one attributed sentence rather than three `Text`
+  /// values added together.
+  ///
+  /// Adding `Text` values with `+` is deprecated in iOS 26, and a single
+  /// attributed string is also the form VoiceOver reads as one continuous
+  /// sentence — which is what this instruction needs, since the emphasised word
+  /// is the name of a switch the reader has to go and find.
+  private var howToFixItText: AttributedString {
+    var sentence = AttributedString(
+      "To switch it back on: open Settings, tap ZenTomato, and turn on "
     )
-    .foregroundStyle(Color(.textPrimary))
+    var switchName = AttributedString("Alarms")
+    switchName.font = Typography.bodyEmphasis
+    sentence.append(switchName)
+    sentence.append(AttributedString(
+      ". Then come back to this screen — it'll let you through by itself."
+    ))
+    return sentence
   }
 
   /// The only control on the screen, and the only filled surface on it.

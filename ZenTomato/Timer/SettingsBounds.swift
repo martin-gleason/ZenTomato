@@ -46,6 +46,8 @@ extension ClosedRange where Bound == Int {
   /// a block whose length came out of a file is not a block whose length was
   /// chosen.
   func clamping(_ value: Bound) -> Bound {
-    min(max(value, lowerBound), upperBound)
+    // `Swift.` qualified because inside an extension on `ClosedRange` the bare
+    // names would resolve to the range's own clamping methods in a future Swift.
+    Swift.min(Swift.max(value, lowerBound), upperBound)
   }
 }
