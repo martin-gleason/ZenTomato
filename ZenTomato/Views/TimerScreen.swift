@@ -1,5 +1,19 @@
 import SwiftUI
 
+// swiftlint:disable file_length
+//
+// THE ONLY LINT RULE THIS FILE TURNS OFF, AND WHY.
+// `file_length` counts documentation and previews, and this file is over half
+// both: roughly two hundred lines of prose explaining decisions to a reviewer
+// who reads code but does not write Swift, and a preview for every state the
+// screen can be in — which is the whole reason the screen was split from its
+// wiring in the first place. Splitting it further would separate a state from
+// the picture of that state, and would make the private preview fixtures
+// visible to the rest of the app to do it: real protection traded away for a
+// line count. The same exemption, for the same reason, is already taken by
+// `TimerEngine.swift`. Every other rule stays on, including all of the ones
+// that catch actual defects.
+
 /// The timer screen, drawn from finished values.
 ///
 /// It has no idea a timer exists. Everything it shows arrives in a
@@ -19,42 +33,17 @@ struct TimerScreen: View {
   var onStop: () -> Void = { }
   var onOpenSettings: () -> Void = { }
 
+  /// A distraction from your own head was tapped. Called synchronously, and what
+  /// is on the other end of it is synchronous all the way to the disk — see
+  /// `DistractionButtons`.
+  var onInternalDistraction: () -> Void = { }
+
+  /// A distraction from outside was tapped.
+  var onExternalDistraction: () -> Void = { }
+
   var body: some View {
     VStack(spacing: Spacing.none) {
-      // Two equal spacers, one above the block and one below it. Because they
-      // are equal, the word-and-number pair centres itself in the space *above*
-      // the buttons, which lands it slightly above the true middle of the
-      // screen. That is where an eye expects a single focal element; a
-      // mathematically centred number with a button underneath reads as low.
-      Spacer(minLength: Spacing.xl)
-
-      focusBlock
-        .accessibilitySortPriority(3)
-
-      if let progress = model.progress {
-        SprintProgressView(completed: progress.completed, total: progress.total)
-          .padding(.top, Spacing.lg)
-          .accessibilitySortPriority(2)
-      }
-
-      if let completionNote = model.completionNote {
-        // No animation, no confetti, no badge. The honest reward for finishing a
-        // sprint is the filled rule and being left alone.
-        Text(completionNote)
-          .font(Typography.label)
-          .foregroundStyle(Color(.textMuted))
-          .multilineTextAlignment(.center)
-          .padding(.top, Spacing.md)
-          .accessibilitySortPriority(2)
-      }
-
-      if let failureNote = model.failureNote {
-        failureRow(failureNote)
-          .padding(.top, Spacing.md)
-          .accessibilitySortPriority(2)
-      }
-
-      Spacer(minLength: Spacing.xl)
+      centreColumn
 
       controls
         .accessibilitySortPriority(1)
@@ -89,6 +78,17 @@ struct TimerScreen: View {
 
   // MARK: Private
 
+  /// The text size from which the middle of the screen starts scrolling.
+  ///
+  /// A 96-point numeral on its own growth curve, plus a sprint rule, plus a
+  /// capture pair that has by then stacked into two full-width buttons, does not
+  /// fit on a phone at the largest accessibility sizes. There is no
+  /// `.dynamicTypeSize(...)` cap anywhere on this screen — that rule is ratified
+  /// and it stands — so the honest answer is that the column becomes scrollable
+  /// and nothing is cut off. Stop stays pinned outside it, because the one exit
+  /// from a running block must never be somewhere you have to go looking for.
+  private static let scrollingThreshold: DynamicTypeSize = .accessibility1
+
   /// How far the small word may shrink. Its vocabulary now reaches "Long break",
   /// which cannot hold one line at the largest text sizes, so it is allowed two.
   private static let kickerMinimumScale: CGFloat = 0.7
@@ -110,6 +110,146 @@ struct TimerScreen: View {
   /// running away. That flattening is the reason a number starting at 96 points
   /// still reads correctly at the largest size.
   @ScaledMetric(relativeTo: .largeTitle) private var numeralSize = Typography.numeralBaseSize
+
+  /// The reader's text-size setting, which decides whether the middle of the
+  /// screen scrolls.
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+  /// Everything above the Stop button, scrollable at the accessibility sizes and
+  /// not before.
+  ///
+  /// `.scrollBounceBehavior(.basedOnSize)` means it does not rubber-band when
+  /// the content already fits, so at the sizes where scrolling is unnecessary
+  /// the screen behaves exactly as if there were no scroll view at all.
+  @ViewBuilder
+  private var centreColumn: some View {
+    if dynamicTypeSize >= Self.scrollingThreshold {
+      ScrollView {
+        column
+      }
+      .scrollBounceBehavior(.basedOnSize)
+    } else {
+      column
+    }
+  }
+
+  /// The word, the number, the sprint rule, any note, and the capture pair.
+  ///
+  /// The two spacers were once equal, and now the lower one has a larger floor.
+  /// They are still equally *flexible*, so on a phone with room to spare the
+  /// word-and-number pair still centres itself in the space above the Stop
+  /// button — slightly above the true middle of the screen, which is where an
+  /// eye expects a single focal element. What changed is the minimum: there are
+  /// never fewer than forty-eight points of bare page between the bottom of a
+  /// capture button and the top of Stop.
+  ///
+  /// That gap is a safety margin rather than a rhythm choice. A mis-tap between
+  /// Internal and External costs one wrong row in a log that is read in
+  /// aggregate, which this feature already accepts. A mis-tap onto Stop opens
+  /// the exit sheet in the middle of a focus block. The two failure modes are
+  /// not the same size, so the two gaps are not the same size: twelve points
+  /// between the pair, forty-eight at minimum down to Stop.
+  private var column: some View {
+    VStack(spacing: Spacing.none) {
+      Spacer(minLength: Spacing.xl)
+
+      focusBlock
+        .accessibilitySortPriority(3)
+
+      if let progress = model.progress {
+        SprintProgressView(completed: progress.completed, total: progress.total)
+          .padding(.top, Spacing.lg)
+          .accessibilitySortPriority(2)
+      }
+
+      if let completionNote = model.completionNote {
+        // No animation, no confetti, no badge. The honest reward for finishing a
+        // sprint is the filled rule and being left alone.
+        Text(completionNote)
+          .font(Typography.label)
+          .foregroundStyle(Color(.textMuted))
+          .multilineTextAlignment(.center)
+          .padding(.top, Spacing.md)
+          .accessibilitySortPriority(2)
+      }
+
+      if let failureNote = model.failureNote {
+        failureRow(failureNote)
+          .padding(.top, Spacing.md)
+          .accessibilitySortPriority(2)
+      }
+
+      capturePair
+
+      Spacer(minLength: Spacing.xxl)
+    }
+    .frame(maxWidth: .infinity)
+  }
+
+  /// The two capture buttons, the space they leave behind during a break, or
+  /// nothing at all.
+  ///
+  /// THREE STATES, AND THE MIDDLE ONE IS THE INTERESTING ONE
+  ///
+  /// | When | What is here |
+  /// |---|---|
+  /// | a focus block is running | the pair |
+  /// | a break is running | the same height, empty and unreachable |
+  /// | nothing is running | no slot at all |
+  ///
+  /// **The countdown moves exactly once in a whole cycle, and that is why the
+  /// break keeps the space.** Adding the pair lifts the centred number by about
+  /// half its height; if the slot were dropped at the work-to-break boundary the
+  /// number would jump back down at the very moment a person glances over to see
+  /// how long their break is. Reserving it means the only thing that changes
+  /// across that boundary is the word above the number — which is the thing they
+  /// should be reading. The one shift left in the cycle happens at Start, at the
+  /// same instant the Start button becomes Stop, where a shift is attributable
+  /// rather than mysterious.
+  ///
+  /// **Reserved means genuinely unreachable**, not merely invisible. Hidden,
+  /// unhittable and removed from the accessibility tree, so a VoiceOver rotor,
+  /// Full Keyboard Access and Voice Control all agree with the eye that there is
+  /// nothing there. A distraction logged during a break would be a false row in
+  /// the one dataset this app exists to produce.
+  ///
+  /// Two alternatives were rejected for the break: the just-ended block's tally,
+  /// which is a reading-back surface that a later feature owns; and a line of
+  /// break copy, which spends attention on the screen a break exists to get you
+  /// off.
+  @ViewBuilder
+  private var capturePair: some View {
+    if let capture = model.capture {
+      DistractionButtons(
+        internalCount: capture.internalCount,
+        externalCount: capture.externalCount,
+        onInternal: onInternalDistraction,
+        onExternal: onExternalDistraction)
+        // The padding lives inside each branch rather than on the pair as a
+        // whole, so that the idle screen — which draws neither branch — does not
+        // carry thirty-two points of space above a control that is not there.
+        .padding(.top, Spacing.xl)
+        // Read after the block name and the countdown, and before the sprint
+        // rule, the Stop button and the gear. For a reader who is not looking at
+        // the screen the two things worth reaching in a swipe or two are "how
+        // long left" and "log this"; the sprint rule between them would cost a
+        // swipe at exactly the wrong moment. A fraction is legal here and avoids
+        // renumbering four elements that were reviewed already.
+        .accessibilitySortPriority(2.5)
+        // The Taptic Engine idles down between blocks, and the first thump
+        // after that pays the cost of waking it — felt as the buzz arriving
+        // after the finger has already lifted, on the one signal a person who
+        // is not looking at the screen has to trust. Warming it when the
+        // buttons appear starts no work and costs nothing if no tap follows.
+        .onAppear { CaptureHaptic.warmUp() }
+    } else if model.isRunning {
+      DistractionButtons(internalCount: 0, externalCount: 0)
+        .padding(.top, Spacing.xl)
+        .hidden()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+  }
 
   /// The word and the number, treated as one thing.
   private var focusBlock: some View {
@@ -260,6 +400,28 @@ struct TimerScreen: View {
     .preferredColorScheme(.light)
 }
 
+/// The receipt in place: a word, and under it how many times it has been
+/// pressed during this block.
+#Preview("Focus running, 2 internal 1 external") {
+  TimerScreen(model: .previewWorkWithTaps)
+    .preferredColorScheme(.light)
+}
+
+#Preview("Focus running, dark") {
+  TimerScreen(model: .previewWorkWithTaps)
+    .preferredColorScheme(.dark)
+}
+
+/// A tap that was refused. Nothing buzzed, no count moved, and the amber row is
+/// the only thing that says so.
+#Preview("A tap that wasn't saved") {
+  TimerScreen(model: .previewCaptureFailed)
+    .preferredColorScheme(.light)
+}
+
+/// The reserved slot. The capture pair is absent, unreachable, and still
+/// occupying its exact height — put this beside "Focus running" and the
+/// countdown must be in the same place in both.
 #Preview("Short break running") {
   TimerScreen(model: .previewShortBreakRunning)
     .preferredColorScheme(.light)
@@ -283,7 +445,15 @@ struct TimerScreen: View {
 /// The largest text size iOS offers, which is the one that breaks layouts.
 /// Nothing here may be cut off or overlap at this size.
 #Preview("Focus running, largest text") {
-  TimerScreen(model: .previewWorkRunning)
+  TimerScreen(model: .previewWorkWithTaps)
+    .preferredColorScheme(.light)
+    .dynamicTypeSize(.accessibility5)
+}
+
+/// The same size with nothing running: no capture slot at all, and therefore
+/// nothing to scroll.
+#Preview("Idle, largest text") {
+  TimerScreen(model: .previewIdle)
     .preferredColorScheme(.light)
     .dynamicTypeSize(.accessibility5)
 }
@@ -313,6 +483,30 @@ private extension TimerScreenModel {
     numeral: "24:58",
     spokenNumeral: "24 minutes remaining",
     progress: Progress(completed: 2, total: 4),
+    capture: Capture(internalCount: 0, externalCount: 0),
+    controls: .running)
+
+  /// The state the receipt exists for: a block that has already been
+  /// interrupted, with a count under each word.
+  static let previewWorkWithTaps = TimerScreenModel(
+    blockName: "Focus block",
+    kicker: "Focus",
+    numeral: "18:04",
+    spokenNumeral: "18 minutes remaining",
+    progress: Progress(completed: 2, total: 4),
+    capture: Capture(internalCount: 2, externalCount: 1),
+    controls: .running)
+
+  /// A tap that could not be written. No count, no receipt, and the same amber
+  /// row the alarm failure uses — which is also announced to VoiceOver.
+  static let previewCaptureFailed = TimerScreenModel(
+    blockName: "Focus block",
+    kicker: "Focus",
+    numeral: "18:04",
+    spokenNumeral: "18 minutes remaining",
+    progress: Progress(completed: 2, total: 4),
+    failureNote: "That tap wasn't saved. Tap again.",
+    capture: Capture(internalCount: 1, externalCount: 0),
     controls: .running)
 
   static let previewShortBreakRunning = TimerScreenModel(
@@ -339,6 +533,7 @@ private extension TimerScreenModel {
     spokenNumeral: "24 minutes remaining",
     progress: Progress(completed: 2, total: 4),
     failureNote: TimerEngineFailure.alarmSchedulingFailed.message,
+    capture: Capture(internalCount: 0, externalCount: 0),
     controls: .running)
 
   static let previewLongestSprint = TimerScreenModel(
@@ -347,5 +542,6 @@ private extension TimerScreenModel {
     numeral: "24:58",
     spokenNumeral: "24 minutes remaining",
     progress: Progress(completed: 11, total: 12),
+    capture: Capture(internalCount: 3, externalCount: 2),
     controls: .running)
 }

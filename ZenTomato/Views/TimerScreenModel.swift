@@ -28,7 +28,12 @@ struct TimerScreenModel {
     /// time and so does need the whole sentence.
     case start(isEnabled: Bool, spokenLabel: String)
 
-    /// Skip and Stop, side by side, neither of them filled.
+    /// One quiet, unfilled Stop.
+    ///
+    /// There was a Skip button beside it and D13 removed it: an exit that costs
+    /// a single tap is not an exit from a focus block, it is a way of not having
+    /// one. Nothing filled is drawn while a block runs, because while a focus
+    /// block runs the thing to do is nothing.
     case running
   }
 
@@ -36,6 +41,45 @@ struct TimerScreenModel {
   struct Progress {
     let completed: Int
     let total: Int
+  }
+
+  /// The two capture buttons, and what each of them has counted so far in the
+  /// block running now.
+  ///
+  /// **`nil` is the whole point of this type.** "Are the capture buttons on the
+  /// screen?" is expressed as whether there is a value here at all, rather than
+  /// as a condition somebody has to remember to write inside a view. A
+  /// distraction during a break is not a distraction, so there is no value
+  /// during a break — and the buttons therefore cannot be drawn, cannot be
+  /// tapped, and cannot be reached by VoiceOver or Voice Control.
+  ///
+  /// This is the first of two guards and it is the one a person sees. The
+  /// second lives in the timer engine, which refuses to write a row that does
+  /// not belong to a running focus block whoever asks it to. Both exist on
+  /// purpose: this one is what the screen looks like, and that one is what makes
+  /// it true for any future caller.
+  struct Capture {
+    let internalCount: Int
+    let externalCount: Int
+
+    /// The capture buttons for a block, or `nil` if there should not be any.
+    ///
+    /// A pure function of three finished values, which is what lets the rule be
+    /// tested without a database, a timer or a screen — see
+    /// `DistractionScreenModelTests`.
+    ///
+    /// - Parameters:
+    ///   - isRunning: whether any block is counting at all.
+    ///   - kind: which kind of block that is.
+    ///   - taps: the kinds recorded in this block so far, in any order. Only
+    ///     their number matters here; the tally line on the sheets is what reads
+    ///     them properly.
+    static func forBlock(isRunning: Bool, kind: BlockKind, taps: [DistractionKind]) -> Capture? {
+      guard isRunning, kind == .work else { return nil }
+      return Capture(
+        internalCount: taps.filter { $0 == .internalInterruption }.count,
+        externalCount: taps.filter { $0 == .externalInterruption }.count)
+    }
   }
 
   // MARK: Stored properties
@@ -72,7 +116,21 @@ struct TimerScreenModel {
   /// loud on the screen rather than written to a log nobody reads.
   let failureNote: String?
 
+  /// The capture buttons, or `nil` when there must not be any. See `Capture`.
+  let capture: Capture?
+
   let controls: Controls
+
+  /// Whether a block is counting right now.
+  ///
+  /// Derived from `controls` rather than stored, so it cannot disagree with what
+  /// the bottom of the screen is drawing. The screen needs it for one thing: a
+  /// break running has no capture buttons but must still leave their space
+  /// empty, so that the countdown does not jump the moment a focus block ends.
+  var isRunning: Bool {
+    if case .running = controls { return true }
+    return false
+  }
 
   // MARK: Initialisation
 
@@ -87,6 +145,7 @@ struct TimerScreenModel {
     progress: Progress?,
     completionNote: String? = nil,
     failureNote: String? = nil,
+    capture: Capture? = nil,
     controls: Controls
   ) {
     self.blockName = blockName
@@ -97,6 +156,7 @@ struct TimerScreenModel {
     self.progress = progress
     self.completionNote = completionNote
     self.failureNote = failureNote
+    self.capture = capture
     self.controls = controls
   }
 
