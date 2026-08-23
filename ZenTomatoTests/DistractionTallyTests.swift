@@ -14,12 +14,12 @@ struct DistractionTallyTests {
 
   @Test("one internal")
   func oneInternal() {
-    #expect(DistractionTally.summary(of: [.internalPull]) == "1 internal")
+    #expect(DistractionTally.summary(of: [.internalInterruption]) == "1 internal")
   }
 
   @Test("two internal")
   func twoInternal() {
-    #expect(DistractionTally.summary(of: [.internalPull, .internalPull]) == "2 internal")
+    #expect(DistractionTally.summary(of: [.internalInterruption, .internalInterruption]) == "2 internal")
   }
 
   @Test("one external")
@@ -29,7 +29,7 @@ struct DistractionTallyTests {
 
   @Test("both kinds")
   func bothKinds() {
-    let taps: [DistractionKind] = [.internalPull, .externalInterruption, .internalPull]
+    let taps: [DistractionKind] = [.internalInterruption, .externalInterruption, .internalInterruption]
     #expect(DistractionTally.summary(of: taps) == "2 internal · 1 external")
   }
 
@@ -37,7 +37,7 @@ struct DistractionTallyTests {
   /// describes the block, not the order you noticed things in.
   @Test("order of taps does not change the order of the summary")
   func orderIsAlwaysInternalFirst() {
-    let taps: [DistractionKind] = [.externalInterruption, .internalPull]
+    let taps: [DistractionKind] = [.externalInterruption, .internalInterruption]
     #expect(DistractionTally.summary(of: taps) == "1 internal · 1 external")
   }
 }
