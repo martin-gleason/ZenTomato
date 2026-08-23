@@ -56,10 +56,6 @@ struct BlockLiveActivity: Widget {
           CountdownNumeral(readout: readout, font: Typography.title)
             .islandInk()
         }
-        DynamicIslandExpandedRegion(.bottom) {
-          DismissButton(fillsWidth: true)
-            .islandInk()
-        }
       } compactLeading: {
         BlockSymbol(kind: readout.kind)
           .islandInk()
@@ -95,7 +91,7 @@ struct BlockLiveActivity: Widget {
 /// ```
 /// ┌───────────────────────────────────────────────┐
 /// │  FOCUS                               2 OF 4   │
-/// │  24:58                              Dismiss   │
+/// │  24:58                                        │
 /// └───────────────────────────────────────────────┘
 /// ```
 ///
@@ -103,12 +99,24 @@ struct BlockLiveActivity: Widget {
 /// Stated here because it varies with the device and the language, and because
 /// the answer is not obvious. The row hands its width to the countdown's column
 /// first, because that column carries the one thing on the card that must be
-/// read exactly. What is left goes to the trailing column, where the sprint
-/// count shrinks — down to seven tenths of its size, and no further. The Dismiss
-/// button never shrinks, because a control with half a word in it is worse than
-/// no control, and the block name above the countdown shrinks before it
-/// truncates. **The countdown itself never gives at all**: a countdown missing a
-/// digit is wrong information, not small information.
+/// read exactly. What is left goes to the sprint count, which shrinks — down to
+/// seven tenths of its size and no further — and the block name above the
+/// countdown shrinks before it truncates. **The countdown itself never gives at
+/// all**: a countdown missing a digit is wrong information, not small
+/// information.
+///
+/// THERE IS NO CONTROL ON THIS CARD, AND THAT IS THE POINT
+/// The card reads; it does not act. A Dismiss button lived here until it was
+/// removed, because a Lock Screen button cannot be trusted to record what it
+/// did. iOS reclaims a backgrounded app's memory whenever it likes, and a tap
+/// that arrives with no app running reaches nothing — leaving the block to be
+/// reconciled later from its end time alone, which reads it as *finished*.
+/// Deliberately abandoning a block from a locked phone therefore added a
+/// pomodoro you had not earned, to the one number this whole app exists to
+/// produce.
+///
+/// Abandoning a block now happens in the app, where the engine is certainly
+/// running and can record what actually happened.
 ///
 /// The case that tests all of this is a two-hour focus block in a twelve-block
 /// sprint at the largest text size: the countdown reads `1:59:58` rather than
@@ -137,13 +145,10 @@ private struct LockScreenCard: View {
 
       Spacer(minLength: Spacing.sm)
 
-      VStack(alignment: .trailing, spacing: Spacing.xs) {
-        if let metadata = readout.metadata {
-          // Left at the default priority, so this column is what gives way. Its
-          // fraction shrinks rather than clipping; the button does neither.
-          SprintCount(completed: metadata.completedInSprint, total: metadata.pomodorosPerSprint)
-        }
-        DismissButton()
+      if let metadata = readout.metadata {
+        // Left at the default priority, so this is what gives way: it shrinks
+        // rather than clipping, while the countdown beside it never gives.
+        SprintCount(completed: metadata.completedInSprint, total: metadata.pomodorosPerSprint)
       }
     }
     .padding(Spacing.md)
@@ -310,48 +315,6 @@ private struct BlockSymbol: View {
     Image(systemName: kind == .work ? "timer" : "cup.and.saucer")
       .font(Typography.data)
       .foregroundStyle(Color(.action))
-  }
-}
-
-/// The only control on the card.
-///
-/// Quiet, for the same reason Skip and Stop are quiet inside the app: glancing at
-/// a locked phone during a focus block, the right thing to do is put the phone
-/// down. A filled button here would advertise stopping as the encouraged action.
-///
-/// The same command runs whether it is tapped here or on the full-screen alert
-/// iOS draws when the alarm goes off — see `DismissBlockIntent`.
-private struct DismissButton: View {
-  // MARK: Internal
-
-  var fillsWidth = false
-
-  var body: some View {
-    Button(intent: DismissBlockIntent()) {
-      Text("Dismiss")
-        .font(Typography.button)
-        .foregroundStyle(Color(.textMuted))
-        .lineLimit(1)
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.xs)
-        .frame(maxWidth: fillsWidth ? CGFloat.infinity : nil, minHeight: Spacing.controlHeight)
-        .overlay {
-          shape.strokeBorder(Color(.borderStrong), lineWidth: Spacing.borderHairline)
-        }
-        .contentShape(shape)
-    }
-    // Without this the system draws its own filled capsule around the label and
-    // the outline above ends up inside a button that looks nothing like the rest
-    // of the app.
-    .buttonStyle(.plain)
-    .accessibilityLabel(Text("Dismiss"))
-    .accessibilityHint(Text("Ends this block now."))
-  }
-
-  // MARK: Private
-
-  private var shape: RoundedRectangle {
-    RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
   }
 }
 

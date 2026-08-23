@@ -366,3 +366,37 @@ already do, and it is append-only. It creates no hierarchy, no local task list, 
 grow into one.
 
 **Cost:** one small model and one export section. The recording lands in F3, the export in F6.
+
+
+---
+
+## D12 — The Live Activity has no controls
+
+**Ratified 2026-08-23, during F2's device review.**
+
+The running-block Live Activity shipped with a Dismiss button on the Lock Screen card and in the
+expanded Dynamic Island. Both are removed. The card now reads and does not act.
+
+**Why.** A Lock Screen button cannot be trusted to record what it did. iOS reclaims a backgrounded
+app's memory whenever it likes, and a Live Activity button reaches the app through an App Intent that
+does nothing at all if the app is not resident. The tap silently reached nothing; the block was left
+to be reconciled at the next foreground from its stored end time alone — and by then that time had
+passed, so it was recorded as **completed**.
+
+The consequence is the part that matters: deliberately abandoning a block from a locked phone added a
+pomodoro you had not earned. Not to a cosmetic counter, but to the one number the whole app exists to
+produce and that the two-week review is read from. It also directly contradicted the decision taken at
+this same gate that a block ended early is abandoned and excluded from counts.
+
+**Why removal rather than a fix.** Making the button honest needs a field on `TimerState` plus a
+cross-process channel from the widget back to the app — real design, and design for a control nobody
+asked for. `SPEC.md` never promised a Lock Screen control; F2's plan named "dismiss" as the one
+affordance the Live Activity would carry, and this delta withdraws it. Abandoning a block now happens
+in the app, where the engine is certainly running and can record what actually happened. That is one
+extra tap, on a deliberate act.
+
+**What is kept.** `DismissBlockIntent` survives as the Stop button on the full-screen alert iOS draws
+when a block's alarm *fires*. Reaching it now implies the alarm was sounding, so the reconciliation
+fallback — record it as completed — is correct rather than merely tolerable. The engine still asks
+rather than assumes: it compares the clock to the block's end time, so the rule lives in one tested
+place.
