@@ -145,13 +145,25 @@ struct TimerScreenModel {
         return Attachment(line: "Project · \(projectTitle)", isTappable: false)
       }
 
-      return Attachment(line: nothingAttached, isTappable: false)
+      return Attachment(line: nothingWasAttached, isTappable: false)
     }
 
     /// Connected, and this block has nothing of its own. A pomodoro with
     /// nothing attached is a normal pomodoro — the timer shipped and is in use
     /// without Todoist at all.
-    private static let nothingAttached = "No task attached"
+    /// What the line says when Todoist is connected and nothing is planned yet.
+    ///
+    /// **It is an invitation, not a status.** It used to read "No task attached",
+    /// which is a perfectly accurate description of the situation and completely
+    /// useless: it tells you where you are and not that you can leave. On a real
+    /// phone it meant the entire Todoist feature was unreachable — the picker,
+    /// the plan and completing a task all sit behind this one line, and nobody
+    /// taps a caption.
+    private static let nothingAttached = "Choose what to work on"
+
+    /// The same idea for a block that ran with nothing attached. Past tense and
+    /// inert, because that block is over and there is nothing to choose.
+    private static let nothingWasAttached = "No task attached"
   }
 
   // MARK: Stored properties

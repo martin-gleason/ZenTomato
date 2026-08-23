@@ -289,3 +289,54 @@ struct SessionAttachmentTests {
     #expect(row.projectTitle == "Deep work")
   }
 }
+
+// MARK: - AttachmentReachabilityTests
+
+/// The attachment line is the ONLY way into Todoist — the picker, the plan and
+/// completing a task all sit behind it.
+///
+/// WHY THIS SUITE EXISTS
+/// On its first run against a real account, none of those could be found. The
+/// line was tappable, and it read "No task attached" in the quietest ink with no
+/// chevron — an accurate description of the situation that gave no hint you could
+/// leave it. Every other test passed; 197 of them. A screen can be correct and
+/// unusable at the same time, and only one of those two things had a test.
+struct AttachmentReachabilityTests {
+  /// Connected, idle, nothing planned — the state a new user is in the moment
+  /// they finish signing in. It must invite, and it must be tappable.
+  @Test("the first state after signing in offers a way forward")
+  func idleWithNoPlanInvites() throws {
+    let attachment = try #require(TimerScreenModel.Attachment.forTimer(
+      hasToken: true, isFocusRunning: false, runningBlock: nil, nextItem: nil))
+
+    #expect(attachment.isTappable)
+    // Not an assertion about wording for its own sake. A line that names only
+    // the current state is what made this feature unreachable, so the test
+    // pins the fact that this one names an action instead.
+    #expect(attachment.line == "Choose what to work on")
+  }
+
+  /// Every line the user can act on must be reachable while the timer is idle,
+  /// and no line may be tappable while a focus block runs — the attachment is
+  /// frozen at Start so a block's records cannot name two different tasks.
+  @Test("tappable exactly when idle, never mid-block")
+  func tappableOnlyWhenIdle() throws {
+    let idle = try #require(TimerScreenModel.Attachment.forTimer(
+      hasToken: true, isFocusRunning: false, runningBlock: nil, nextItem: nil))
+    #expect(idle.isTappable)
+
+    let running = try #require(TimerScreenModel.Attachment.forTimer(
+      hasToken: true, isFocusRunning: true, runningBlock: nil, nextItem: nil))
+    #expect(running.isTappable == false)
+    // Past tense, and inert: that block is over and there is nothing to choose.
+    #expect(running.line == "No task attached")
+  }
+
+  /// With no token the line is absent entirely, so the timer is exactly the
+  /// screen F2 shipped. Nothing nags somebody who has not connected an account.
+  @Test("no token, no line")
+  func noTokenNoLine() {
+    #expect(TimerScreenModel.Attachment.forTimer(
+      hasToken: false, isFocusRunning: false, runningBlock: nil, nextItem: nil) == nil)
+  }
+}

@@ -272,16 +272,38 @@ struct TimerScreen: View {
   /// on it. The gone state is not amber either: this screen's amber belongs to
   /// the failure row, and amber marks exactly one thing per screen.
   ///
-  /// **No chevron, in any state.** The ratified rule is that the countdown moves
-  /// exactly once in a whole cycle, and an affordance that appeared at a block
-  /// boundary would be precisely that movement. The whole line is the target, at
-  /// the 44-point floor.
+  /// **A chevron, but only on the states that are actually tappable.**
+  ///
+  /// This line carried no affordance at all, to protect the ratified rule that
+  /// the countdown moves exactly once in a whole cycle — an indicator appearing
+  /// at a block boundary would be that movement. The reasoning had a hole in it:
+  /// `isTappable` is only ever true while the timer is IDLE, so a chevron drawn
+  /// on tappable lines can never appear or disappear during a running block. The
+  /// rule was suppressing an affordance in states it did not govern.
+  ///
+  /// The cost of that was total. Every Todoist surface — the picker, the plan,
+  /// completing a task — is reached through this line and nothing else, and on a
+  /// real phone it read as a caption, so none of them were ever found.
+  ///
+  /// The chevron is `textMuted`, not `action`: the one piece of colour on this
+  /// screen is the word above the number, and a sage chevron would be a second
+  /// claim on it. A chevron reads as "there is more here" without needing colour.
+  ///
+  /// The whole line is the target, at the 44-point floor.
   @ViewBuilder
   private func attachmentLine(_ attachment: TimerScreenModel.Attachment) -> some View {
     if attachment.isTappable {
-      Button { onOpenPlan() } label: { attachmentText(attachment.line) }
-        .buttonStyle(.plain)
-        .accessibilityHint(Text("Opens your Todoist plan."))
+      Button { onOpenPlan() } label: {
+        HStack(spacing: Spacing.xs) {
+          attachmentText(attachment.line)
+          Image(systemName: "chevron.right")
+            .font(Typography.label)
+            .foregroundStyle(Color(.textMuted))
+            .accessibilityHidden(true)
+        }
+      }
+      .buttonStyle(.plain)
+      .accessibilityHint(Text("Opens your Todoist plan."))
     } else {
       attachmentText(attachment.line)
     }
