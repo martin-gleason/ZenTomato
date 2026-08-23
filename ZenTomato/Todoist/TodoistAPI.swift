@@ -141,6 +141,29 @@ enum TodoistAPI {
     Endpoint(method: .post, path: "/tasks/\(id)/close")
   }
 
+  /// Whether a piece of text is the sort of identifier Todoist hands out.
+  ///
+  /// v1 identifiers are documented as opaque strings — letters and digits, such
+  /// as `6XGgmFVcrG5RRjVr`. Hyphens and underscores are allowed here as well,
+  /// because they are the two characters an opaque scheme most commonly adds and
+  /// neither of them means anything to a web address.
+  ///
+  /// **What it is for.** The close command is the only address in this app with
+  /// anything substituted into it, so it is the only place a value from
+  /// somewhere else can affect where a request goes. Slashes, dots and
+  /// percent-signs are what would let it, so an identifier carrying any of them
+  /// is not used. It is a check on the *input*, made before an address is built,
+  /// which is the only place a check of this kind is worth anything.
+  ///
+  /// The template used by `allEndpoints` is deliberately not run through this:
+  /// it is a piece of documentation, not something a request is ever made with.
+  static func isOpaqueIdentifier(_ id: String) -> Bool {
+    guard id.isEmpty == false else { return false }
+    return id.allSatisfy { character in
+      character.isASCII && (character.isLetter || character.isNumber || character == "-" || character == "_")
+    }
+  }
+
   /// Every address this app may ever contact, as one list.
   ///
   /// It exists to be read by two tests: one asserts that exactly one of these

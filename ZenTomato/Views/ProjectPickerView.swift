@@ -44,6 +44,10 @@ struct ProjectPickerView: View {
   /// The plan being built, in the order it was chosen.
   @Binding var selections: [SessionPlanStore.Selection]
 
+  /// What the line along the bottom says — the selection being built, or the
+  /// plan that already exists when nothing new has been chosen.
+  let planBar: PlanBar.Contents
+
   let onOpenProject: (PickerScreenModel.Project) -> Void
   let onOpenPlan: () -> Void
   let onRefresh: () async -> Void
@@ -65,7 +69,7 @@ struct ProjectPickerView: View {
       // on an empty result is half of a create button.
       .submitLabel(.search)
       .safeAreaInset(edge: .bottom, spacing: Spacing.none) {
-        PlanBar(selections: selections, onOpen: onOpenPlan)
+        PlanBar(contents: planBar, onOpen: onOpenPlan)
       }
   }
 
@@ -94,7 +98,7 @@ struct ProjectPickerView: View {
             projectRow(project)
           }
         } header: {
-          header("Projects")
+          header(PickerScreenModel.projectsHeader)
         }
         .listRowBackground(Color(.surfaceRaised))
       } else {
@@ -129,7 +133,7 @@ struct ProjectPickerView: View {
           case .project(let project):
             PickerRowView(
               title: project.name,
-              subtitle: Self.taskCountLine(project.openTaskCount),
+              subtitle: PickerScreenModel.taskCountLine(project.openTaskCount),
               ordinal: ordinal(for: project.id),
               isSelected: isSelected(project.id),
               onToggle: {
@@ -145,7 +149,7 @@ struct ProjectPickerView: View {
           }
         }
       } header: {
-        header("Results")
+        header(PickerScreenModel.resultsHeader)
       }
       .listRowBackground(Color(.surfaceRaised))
     }
@@ -154,7 +158,7 @@ struct ProjectPickerView: View {
   private func projectRow(_ project: PickerScreenModel.Project) -> some View {
     PickerRowView(
       title: project.name,
-      subtitle: Self.taskCountLine(project.openTaskCount),
+      subtitle: PickerScreenModel.taskCountLine(project.openTaskCount),
       ordinal: ordinal(for: project.id),
       isSelected: isSelected(project.id),
       onToggle: { toggle(.init(todoistID: project.id, titleSnapshot: project.name, kind: .project)) },
@@ -189,17 +193,6 @@ struct ProjectPickerView: View {
       selections.append(selection)
     }
   }
-
-  /// "3 tasks", "1 task", "No tasks".
-  ///
-  /// A count of what was mirrored, never a number this app maintains.
-  private static func taskCountLine(_ count: Int) -> String {
-    switch count {
-    case 0: "No tasks"
-    case 1: "1 task"
-    default: "\(count) tasks"
-    }
-  }
 }
 
 // MARK: - PickerRowView
@@ -226,6 +219,26 @@ struct PickerRowView: View {
   /// Set only on a project row. A task row has nowhere further to go, so the
   /// whole of it toggles instead.
   var onOpen: (() -> Void)?
+
+  /// What VoiceOver says instead of "circle".
+  ///
+  /// **The subtitle is spoken, and it is load-bearing on a search result.** Task
+  /// titles repeat across projects — that is why the second line exists at
+  /// all — and the label carrying it is hidden from VoiceOver on a task row, so
+  /// without this the project name reaches no reader at all. Somebody searching
+  /// "review" would hear "Review the draft, not in your plan" three times with
+  /// nothing to tell them apart, and build exactly the plan they cannot trust
+  /// that the second line was added to prevent. It also restores the "3 tasks"
+  /// count on a project row.
+  ///
+  /// A pure function of the three things a row draws, so it can be read by a
+  /// test with no screen behind it.
+  static func spokenToggleLabel(title: String, subtitle: String?, ordinal: Int?) -> String {
+    var parts = [title]
+    if let subtitle { parts.append(subtitle) }
+    parts.append(ordinal.map { "number \($0) in your plan" } ?? "not in your plan")
+    return parts.joined(separator: ", ")
+  }
 
   var body: some View {
     HStack(spacing: Spacing.sm) {
@@ -297,13 +310,8 @@ struct PickerRowView: View {
         .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .accessibilityLabel(Text(spokenToggleLabel))
+    .accessibilityLabel(Text(Self.spokenToggleLabel(title: title, subtitle: subtitle, ordinal: ordinal)))
     .accessibilityHint(Text(isSelected ? "Takes it out of your plan." : "Puts it in your plan."))
-  }
-
-  private var spokenToggleLabel: String {
-    guard let ordinal else { return "\(title), not in your plan" }
-    return "\(title), number \(ordinal) in your plan"
   }
 }
 
@@ -389,25 +397,17 @@ struct NothingMirroredYetView: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: Spacing.md) {
-        Text("Nothing to show yet")
+        Text(PickerScreenModel.nothingMirroredHeading)
           .font(Typography.title)
           .foregroundStyle(Color(.textPrimary))
           .accessibilityAddTraits(.isHeader)
 
-        Text(
-          """
-          ZenTomato hasn't managed to reach Todoist since you connected, so it \
-          doesn't have a copy of your projects yet.
-          """)
+        Text(PickerScreenModel.nothingMirroredExplanation)
           .font(Typography.body)
           .foregroundStyle(Color(.textPrimary))
           .fixedSize(horizontal: false, vertical: true)
 
-        Text(
-          """
-          Try again when you're back on a connection. Your timer works without \
-          it — the pomodoro just won't have a task attached to it.
-          """)
+        Text(PickerScreenModel.nothingMirroredReassurance)
           .font(Typography.body)
           .foregroundStyle(Color(.textMuted))
           .fixedSize(horizontal: false, vertical: true)
@@ -415,7 +415,7 @@ struct NothingMirroredYetView: View {
         // A retry button is honest here — unlike the alarm explainer's
         // deliberately absent one, this genuinely does something the app is not
         // already doing.
-        Button("Try again") { retryRequest = UUID() }
+        Button(PickerScreenModel.tryAgain) { retryRequest = UUID() }
           .buttonStyle(SecondaryButtonStyle(emphasis: .normal))
       }
       .frame(maxWidth: .infinity, alignment: .leading)

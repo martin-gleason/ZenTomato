@@ -444,8 +444,14 @@ struct TodoistSignInView: View {
 }
 
 /// The largest text size iOS offers. Nothing may be clipped; the screen scrolls.
+///
+/// **One amber row, not two.** This used to be drawn with a banner *and* a
+/// refusal on screen at once, which is a state the app cannot reach: starting a
+/// fresh attempt clears the banner, so the refusal replaces it. Two warning
+/// triangles on one screen is the state that makes amber stop meaning anything,
+/// and a preview showing it would teach the next reader that it is allowed.
 #Preview("Largest text") {
-  TodoistSignInPreviewHost(banner: .revoked, token: .fixture, failure: .tokenRejected)
+  TodoistSignInPreviewHost(banner: .revoked, token: .fixture)
     .preferredColorScheme(.light)
     .dynamicTypeSize(.accessibility5)
 }

@@ -40,7 +40,7 @@ struct TodoistSessionTrafficTests {
 
   @Test("noMutatingRequestsAcrossAWholeSession")
   func noMutatingRequestsAcrossAWholeSession() async throws {
-    let credentials = InMemoryTokenStore()
+    let credentials = FakeTokenStore()
     let stub = Self.anAfternoonOfAnswers()
 
     let client = TodoistClient(transport: stub, tokens: credentials, waiting: RecordingRetryWaiting())
@@ -104,7 +104,7 @@ struct TodoistSessionTrafficTests {
       .page(rows: []),
       .page(rows: [StubTodoistTransport.taskRow(id: "t1", content: "Draft the Q3 summary", projectID: "p1")])
     ])
-    let credentials = InMemoryTokenStore()
+    let credentials = FakeTokenStore()
     let client = TodoistClient(transport: stub, tokens: credentials, waiting: RecordingRetryWaiting())
     let cache = TodoistCacheStore(context: context, client: client)
     let plan = SessionPlanStore(context: context)

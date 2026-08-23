@@ -35,6 +35,17 @@ final class TodoistCacheStore {
   private let context: ModelContext
   private let client: TodoistClient
 
+  /// Whether a sweep is already under way. Nothing waits on this — a second
+  /// caller simply gets the copy the first one is about to write.
+  private var isRefreshing = false
+
+  /// How recent the copy has to be for an automatic refresh to skip.
+  ///
+  /// A minute. It is far shorter than anybody's working rhythm and far longer
+  /// than the burst of triggers that happens when an app is opened, which is the
+  /// only thing it exists to absorb.
+  private static let floorBetweenAutomaticRefreshes: TimeInterval = 60
+
   init(context: ModelContext, client: TodoistClient) {
     self.context = context
     self.client = client
@@ -44,15 +55,42 @@ final class TodoistCacheStore {
 
   /// Fetches everything and replaces the local copy.
   ///
-  /// Called when the app comes to the foreground and when somebody pulls the
-  /// picker down to refresh it. **Never on a timer, never as somebody types, and
+  /// THREE THINGS ASK FOR THIS, AND TWO OF THEM ARE NOT A PERSON
+  /// The app coming to the foreground, the Todoist sheet opening, and somebody
+  /// pulling the list down. **Never on a timer, never as somebody types, and
   /// never at launch before a screen has asked for it** — Todoist publishes no
-  /// request ceiling for these addresses, so the app stays far under whatever it
-  /// is by asking rarely and by design rather than by budgeting.
+  /// request ceiling for these four addresses at all, so the app has to stay
+  /// under whatever it is by design.
   ///
+  /// "By design" used to mean nothing but this comment. It now means two rules:
+  ///
+  ///   * **one at a time.** Opening the app straight into the Todoist sheet
+  ///     fires the foreground refresh and the sheet's refresh together, which
+  ///     was two full sweeps of three paginated lists for one gesture;
+  ///   * **the two automatic triggers have a floor.** A phone picked up forty
+  ///     times in a quarter of an hour was forty sweeps — on a five-thousand-task
+  ///     account, over a thousand requests, past the strictest number Todoist
+  ///     publishes anywhere. A pull is never held back: that one is somebody
+  ///     asking.
+  ///
+  /// - Parameters:
+  ///   - now: the moment to stamp the copy with. Defaults to the real clock.
+  ///   - force: whether to fetch regardless of how recently the copy was filled.
+  ///     `true` by default, because most callers are somebody asking; the
+  ///     foreground and sheet-opening refreshes pass `false`.
   /// - Throws: whatever stopped it — `TodoistError.offline`, `.tokenRejected`
   ///   and the rest. When it throws, nothing in the database has changed.
-  func refresh(now: Date = Date()) async throws {
+  func refresh(now: Date = Date(), force: Bool = true) async throws {
+    guard isRefreshing == false else { return }
+    if force == false,
+       let filledAt = lastSyncedAt,
+       now.timeIntervalSince(filledAt) < Self.floorBetweenAutomaticRefreshes {
+      return
+    }
+
+    isRefreshing = true
+    defer { isRefreshing = false }
+
     // Everything is fetched before anything is written. See the note above:
     // this ordering is the whole of the all-or-nothing guarantee.
     let projects = try await client.fetchProjects()

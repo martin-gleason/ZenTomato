@@ -30,7 +30,7 @@ struct SessionPlanView: View {
 
   var body: some View {
     content
-      .navigationTitle("Session plan")
+      .navigationTitle(PickerScreenModel.sessionPlanTitle)
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .confirmationAction) {
@@ -90,7 +90,7 @@ struct SessionPlanView: View {
             onRemove: { record(plan.remove(row.item)) })
         }
       } header: {
-        Text("In order")
+        Text(PickerScreenModel.inOrderHeader)
           .font(Typography.kicker)
           .textCase(.uppercase)
           .foregroundStyle(Color(.textMuted))
@@ -108,16 +108,12 @@ struct SessionPlanView: View {
   /// control anywhere in this navigation stack.
   private var emptyPlan: some View {
     VStack(alignment: .leading, spacing: Spacing.md) {
-      Text("Nothing planned")
+      Text(PickerScreenModel.emptyPlanHeading)
         .font(Typography.title)
         .foregroundStyle(Color(.textPrimary))
         .accessibilityAddTraits(.isHeader)
 
-      Text(
-        """
-        Choose a project or some tasks in the picker and they'll appear here, in \
-        the order you'll work them.
-        """)
+      Text(PickerScreenModel.emptyPlanDetail)
         .font(Typography.body)
         .foregroundStyle(Color(.textMuted))
         .fixedSize(horizontal: false, vertical: true)

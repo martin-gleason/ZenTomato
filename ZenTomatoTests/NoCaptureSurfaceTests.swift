@@ -77,6 +77,29 @@ struct NoCaptureSurfaceTests {
     #expect(PickerScreenModel.emptyProjectMessage == "No tasks in this project.")
   }
 
+  /// A project holding nothing but an emptied section draws that section's
+  /// heading **and** the empty-project sentence — and still offers nothing.
+  ///
+  /// A heading is text. Drawing it satisfies `SPEC.md`'s "all sections are
+  /// visible" without adding a control anywhere, which is why the two rules do
+  /// not collide.
+  @Test("anEmptySectionIsAHeadingAndNotAnInvitation")
+  func anEmptySectionIsAHeadingAndNotAnInvitation() {
+    let rows = Self.corpus.rows(inProject: "p4")
+
+    #expect(rows.count == 1)
+    for row in rows {
+      switch row {
+      case .section(let section):
+        for word in Self.creationWords {
+          #expect(section.name.range(of: word, options: .caseInsensitive) == nil)
+        }
+      case .project, .task:
+        Issue.record("A project holding only an emptied section can draw nothing but that heading.")
+      }
+    }
+  }
+
   // MARK: By words
 
   /// Nothing this feature can say invites making a task.
@@ -161,21 +184,50 @@ struct NoCaptureSurfaceTests {
   private static let creationWords = ["add ", "new task", "create a", "create your", "compose", "+ "]
 
   /// Every sentence these screens can put in front of somebody.
+  ///
+  /// **It used to be five of about fifteen**, and the ten it was missing were
+  /// the empty states — which is precisely where a create affordance gets added.
+  /// The fix was not to lengthen this array but to move the words: every
+  /// user-facing string in the picker stack now lives on `PickerScreenModel`
+  /// beside the ones that were already there, and the views name them. A
+  /// sentence written inline in a view would be a sentence outside the pattern
+  /// the whole file is built on, which is a visible thing in a diff rather than
+  /// an invisible one.
   private static let everySentenceThePickerCanSay = [
     PickerScreenModel.searchPrompt,
     PickerScreenModel.emptyProjectMessage,
     PickerScreenModel.noMatchHeading,
     PickerScreenModel.noMatchOrigin,
-    PickerScreenModel.noMatchDetail(for: "deploy the thing")
+    PickerScreenModel.noMatchDetail(for: "deploy the thing"),
+    PickerScreenModel.projectsHeader,
+    PickerScreenModel.resultsHeader,
+    PickerScreenModel.looseGroupName,
+    PickerScreenModel.nothingPlannedYet,
+    PickerScreenModel.sessionPlanTitle,
+    PickerScreenModel.inOrderHeader,
+    PickerScreenModel.emptyPlanHeading,
+    PickerScreenModel.emptyPlanDetail,
+    PickerScreenModel.nothingMirroredHeading,
+    PickerScreenModel.nothingMirroredExplanation,
+    PickerScreenModel.nothingMirroredReassurance,
+    PickerScreenModel.tryAgain,
+    PickerScreenModel.taskCountLine(0),
+    PickerScreenModel.taskCountLine(1),
+    PickerScreenModel.taskCountLine(3),
+    PickerScreenModel.planSummary(count: 1),
+    PickerScreenModel.planSummary(count: 3),
+    PickerScreenModel.nextInPlan("Draft the Q3 summary")
   ]
 
   private static let corpus = PickerScreenModel(
     projects: [
       PickerScreenModel.Project(id: "p1", name: "Deep work", openTaskCount: 1),
-      PickerScreenModel.Project(id: "p3", name: "Someday", openTaskCount: 0)
+      PickerScreenModel.Project(id: "p3", name: "Someday", openTaskCount: 0),
+      PickerScreenModel.Project(id: "p4", name: "Errands", openTaskCount: 0)
     ],
     sections: [
-      PickerScreenModel.Section(id: "s1", name: "This week", projectID: "p1")
+      PickerScreenModel.Section(id: "s1", name: "This week", projectID: "p1"),
+      PickerScreenModel.Section(id: "s2", name: "Waiting on somebody", projectID: "p4")
     ],
     tasks: [
       PickerScreenModel.TaskItem(

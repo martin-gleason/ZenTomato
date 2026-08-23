@@ -144,7 +144,7 @@ struct TodoistPaginationTests {
   private static func client(_ transport: StubTodoistTransport) -> TodoistClient {
     TodoistClient(
       transport: transport,
-      tokens: InMemoryTokenStore(),
+      tokens: FakeTokenStore(),
       waiting: RecordingRetryWaiting())
   }
 

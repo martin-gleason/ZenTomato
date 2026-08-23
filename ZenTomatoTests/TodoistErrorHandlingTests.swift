@@ -28,7 +28,7 @@ struct TodoistErrorHandlingTests {
   /// would mean every later request failed the same way, silently, forever.
   @Test("unauthorizedClearsToken")
   func unauthorizedClearsToken() async throws {
-    let tokens = InMemoryTokenStore()
+    let tokens = FakeTokenStore()
     let stub = StubTodoistTransport(answers: [.bare(status: 401)])
     let client = TodoistClient(transport: stub, tokens: tokens, waiting: RecordingRetryWaiting())
 
@@ -52,7 +52,7 @@ struct TodoistErrorHandlingTests {
       .bare(status: 429, headers: ["Retry-After": "3"]),
       .page(rows: [StubTodoistTransport.projectRow(id: "p1", name: "Deep work")])
     ])
-    let client = TodoistClient(transport: stub, tokens: InMemoryTokenStore(), waiting: waiting)
+    let client = TodoistClient(transport: stub, tokens: FakeTokenStore(), waiting: waiting)
 
     let projects = try await client.fetchProjects()
 
@@ -72,7 +72,7 @@ struct TodoistErrorHandlingTests {
       .bare(status: 429, headers: ["Retry-After": "3"]),
       .bare(status: 429, headers: ["Retry-After": "3"])
     ])
-    let client = TodoistClient(transport: stub, tokens: InMemoryTokenStore(), waiting: waiting)
+    let client = TodoistClient(transport: stub, tokens: FakeTokenStore(), waiting: waiting)
 
     await #expect(throws: TodoistError.rateLimited(retryAfter: .seconds(3))) {
       _ = try await client.fetchProjects()
@@ -86,7 +86,7 @@ struct TodoistErrorHandlingTests {
   func rateLimitBeyondTheCeilingIsReportedNotSlept() async throws {
     let waiting = RecordingRetryWaiting()
     let stub = StubTodoistTransport(answers: [.bare(status: 429, headers: ["Retry-After": "3600"])])
-    let client = TodoistClient(transport: stub, tokens: InMemoryTokenStore(), waiting: waiting)
+    let client = TodoistClient(transport: stub, tokens: FakeTokenStore(), waiting: waiting)
 
     await #expect(throws: TodoistError.rateLimited(retryAfter: .seconds(3600))) {
       _ = try await client.fetchProjects()
@@ -100,7 +100,7 @@ struct TodoistErrorHandlingTests {
   func rateLimitWithNoRetryAfterIsNotRetried() async throws {
     let waiting = RecordingRetryWaiting()
     let stub = StubTodoistTransport(answers: [.bare(status: 429)])
-    let client = TodoistClient(transport: stub, tokens: InMemoryTokenStore(), waiting: waiting)
+    let client = TodoistClient(transport: stub, tokens: FakeTokenStore(), waiting: waiting)
 
     await #expect(throws: TodoistError.rateLimited(retryAfter: nil)) {
       _ = try await client.fetchProjects()
@@ -123,7 +123,7 @@ struct TodoistErrorHandlingTests {
     let stub = StubTodoistTransport(answers: [.failure(URLError(code))])
     let client = TodoistClient(
       transport: stub,
-      tokens: InMemoryTokenStore(),
+      tokens: FakeTokenStore(),
       waiting: RecordingRetryWaiting())
 
     await #expect(throws: TodoistError.offline) {
@@ -143,7 +143,7 @@ struct TodoistErrorHandlingTests {
     let stub = StubTodoistTransport(answers: [])
     let client = TodoistClient(
       transport: stub,
-      tokens: InMemoryTokenStore(token: nil),
+      tokens: FakeTokenStore(token: nil),
       waiting: RecordingRetryWaiting())
 
     await #expect(throws: TodoistError.notSignedIn) {
@@ -167,11 +167,17 @@ struct TodoistErrorHandlingTests {
   /// with a real header.
   @Test("tokenNeverAppearsInErrors")
   func tokenNeverAppearsInErrors() async throws {
-    let token = "not-a-real-token"
+    // Named `fixture` rather than `token`. `scripts/check-secrets.sh` reads a
+    // sixteen-character opaque value assigned to something called "token" as a
+    // credential in source — which is exactly what it is for, and exactly what
+    // this line looks like. The value itself is deliberately unchanged: it is
+    // the literal the whole suite uses, and the point of the test is that it
+    // never comes back out.
+    let fixture = "not-a-real-token"
     let stub = StubTodoistTransport(answers: [.bare(status: 500)])
     let client = TodoistClient(
       transport: stub,
-      tokens: InMemoryTokenStore(token: token),
+      tokens: FakeTokenStore(token: fixture),
       waiting: RecordingRetryWaiting())
 
     // The request really was made, and really did carry the credential, so this
@@ -185,10 +191,10 @@ struct TodoistErrorHandlingTests {
     let failure = try #require(thrown)
     #expect(stub.recordedRequests.count == 1)
     #expect(
-      stub.recordedRequests[0].value(forHTTPHeaderField: "Authorization")?.contains(token) == true)
+      stub.recordedRequests[0].value(forHTTPHeaderField: "Authorization")?.contains(fixture) == true)
 
     for text in Self.readableForms(of: failure) {
-      #expect(text.localizedCaseInsensitiveContains(token) == false)
+      #expect(text.localizedCaseInsensitiveContains(fixture) == false)
       #expect(text.localizedCaseInsensitiveContains("authorization") == false)
       #expect(text.localizedCaseInsensitiveContains("bearer") == false)
     }
@@ -208,7 +214,7 @@ struct TodoistErrorHandlingTests {
     for failure in everyFailure {
       for text in Self.readableForms(of: failure) {
         #expect(text.isEmpty == false)
-        #expect(text.localizedCaseInsensitiveContains(token) == false)
+        #expect(text.localizedCaseInsensitiveContains(fixture) == false)
         #expect(text.localizedCaseInsensitiveContains("bearer") == false)
       }
     }

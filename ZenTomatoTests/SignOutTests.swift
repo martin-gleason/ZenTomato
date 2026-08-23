@@ -35,7 +35,7 @@ struct SignOutTests {
 
   @Test("signOutClearsTokenCacheAndPlanButNotHistory")
   func signOutClearsTokenCacheAndPlanButNotHistory() throws {
-    let credentials = InMemoryTokenStore()
+    let credentials = FakeTokenStore()
     let cache = TodoistCacheStore(
       context: context,
       client: TodoistClient(transport: StubTodoistTransport(answers: []), tokens: credentials))
@@ -98,7 +98,7 @@ struct SignOutTests {
   /// is only hidden after the first one has been read back.
   @Test("signingOutTwiceIsHarmless")
   func signingOutTwiceIsHarmless() throws {
-    let credentials = InMemoryTokenStore()
+    let credentials = FakeTokenStore()
     let cache = TodoistCacheStore(
       context: context,
       client: TodoistClient(transport: StubTodoistTransport(answers: []), tokens: credentials))
@@ -107,6 +107,46 @@ struct SignOutTests {
     #expect(SettingsView.signOutOfTodoist(tokens: credentials, cache: cache, plan: plan))
     #expect(SettingsView.signOutOfTodoist(tokens: credentials, cache: cache, plan: plan))
     #expect(try credentials.read() == nil)
+  }
+
+  /// A Keychain that refuses to delete must not stop the copy being removed.
+  ///
+  /// The three clears were once inside one `do`, so the first refusal skipped
+  /// the rest: the credential still on the phone, a full copy of somebody's
+  /// Todoist still on the phone, and the plan gone anyway — while the dialog had
+  /// promised all three would go. Of the three, the one with a security meaning
+  /// was the one left behind. Each is attempted on its own now, and the failure
+  /// is still reported.
+  @Test("aKeychainThatRefusesToDeleteStillEmptiesTheCopyAndThePlan")
+  func aKeychainThatRefusesToDeleteStillEmptiesTheCopyAndThePlan() throws {
+    let credentials = FakeTokenStore(refusesToClear: true)
+    let cache = TodoistCacheStore(
+      context: context,
+      client: TodoistClient(transport: StubTodoistTransport(answers: []), tokens: credentials))
+    let plan = SessionPlanStore(context: context)
+
+    context.insert(CachedProject(id: "p1", name: "Deep work", childOrder: 0, syncedAt: .now))
+    context.insert(CachedTask(
+      id: "t1",
+      content: "Draft the Q3 summary",
+      projectID: "p1",
+      sectionID: nil,
+      childOrder: 0,
+      syncedAt: .now))
+    try context.save()
+    plan.replacePlan(with: [
+      SessionPlanStore.Selection(todoistID: "t1", titleSnapshot: "Draft the Q3 summary", kind: .task)
+    ])
+
+    let removedEverything = SettingsView.signOutOfTodoist(tokens: credentials, cache: cache, plan: plan)
+
+    // It says so, rather than claiming a disconnection that did not happen.
+    #expect(removedEverything == false)
+
+    // But the copy and the plan really are gone.
+    #expect(try context.fetch(FetchDescriptor<CachedProject>()).isEmpty)
+    #expect(try context.fetch(FetchDescriptor<CachedTask>()).isEmpty)
+    #expect(plan.isEmpty)
   }
 
   // MARK: Private

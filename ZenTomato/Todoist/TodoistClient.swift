@@ -93,6 +93,21 @@ struct TodoistClient: Sendable {
   ///   more — which means it was finished or deleted somewhere else, and the two
   ///   cannot be told apart. `.tokenRejected`, `.offline` and the rest as usual.
   func closeTask(id: String) async throws {
+    // THE ONE PIECE OF A REQUEST THAT IS ASSEMBLED AT RUNTIME, AND THE ONE
+    // CHECK THAT KEEPS IT SEALED.
+    //
+    // Every address this app can name is a constant except this identifier,
+    // which arrives from a Todoist answer. Building a web address does not
+    // remove dot segments — `a/../..` stays exactly that — so an odd identifier
+    // could point the request at a different address from the one written here.
+    // Today it still could not reach a write, because the identifier is
+    // substituted *before* a literal `/close` and no Todoist write address ends
+    // that way. That is an accident of the shape rather than a guarantee, so the
+    // identifier is checked instead: Todoist documents these as opaque strings
+    // such as `6XGgmFVcrG5RRjVr`, and anything else is refused before a request
+    // exists.
+    guard TodoistAPI.isOpaqueIdentifier(id) else { throw TodoistError.malformedResponse }
+
     // The answer's body is documented as an empty object. It is deliberately
     // not decoded: there is nothing in it, and a decoder here would be a way for
     // a future field to start meaning something.
@@ -151,18 +166,29 @@ struct TodoistClient: Sendable {
   /// Sends one request and turns Todoist's answer into either a body or a
   /// named failure.
   ///
-  /// THE RETRY, AND WHY THERE IS EXACTLY ONE
+  /// THE RETRY, AND WHY THERE IS EXACTLY ONE — AND WHY READS ONLY
   /// When Todoist answers "slow down" it usually says for how long. If that is a
   /// sane wait — a minute or less — the request is made once more after waiting,
   /// and once more only. An automatic retry that kept going would be a hang
   /// rather than a courtesy: this runs inside a refresh somebody is watching,
   /// and it would sit there with a spinner instead of telling them what
   /// happened.
+  ///
+  /// **The retry is bound to the method, and it is the read method.** Re-sending
+  /// a read costs nothing: the answer is the same list. Re-sending the close
+  /// would be a second write to somebody's real account that nobody asked for
+  /// and nobody can see — and Todoist's own documentation for that address says
+  /// a recurring task is *"scheduled to its next occurrence"*, so closing twice
+  /// silently skips a day. One tap must mean one close, so a rate-limited close
+  /// falls straight through to the failure below and the retry is a person
+  /// tapping the button again. `oneTapOnCompleteIsOneCloseEvenWhenRateLimited`
+  /// fails the moment this condition loses its first clause.
   private func perform(_ endpoint: TodoistAPI.Endpoint, cursor: String?) async throws -> Data {
     let request = try makeRequest(endpoint, cursor: cursor)
     let (data, response) = try await send(request)
 
-    if response.statusCode == 429,
+    if endpoint.method == .get,
+       response.statusCode == 429,
        let delay = Self.retryDelay(from: response),
        delay <= .seconds(60) {
       try await waiting.wait(for: delay)

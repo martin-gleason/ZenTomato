@@ -1,5 +1,18 @@
 import SwiftUI
 
+// swiftlint:disable file_length
+//
+// THE ONLY LINT RULE THIS FILE TURNS OFF, AND WHY.
+// `file_length` counts documentation and previews, and this file is mostly
+// both. It is the one control in the app that can change somebody else's data,
+// so the argument for every state it can be in is written beside the state —
+// and the eleven previews at the bottom exist because those states are the ones
+// no test can look at: the failure wordings, the switched-off treatments, and
+// the hard case of six reflection fields at the largest text size. Splitting the
+// previews away from the view would put the states in one file and the reasons
+// they exist in another. The same exemption, for the same reason, is already
+// taken by `TimerScreen.swift`, `SettingsView.swift` and `TimerView.swift`.
+
 /// The one control in this app that can change anything in Todoist.
 ///
 /// It appears on the end-of-block sheets, above the reflection fields, and it
@@ -135,7 +148,12 @@ struct TaskCompletionSection: View {
     hasToken: Bool,
     todoistIsReachable: Bool,
     taskIsInTodoist: SessionPlanStore.Presence) -> Control {
-    guard hasToken, todoistIsReachable else { return .unavailable(cannotReach) }
+    // The credential is checked FIRST, and separately, because the two states
+    // have different causes and different ways out. Folded together they read as
+    // "can't reach Todoist", which blames the network for a credential that was
+    // revoked and sends somebody to look for a signal they already have.
+    guard hasToken else { return .unavailable(notConnected) }
+    guard todoistIsReachable else { return .unavailable(cannotReach) }
     guard taskIsInTodoist != .absent else { return .unavailable(notInTodoist) }
     return .ready
   }
@@ -151,7 +169,15 @@ struct TaskCompletionSection: View {
       // absent could have been completed or removed, and claiming one would be
       // a fabricated record.
       .unavailable(alreadyGone)
-    case .offline, .tokenRejected, .failed:
+    case .tokenRejected:
+      // NOT back to tappable. The credential has just been taken out of the
+      // Keychain, so a second tap cannot succeed — it would fail again with a
+      // message naming no cause, which is worse than the one already on screen.
+      // The amber row above says what happened and where to fix it; the button
+      // is switched off with the same sentence rather than left looking live.
+      .unavailable(notConnected)
+
+    case .offline, .rateLimited, .failed:
       // Back to tappable. **Tapping again is the retry, and it is the only
       // one.** No automatic retry, no backoff on this control, and above all no
       // queue: a completion the app performs later, unwatched, is a write
@@ -176,6 +202,10 @@ struct TaskCompletionSection: View {
       Todoist no longer accepts your token, so the task is still open. Reconnect \
       in Settings, then try again.
       """
+    case .rateLimited(let retryAfter):
+      // The wait is named when Todoist named one, because "in a moment" against
+      // a stated number is the sentence that invites the immediate second tap.
+      Self.slowDown(retryAfter: retryAfter)
     case .failed:
       "Todoist couldn't tick that off just now, so the task is still open. Try again in a moment."
     }
@@ -190,6 +220,13 @@ struct TaskCompletionSection: View {
 
   private static let notInTodoist = "This task is no longer in Todoist, so there's nothing to tick off."
 
+  /// Shown when there is no credential — including the moment after Todoist
+  /// refused one, which is the state this sentence exists for. **Not amber**
+  /// where it stands under the button; the amber row above already said what
+  /// happened, and this names the way out.
+  private static let notConnected =
+    "ZenTomato isn't connected to Todoist, so this can't be ticked off. Reconnect in Settings."
+
   private static let alreadyGone =
     "That task isn't in Todoist any more — it was already completed or removed. Nothing to do here."
 
@@ -198,6 +235,16 @@ struct TaskCompletionSection: View {
   /// allowlist and is not being added. Better said before the tap than
   /// explained after it.
   private static let undoNote = "This can only be undone in Todoist."
+
+  /// "Todoist asked us to slow down" — the *us* is correct and is the whole
+  /// point. This is the app's own traffic, not something the reader did. No
+  /// "you", no "too many requests", no status code.
+  private static func slowDown(retryAfter: Duration?) -> String {
+    guard let seconds = retryAfter.map({ Int($0.components.seconds) }), seconds > 0 else {
+      return "Todoist asked us to slow down, so the task is still open. Try again shortly."
+    }
+    return "Todoist asked us to slow down, so the task is still open. Try again in \(seconds) seconds."
+  }
 
   private var hasCompleted: Bool {
     if case .completed = control { return true }
@@ -320,10 +367,30 @@ struct TaskCompletionSection: View {
     .preferredColorScheme(.light)
 }
 
+/// A revoked token: the amber row says what happened, and the button is
+/// switched off rather than left live, because a second tap cannot succeed.
 #Preview("Failed — token revoked") {
   TaskCompletionPreviewHost(
-    control: .ready,
+    control: TaskCompletionSection.control(after: .tokenRejected, at: .previewAfternoon),
     failure: TaskCompletionSection.failureMessage(for: .tokenRejected))
+    .preferredColorScheme(.light)
+}
+
+/// Rate-limited: tappable again, with the wait Todoist named.
+#Preview("Failed — asked to slow down") {
+  TaskCompletionPreviewHost(
+    control: TaskCompletionSection.control(after: .rateLimited(retryAfter: .seconds(30)), at: .previewAfternoon),
+    failure: TaskCompletionSection.failureMessage(for: .rateLimited(retryAfter: .seconds(30))))
+    .preferredColorScheme(.light)
+}
+
+/// No credential at all, before any tap.
+#Preview("Disabled, not connected") {
+  TaskCompletionPreviewHost(
+    control: TaskCompletionSection.restingControl(
+      hasToken: false,
+      todoistIsReachable: true,
+      taskIsInTodoist: .present))
     .preferredColorScheme(.light)
 }
 

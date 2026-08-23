@@ -60,6 +60,15 @@ struct SettingsView: View {
   /// stores, and "which of them did it miss?" is exactly the question a test
   /// should be able to ask.
   ///
+  /// **EACH STORE IS ATTEMPTED ON ITS OWN.** They were once in a single `do`,
+  /// which meant a Keychain that refused to delete stopped the mirror being
+  /// emptied — the credential still on the phone, a full copy of somebody's
+  /// Todoist still on the phone, the plan gone anyway, and a row reading
+  /// "Couldn't sign out". Of the three things this removes, the one with a
+  /// security meaning was the one left behind, and the dialog had already
+  /// promised all three. Three independent attempts cannot do that: one refusal
+  /// is one thing left, and it is reported.
+  ///
   /// - Returns: `true` when all three were emptied.
   @MainActor
   @discardableResult
@@ -69,12 +78,18 @@ struct SettingsView: View {
     plan: SessionPlanStore?) -> Bool {
     var everything = true
     do {
-      try tokens.clear()
       try cache?.clear()
     } catch {
       everything = false
     }
     if plan?.clear() == false { everything = false }
+    // The credential last, so a refusal here is reported against a phone where
+    // everything else has already gone.
+    do {
+      try tokens.clear()
+    } catch {
+      everything = false
+    }
     return everything
   }
 
@@ -315,9 +330,7 @@ private struct SettingsForm: View {
     if let tokens {
       Section {
         NavigationLink {
-          TodoistSignInView(model: SignInScreenModel(tokens: tokens, cache: cache)) {
-            hasToken = true
-          }
+          TodoistSignInRoute(tokens: tokens, cache: cache) { hasToken = true }
         } label: {
           LabeledContent("Todoist") {
             Text(trailingValue)
@@ -405,6 +418,40 @@ private struct SettingsForm: View {
   private static func spokenPomodoros(_ count: Int) -> String {
     "\(count) \(count == 1 ? "pomodoro" : "pomodoros")"
   }
+}
+
+// MARK: - TodoistSignInRoute
+
+/// The token screen, pushed from the Settings row, with its state owned here.
+///
+/// **WHY THIS TINY VIEW EXISTS.** `TodoistSignInView` holds its state in a
+/// `@Bindable` rather than a `@State`, so whoever pushes it owns the model. A
+/// destination written inline in a `NavigationLink` is rebuilt every time its
+/// parent's body runs — and this parent reads the running timer, so a break
+/// ending flips `isRunning`, the body re-runs, a brand-new empty model replaces
+/// the old one, and a half-pasted credential vanishes with no explanation.
+/// Holding the model in `@State` here builds it once and keeps it for as long as
+/// the screen is on the stack. `PlanBuilderView` already guards the other
+/// entrance to the same screen for exactly this reason.
+private struct TodoistSignInRoute: View {
+  // MARK: Lifecycle
+
+  init(tokens: any TokenStore, cache: TodoistCacheStore?, onConnected: @escaping () -> Void) {
+    self.onConnected = onConnected
+    _model = State(initialValue: SignInScreenModel(tokens: tokens, cache: cache))
+  }
+
+  // MARK: Internal
+
+  var body: some View {
+    TodoistSignInView(model: model, onConnected: onConnected)
+  }
+
+  // MARK: Private
+
+  private let onConnected: () -> Void
+
+  @State private var model: SignInScreenModel
 }
 
 // MARK: - Previews

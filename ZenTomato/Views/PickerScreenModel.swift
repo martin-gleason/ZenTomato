@@ -59,6 +59,33 @@ struct PickerScreenModel: Sendable {
     let sectionID: String?
   }
 
+  /// One heading inside a project, and the tasks under it.
+  ///
+  /// A layout value and nothing more: it is built when the screen is drawn,
+  /// thrown away when it is not, and never stored. It defines no hierarchy the
+  /// plan could inherit.
+  ///
+  /// **A group may hold no tasks**, and that is the point of it being a value
+  /// rather than a filter. `SPEC.md` locks that *all* projects, sections and
+  /// tasks are visible in the picker; a section that has just been emptied is
+  /// still a section, and hiding it would be this app making a small editorial
+  /// judgement about somebody else's Todoist — which is exactly the class of
+  /// decision a mirror does not get to make.
+  struct TaskGroup: Identifiable, Hashable, Sendable {
+    /// The Todoist section, or `nil` for the tasks that sit loose in the
+    /// project.
+    let section: Section?
+    let tasks: [TaskItem]
+
+    /// The heading as drawn.
+    var name: String { section?.name ?? PickerScreenModel.looseGroupName }
+
+    /// The identity of the one heading that is not a Todoist section could
+    /// never collide with a real one: Todoist's identifiers are opaque strings
+    /// with no spaces in them.
+    var id: String { section?.id ?? PickerScreenModel.looseGroupName }
+  }
+
   /// Every kind of row the picker can draw. **There are three, and a fourth
   /// would be a change to this list.**
   ///
@@ -88,6 +115,9 @@ struct PickerScreenModel: Sendable {
   /// already exists and either contains the answer or does not.
   static let searchPrompt = "Search your Todoist tasks"
 
+  /// The heading over the tasks that sit loose in a project.
+  static let looseGroupName = "Not in a section"
+
   /// A project with nothing in it.
   ///
   /// This sentence and nothing else. No button, no placeholder row, no greyed
@@ -109,6 +139,61 @@ struct PickerScreenModel: Sendable {
   /// It is a statement of where tasks come from, in the quiet ink, with no tap
   /// target of any kind. **The third line is the whole design.**
   static let noMatchOrigin = "Tasks are created in Todoist, not here."
+
+  /// The picker's own section headings.
+  static let projectsHeader = "Projects"
+  static let resultsHeader = "Results"
+
+  /// The line along the bottom, with nothing in the plan. **Inert**, which is
+  /// what removes the need for an "Add" control anywhere on this sheet.
+  static let nothingPlannedYet = "Nothing planned yet"
+
+  /// The session plan screen's title, its one heading, and its empty state.
+  static let sessionPlanTitle = "Session plan"
+  static let inOrderHeader = "In order"
+  static let emptyPlanHeading = "Nothing planned"
+  static let emptyPlanDetail = """
+    Choose a project or some tasks in the picker and they'll appear here, in \
+    the order you'll work them.
+    """
+
+  /// Todoist has never been reached, so there is nothing to pick from.
+  ///
+  /// **The third sentence is load-bearing**: it stops the reader concluding the
+  /// app is broken and closing it. F3 is an integration; the timer is the
+  /// product.
+  static let nothingMirroredHeading = "Nothing to show yet"
+  static let nothingMirroredExplanation = """
+    ZenTomato hasn't managed to reach Todoist since you connected, so it \
+    doesn't have a copy of your projects yet.
+    """
+  static let nothingMirroredReassurance = """
+    Try again when you're back on a connection. Your timer works without it — \
+    the pomodoro just won't have a task attached to it.
+    """
+  static let tryAgain = "Try again"
+
+  /// "3 tasks", "1 task", "No tasks".
+  ///
+  /// A count of what was mirrored, never a number this app maintains.
+  static func taskCountLine(_ count: Int) -> String {
+    switch count {
+    case 0: "No tasks"
+    case 1: "1 task"
+    default: "\(count) tasks"
+    }
+  }
+
+  /// "Plan · 3 items". The singular matters: a plan of one item is the
+  /// commonest plan there is.
+  static func planSummary(count: Int) -> String {
+    "Plan · \(count) \(count == 1 ? "item" : "items")"
+  }
+
+  /// "Next · Draft the Q3 summary".
+  static func nextInPlan(_ title: String) -> String {
+    "Next · \(title)"
+  }
 
   /// Names what was searched, so the reader can see the app understood them.
   ///
@@ -156,27 +241,49 @@ struct PickerScreenModel: Sendable {
   /// the order the API returned it, with no indentation and no disclosure
   /// triangle. Drawing a hierarchy the plan is forbidden to hold is how a plan
   /// starts becoming a task model one reasonable step at a time.
-  func rows(inProject projectID: String) -> [Row] {
+  /// **EVERY** section of the project, each with whatever is in it, then the
+  /// tasks that sit loose in the project.
+  ///
+  /// An empty section is drawn as a heading with nothing under it. That is a
+  /// heading and no control of any kind, so it stays inside the no-capture rule,
+  /// and it is what `SPEC.md`'s *"All projects, sections, and tasks are visible
+  /// in the picker"* actually says.
+  ///
+  /// Nothing is sorted here. The sections and the tasks arrive in Todoist's own
+  /// order, which the mirror copied and this keeps — inventing an order is
+  /// exactly what mirroring exists to avoid.
+  func groups(inProject projectID: String) -> [TaskGroup] {
     let mine = tasks.filter { $0.projectID == projectID }
-    var rows: [Row] = []
+    let mySections = sections.filter { $0.projectID == projectID }
 
-    for section in sections where section.projectID == projectID {
-      let inSection = mine.filter { $0.sectionID == section.id }
-      guard inSection.isEmpty == false else { continue }
-      rows.append(.section(section))
-      rows.append(contentsOf: inSection.map(Row.task))
+    var groups = mySections.map { section in
+      TaskGroup(section: section, tasks: mine.filter { $0.sectionID == section.id })
     }
 
-    let sectionIDs = Set(sections.filter { $0.projectID == projectID }.map(\.id))
+    let sectionIDs = Set(mySections.map(\.id))
     let loose = mine.filter { task in
       guard let sectionID = task.sectionID else { return true }
       // A task whose section was not mirrored is drawn loose rather than
       // dropped. Losing a task from a picker is worse than filing it oddly.
       return sectionIDs.contains(sectionID) == false
     }
-    rows.append(contentsOf: loose.map(Row.task))
+    if loose.isEmpty == false {
+      groups.append(TaskGroup(section: nil, tasks: loose))
+    }
+    return groups
+  }
 
-    return rows
+  /// The same thing, flattened into the closed three-case row list.
+  ///
+  /// **Derived from `groups(inProject:)` rather than worked out again**, so the
+  /// screen draws the structure the tests examine. The two were once written
+  /// twice, which meant a fix applied to one left the other stale and the suite
+  /// went on passing against an implementation nothing drew.
+  func rows(inProject projectID: String) -> [Row] {
+    groups(inProject: projectID).flatMap { group -> [Row] in
+      let heading: [Row] = group.section.map { [.section($0)] } ?? []
+      return heading + group.tasks.map(Row.task)
+    }
   }
 
   // MARK: Search

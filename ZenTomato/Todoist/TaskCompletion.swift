@@ -56,6 +56,17 @@ final class TaskCompletion {
     /// is still open.
     case tokenRejected
 
+    /// Todoist asked us to slow down, and said for how long if it named a wait.
+    /// The task is still open.
+    ///
+    /// **It is a case of its own rather than a kind of failure**, because it is
+    /// the one refusal that comes with an instruction: wait this long. Folded in
+    /// with the rest it would be shown as "try again in a moment", which invites
+    /// the immediate second tap that extends the lockout. Nothing here waits and
+    /// nothing here retries — the number is passed to the screen so a person can
+    /// decide.
+    case rateLimited(retryAfter: Duration?)
+
     /// Something else went wrong at Todoist's end. The task is still open.
     case failed
   }
@@ -95,6 +106,15 @@ final class TaskCompletion {
       return .offline
     } catch TodoistError.tokenRejected {
       return .tokenRejected
+    } catch TodoistError.notSignedIn {
+      // There is no credential to send, which from the reader's point of view is
+      // the same situation as one Todoist has just refused: the task is still
+      // open and the way out is to reconnect. Reported as the same outcome so
+      // the sheet says the one true sentence rather than a generic one that
+      // names no cause — a second tap on this control reaches exactly here.
+      return .tokenRejected
+    } catch TodoistError.rateLimited(let retryAfter) {
+      return .rateLimited(retryAfter: retryAfter)
     } catch {
       return .failed
     }
@@ -112,6 +132,15 @@ final class TaskCompletion {
   /// anyway, because Todoist's read addresses return open tasks only. **It is
   /// not a "completed" flag** — there is no such column anywhere, and a task
   /// that has gone is expressed by absence, exactly as it is in Todoist.
+  ///
+  /// THE TWO HALVES ARE NOT EQUALLY IMPORTANT, AND THE SECOND ATTEMPT SAYS SO.
+  /// The record is the artefact this whole feature exists to produce. Dropping
+  /// the cached row is housekeeping the next refresh would do anyway. They were
+  /// once saved together, which meant a refusal on the housekeeping half rolled
+  /// the record back with it — a completion confirmed on screen with nothing
+  /// behind it, which is the mirror image of the invented row this file is
+  /// otherwise so careful about. So a failure is followed by one more attempt at
+  /// the record **alone**, with the optional half left out.
   private func recordLocally(taskID: String, titleSnapshot: String, at instant: Date) {
     context.insert(CompletedTaskRecord(
       taskID: taskID,
@@ -120,6 +149,18 @@ final class TaskCompletion {
 
     do {
       try context.delete(model: CachedTask.self, where: #Predicate { $0.id == taskID })
+      try context.save()
+      return
+    } catch {
+      context.rollback()
+    }
+
+    // Second attempt, with the record and nothing else.
+    context.insert(CompletedTaskRecord(
+      taskID: taskID,
+      titleSnapshot: titleSnapshot,
+      completedAt: instant))
+    do {
       try context.save()
     } catch {
       // The task IS closed in Todoist — that already happened, and saying

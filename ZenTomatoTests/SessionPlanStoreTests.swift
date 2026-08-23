@@ -105,7 +105,7 @@ struct SessionPlanStoreTests {
     let before = plan.currentIndex
 
     let stub = StubTodoistTransport(answers: [.bare(status: 200)])
-    let credentials = InMemoryTokenStore()
+    let credentials = FakeTokenStore()
     let completion = TaskCompletion(
       context: context,
       client: TodoistClient(transport: stub, tokens: credentials, waiting: RecordingRetryWaiting()))

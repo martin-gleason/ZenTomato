@@ -108,7 +108,15 @@ final class SignInScreenModel {
   var isRevealed = false
 
   /// Why this screen appeared, or `nil` when nobody has connected yet.
-  let banner: Banner?
+  ///
+  /// **Cleared the moment a fresh attempt begins**, and that is not tidiness.
+  /// This screen's rule — written on the screen itself — is that amber marks
+  /// exactly one thing. The banner is amber and so is a refusal, so a revoked
+  /// token followed by one fumbled paste would otherwise put two warning
+  /// triangles on one screen, which is the state that makes the signal stop
+  /// meaning anything. The refusal replaces the banner rather than stacking
+  /// under it: it is the more recent, more specific thing.
+  private(set) var banner: Banner?
 
   /// Whether a check is in flight. The button says "Connecting…" and is
   /// switched off while it is.
@@ -148,6 +156,16 @@ final class SignInScreenModel {
   /// it was refused. The screen's copy says "Nothing has been saved" and this is
   /// what makes that true.
   ///
+  /// **WHAT WAS THERE BEFORE IS READ FIRST, AND PUT BACK.** This screen is
+  /// reachable from Settings while a perfectly good token is already stored. A
+  /// stale paste — or simply tapping Connect on a train — would otherwise
+  /// overwrite the working credential, fail, and clear it: signed out, with no
+  /// dialog, by an action whose own message says "Nothing has been saved". That
+  /// sentence is true about the new token and was false about the old one, and
+  /// the old one is the one the person was relying on. So the previous value is
+  /// taken before the overwrite and restored on any refusal; only a store that
+  /// held nothing is left holding nothing.
+  ///
   /// **The check is an ordinary read.** Filling the local mirror is the first
   /// thing a connected app does anyway, so a token is proved by doing the work
   /// rather than by a request that exists only to ask "am I allowed?".
@@ -160,7 +178,14 @@ final class SignInScreenModel {
 
     isConnecting = true
     errorMessage = nil
+    // One amber thing at a time: the attempt about to be made owns the row.
+    banner = nil
     defer { isConnecting = false }
+
+    // Read before it is overwritten. A Keychain that will not answer is treated
+    // as one holding nothing, which is the same conclusion every other reader of
+    // it in this app draws.
+    let previous = try? tokens.read()
 
     do {
       try tokens.write(credential)
@@ -171,7 +196,7 @@ final class SignInScreenModel {
       isRevealed = false
       return true
     } catch {
-      forgetTheRefusedToken(in: tokens)
+      restore(previous, in: tokens)
       errorMessage = Self.message(for: error)
       return false
     }
@@ -211,16 +236,30 @@ final class SignInScreenModel {
   private static let anythingElse =
     "Todoist couldn't answer just now. Nothing has been saved. Try again in a moment."
 
-  /// Takes a refused credential back out of the Keychain.
+  /// Puts the store back the way it was before a refused attempt.
   ///
-  /// A failure to remove it is not passed on to the reader, and that is a
-  /// decision rather than an oversight: there is nothing they could do about it,
-  /// the message on screen is already the true and useful one, and the next
-  /// successful connection replaces the item outright. Saying so here is
-  /// cheaper than a sentence on screen that nobody can act on.
-  private func forgetTheRefusedToken(in tokens: any TokenStore) {
+  /// If something was there, it goes back — the attempt that just failed said
+  /// nothing about it, and in the offline case it definitely said nothing about
+  /// it. If nothing was there, the refused credential is removed, which is what
+  /// makes the screen's "Nothing has been saved" true.
+  ///
+  /// **This cannot put a revoked credential back.** The only way somebody
+  /// reaches this screen because their stored token stopped working is a refusal
+  /// that has already taken it out of the Keychain — the client does that the
+  /// moment Todoist says no. So a stored value still being here means nothing
+  /// has refused it, and restoring it is returning to the last state known to
+  /// work rather than reinstating a dead one.
+  ///
+  /// A Keychain that refuses either operation is not reported: there is nothing
+  /// the reader could do about it, and the message already on screen is the true
+  /// and useful one. Saying so here is cheaper than a sentence nobody can act on.
+  private func restore(_ previous: String?, in tokens: any TokenStore) {
     do {
-      try tokens.clear()
+      if let previous, previous.isEmpty == false {
+        try tokens.write(previous)
+      } else {
+        try tokens.clear()
+      }
     } catch {
       return
     }

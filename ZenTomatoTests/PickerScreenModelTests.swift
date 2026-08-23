@@ -56,6 +56,52 @@ struct PickerScreenModelTests {
     #expect(Self.corpus.rows(inProject: "p3").isEmpty)
   }
 
+  /// **An emptied section is still a section, and it is still drawn.**
+  ///
+  /// `SPEC.md` is unconditional: *"All projects, sections, and tasks are visible
+  /// in the picker."* Sections with nothing in them used to be dropped, which is
+  /// this app making a small editorial judgement about somebody else's Todoist —
+  /// the one class of decision a mirror does not get to make. A person who
+  /// organises by section and goes looking for the one they just cleared would
+  /// find the app quietly disagreeing with Todoist.
+  ///
+  /// It is drawn as a heading with nothing under it. A heading is text, so this
+  /// adds no control anywhere and the no-capture rule is untouched.
+  @Test("anEmptySectionIsStillDrawn")
+  func anEmptySectionIsStillDrawn() {
+    let groups = Self.corpus.groups(inProject: "p4")
+
+    #expect(groups.count == 1)
+    #expect(groups.first?.name == "Waiting on somebody")
+    #expect(groups.first?.tasks.isEmpty == true)
+
+    // And it reaches the row list too, since that is what the screen's own
+    // vocabulary check reads.
+    let rows = Self.corpus.rows(inProject: "p4")
+    #expect(rows.count == 1)
+    guard case .section(let section) = rows[0] else {
+      Issue.record("An empty section should still produce its heading row.")
+      return
+    }
+    #expect(section.name == "Waiting on somebody")
+  }
+
+  /// The rows the screen draws and the rows the tests read are the same rows.
+  ///
+  /// They were once two implementations of the same rule — one in the model, one
+  /// in the view — so a fix applied to either left the other stale while this
+  /// suite went on passing against code nothing drew.
+  @Test("theRowsAreTheGroupsFlattened")
+  func theRowsAreTheGroupsFlattened() {
+    for projectID in ["p1", "p2", "p3", "p4"] {
+      let fromGroups = Self.corpus.groups(inProject: projectID).flatMap { group -> [String] in
+        let heading = group.section.map { ["section-\($0.id)"] } ?? []
+        return heading + group.tasks.map { "task-\($0.id)" }
+      }
+      #expect(Self.corpus.rows(inProject: projectID).map(\.id) == fromGroups)
+    }
+  }
+
   // MARK: Searching
 
   /// Matching is case- and accent-insensitive, so somebody typing quickly still
@@ -97,6 +143,44 @@ struct PickerScreenModelTests {
     #expect(rows.isEmpty)
   }
 
+  // MARK: What VoiceOver hears
+
+  /// A row's spoken label carries its second line.
+  ///
+  /// On a search result that second line is the project name, and it is the only
+  /// thing telling two rows with the same title apart — which is why it was put
+  /// there. The label that draws it is hidden from VoiceOver on a task row, so
+  /// without this the project name reached no reader at all: three identical
+  /// "Review the draft, not in your plan" and a plan you cannot trust.
+  ///
+  /// `@MainActor` on this one test: `PickerRowView` is a SwiftUI view, and every
+  /// member of one — including a static function that touches nothing — belongs
+  /// to the main thread. The rest of this suite is deliberately off it, because
+  /// the model it exercises is a plain value with no screen behind it.
+  @Test("aRowSpeaksItsSecondLine")
+  @MainActor
+  func aRowSpeaksItsSecondLine() {
+    #expect(
+      PickerRowView.spokenToggleLabel(title: "Review the draft", subtitle: "Deep work", ordinal: nil)
+        == "Review the draft, Deep work, not in your plan")
+
+    #expect(
+      PickerRowView.spokenToggleLabel(title: "Review the draft", subtitle: "Café admin", ordinal: 2)
+        == "Review the draft, Café admin, number 2 in your plan")
+
+    // A row inside a project has no second line, and gains no invented one.
+    #expect(
+      PickerRowView.spokenToggleLabel(title: "Reply to Anna", subtitle: nil, ordinal: nil)
+        == "Reply to Anna, not in your plan")
+
+    // A project row speaks its count.
+    #expect(
+      PickerRowView.spokenToggleLabel(
+        title: "Deep work",
+        subtitle: PickerScreenModel.taskCountLine(3),
+        ordinal: 1) == "Deep work, 3 tasks, number 1 in your plan")
+  }
+
   // MARK: No request, ever
 
   /// Every search in this suite, run one after another, with a stand-in for the
@@ -114,16 +198,21 @@ struct PickerScreenModelTests {
 
   // MARK: Private
 
-  /// A small account: two projects with things in them, one empty, one section,
-  /// one loose task, and one accented title.
+  /// A small account: two projects with things in them, one empty, one holding
+  /// nothing but an emptied section, two sections, one loose task, and one
+  /// accented title.
   private static let corpus = PickerScreenModel(
     projects: [
       PickerScreenModel.Project(id: "p1", name: "Deep work", openTaskCount: 3),
       PickerScreenModel.Project(id: "p2", name: "Café admin", openTaskCount: 1),
-      PickerScreenModel.Project(id: "p3", name: "Someday", openTaskCount: 0)
+      PickerScreenModel.Project(id: "p3", name: "Someday", openTaskCount: 0),
+      PickerScreenModel.Project(id: "p4", name: "Errands", openTaskCount: 0)
     ],
     sections: [
-      PickerScreenModel.Section(id: "s1", name: "This week", projectID: "p1")
+      PickerScreenModel.Section(id: "s1", name: "This week", projectID: "p1"),
+      // A section somebody has just cleared. It has no tasks and it is still one
+      // of their sections.
+      PickerScreenModel.Section(id: "s2", name: "Waiting on somebody", projectID: "p4")
     ],
     tasks: [
       PickerScreenModel.TaskItem(

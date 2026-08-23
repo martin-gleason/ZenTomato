@@ -36,7 +36,7 @@ struct OfflinePickerTests {
 
   @Test("offlineServesCacheAndDisablesComplete")
   func offlineServesCacheAndDisablesComplete() async throws {
-    let credentials = InMemoryTokenStore()
+    let credentials = FakeTokenStore()
     let stub = StubTodoistTransport(
       answers: [.failure(URLError(.notConnectedToInternet))],
       repeatingLastAnswer: true)
@@ -115,7 +115,7 @@ struct OfflinePickerTests {
       Issue.record("A rate limit with a copy to serve is a stale list.")
       return
     }
-    #expect(withSeconds == "Todoist asked us to slow down. Trying again in 30 seconds — nothing is lost.")
+    #expect(withSeconds == "Todoist asked us to slow down. Pull down to try again in 30 seconds — nothing is lost.")
 
     let uncounted = PlanBuilderView.freshness(
       after: TodoistError.rateLimited(retryAfter: nil),
@@ -124,7 +124,7 @@ struct OfflinePickerTests {
       Issue.record("A rate limit with a copy to serve is a stale list.")
       return
     }
-    #expect(withoutSeconds == "Todoist asked us to slow down. Trying again shortly — nothing is lost.")
+    #expect(withoutSeconds == "Todoist asked us to slow down. Pull down to try again shortly — nothing is lost.")
 
     // No status code, no jargon, and no "you".
     for note in [withSeconds, withoutSeconds] {

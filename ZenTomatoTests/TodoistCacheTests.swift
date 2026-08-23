@@ -132,7 +132,7 @@ struct TodoistCacheTests {
       position: 0))
     try context.save()
 
-    let tokens = InMemoryTokenStore()
+    let tokens = FakeTokenStore()
     let stub = StubTodoistTransport(answers: [.bare(status: 401)])
     let store = TodoistCacheStore(
       context: context,
@@ -195,12 +195,64 @@ struct TodoistCacheTests {
     #expect(store.lastSyncedAt == nil)
   }
 
+  // MARK: How often it is allowed to ask
+
+  /// The two automatic triggers do not both sweep.
+  ///
+  /// Opening the app straight into the Todoist sheet fires the foreground
+  /// refresh and the sheet's own, one after the other, for one gesture. Todoist
+  /// publishes no request ceiling at all for these four addresses, so the app
+  /// stays under whatever it is by asking rarely — which used to be a claim in a
+  /// comment and is now a floor in the code. A pull is never held back.
+  @Test("anAutomaticRefreshRightAfterAnotherAsksForNothing")
+  func anAutomaticRefreshRightAfterAnotherAsksForNothing() async throws {
+    let stub = StubTodoistTransport(answers: [
+      .page(rows: [StubTodoistTransport.projectRow(id: "p1", name: "Deep work")]),
+      .page(rows: []),
+      .page(rows: [StubTodoistTransport.taskRow(id: "t1", content: "Draft it", projectID: "p1")])
+    ])
+    let store = TodoistCacheStore(context: context, client: Self.client(stub))
+    let openedAt = Date(timeIntervalSince1970: 1_787_400_000)
+
+    try await store.refresh(now: openedAt, force: false)
+    #expect(stub.recordedRequests.count == 3)
+
+    // The sheet opens two seconds later. Nothing is sent.
+    try await store.refresh(now: openedAt.addingTimeInterval(2), force: false)
+    #expect(stub.recordedRequests.count == 3)
+
+    // And the copy is still there, so the picker draws a list rather than an
+    // empty screen.
+    #expect(try Self.rows(CachedProject.self, in: context).count == 1)
+  }
+
+  /// A pull is somebody asking, and it always goes out.
+  @Test("aPullToRefreshIsNeverHeldBack")
+  func aPullToRefreshIsNeverHeldBack() async throws {
+    let stub = StubTodoistTransport(answers: [
+      .page(rows: [StubTodoistTransport.projectRow(id: "p1", name: "Deep work")]),
+      .page(rows: []),
+      .page(rows: []),
+      .page(rows: [StubTodoistTransport.projectRow(id: "p1", name: "Deep work")]),
+      .page(rows: []),
+      .page(rows: [])
+    ])
+    let store = TodoistCacheStore(context: context, client: Self.client(stub))
+    let openedAt = Date(timeIntervalSince1970: 1_787_400_000)
+
+    try await store.refresh(now: openedAt, force: false)
+    #expect(stub.recordedRequests.count == 3)
+
+    try await store.refresh(now: openedAt.addingTimeInterval(2))
+    #expect(stub.recordedRequests.count == 6)
+  }
+
   // MARK: Helpers
 
   private static func client(_ transport: StubTodoistTransport) -> TodoistClient {
     TodoistClient(
       transport: transport,
-      tokens: InMemoryTokenStore(),
+      tokens: FakeTokenStore(),
       waiting: RecordingRetryWaiting())
   }
 

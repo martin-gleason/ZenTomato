@@ -117,7 +117,7 @@ struct TaskCompletionTests {
   /// A refused token is reported as such, and still writes nothing.
   @Test("tokenRejectedDuringCompletionWritesNoRecord")
   func tokenRejectedDuringCompletionWritesNoRecord() async throws {
-    let tokens = InMemoryTokenStore()
+    let tokens = FakeTokenStore()
     let stub = StubTodoistTransport(answers: [.bare(status: 401)])
     let completion = TaskCompletion(
       context: context,
@@ -213,12 +213,141 @@ struct TaskCompletionTests {
     #expect(reads.allSatisfy { $0.httpBody == nil })
   }
 
+  // MARK: Being asked to slow down, on the one address that writes
+
+  /// **ONE TAP IS ONE CLOSE, EVEN WHEN TODOIST SAYS "SLOW DOWN".**
+  ///
+  /// This is the test the feature's headline claim was missing. The client
+  /// retries a rate-limited request once, which is right for a read — the answer
+  /// is the same list either way. It used to do it for *every* request, and this
+  /// address is a write: one tap on Complete produced two close commands against
+  /// somebody's real account, unwatched, which is the exact thing the ratified
+  /// design forbids in its own words. It is not harmless duplication either.
+  /// Todoist's documentation for this address, quoted in `TodoistAPI`, says a
+  /// recurring task is *"scheduled to its next occurrence"* — so closing twice
+  /// silently advances it two occurrences, and the person sees one tap, one
+  /// confirmation, one local record and a task that has skipped a day.
+  ///
+  /// The stub is scripted `[429 with a Retry-After, 200]`. A retrying client
+  /// takes the second answer and reports success; the shipping one stops at the
+  /// first, sends nothing more, and reports the refusal.
+  @Test("oneTapOnCompleteIsOneCloseEvenWhenRateLimited")
+  func oneTapOnCompleteIsOneCloseEvenWhenRateLimited() async throws {
+    let waiting = RecordingRetryWaiting()
+    let stub = StubTodoistTransport(answers: [
+      .bare(status: 429, headers: ["Retry-After": "3"]),
+      .bare(status: 200)
+    ])
+    let completion = TaskCompletion(
+      context: context,
+      client: TodoistClient(transport: stub, tokens: FakeTokenStore(), waiting: waiting))
+
+    let outcome = await completion.complete(taskID: "t1", titleSnapshot: "Draft the summary")
+
+    // ONE close command left the device. Not two.
+    #expect(stub.requestsThatWereNotReads.count == 1)
+    #expect(stub.recordedRequests.count == 1)
+
+    // Nothing waited, because nothing was going to be sent again.
+    #expect(waiting.requestedWaits.isEmpty)
+
+    // It is reported as its own thing, with the wait Todoist named, so the sheet
+    // can say how long rather than "try again in a moment".
+    #expect(outcome == .rateLimited(retryAfter: .seconds(3)))
+
+    // AND NOTHING WAS WRITTEN DOWN. The task is still open in Todoist.
+    #expect(try Self.records(in: context).isEmpty)
+  }
+
+  /// The wording that goes with it names the wait, and the button stays live —
+  /// tapping again is the retry, and it is the only one.
+  @Test("aRateLimitedCompletionSaysHowLongAndStaysTappable")
+  func aRateLimitedCompletionSaysHowLongAndStaysTappable() {
+    let message = TaskCompletionSection.failureMessage(for: .rateLimited(retryAfter: .seconds(30)))
+
+    #expect(message == "Todoist asked us to slow down, so the task is still open. Try again in 30 seconds.")
+    #expect(TaskCompletionSection.control(after: .rateLimited(retryAfter: .seconds(30)), at: Date()) == .ready)
+
+    // With no stated wait, no number is invented.
+    let vague = TaskCompletionSection.failureMessage(for: .rateLimited(retryAfter: nil))
+    #expect(vague == "Todoist asked us to slow down, so the task is still open. Try again shortly.")
+  }
+
+  // MARK: A credential that has stopped working
+
+  /// A refused token switches the button off rather than leaving it live.
+  ///
+  /// The second tap was the problem. The control used to go back to `.ready`
+  /// after a 401, but by then the credential has been taken out of the Keychain,
+  /// so tapping again reached a client with nothing to send and came back as a
+  /// generic failure — "try again in a moment", naming no cause, for something
+  /// that can never succeed. Both paths now agree, and both say where to fix it.
+  @Test("aRefusedTokenSwitchesTheButtonOffRatherThanLeavingItLive")
+  func aRefusedTokenSwitchesTheButtonOffRatherThanLeavingItLive() async throws {
+    let reconnect = "ZenTomato isn't connected to Todoist, so this can't be ticked off. Reconnect in Settings."
+
+    // The first tap: Todoist refuses the token.
+    let refused = TaskCompletionSection.control(after: .tokenRejected, at: Date())
+    #expect(refused == .unavailable(reconnect))
+
+    // The second tap, if the button were still live, reaches a client with no
+    // credential. It reports the same cause rather than a nameless failure.
+    let stub = StubTodoistTransport(answers: [])
+    let completion = TaskCompletion(
+      context: context,
+      client: TodoistClient(
+        transport: stub,
+        tokens: FakeTokenStore(token: nil),
+        waiting: RecordingRetryWaiting()))
+
+    let outcome = await completion.complete(taskID: "t1", titleSnapshot: "Draft the summary")
+
+    #expect(outcome == .tokenRejected)
+    #expect(stub.recordedRequests.isEmpty)
+    #expect(try Self.records(in: context).isEmpty)
+
+    // And a sheet opening fresh with no credential says the same sentence.
+    #expect(
+      TaskCompletionSection.restingControl(
+        hasToken: false,
+        todoistIsReachable: true,
+        taskIsInTodoist: .present) == .unavailable(reconnect))
+  }
+
+  // MARK: The identifier is the only part of an address that is not a constant
+
+  /// An identifier that is not an opaque Todoist identifier makes no request.
+  ///
+  /// The close command is the one address in this app with anything substituted
+  /// into it. Building a web address does not remove dot segments, so an
+  /// identifier carrying them could point the request somewhere other than where
+  /// the source says. It cannot reach a write today — every path this app can
+  /// produce ends in `/close` — but that is the shape being lucky rather than a
+  /// guarantee, so the identifier is refused before a request exists.
+  @Test("aTaskIdentifierThatIsNotOpaqueSendsNothing")
+  func aTaskIdentifierThatIsNotOpaqueSendsNothing() async throws {
+    let stub = StubTodoistTransport(answers: [.bare(status: 200)])
+    let completion = TaskCompletion(context: context, client: Self.client(stub))
+
+    let outcome = await completion.complete(taskID: "a/../..", titleSnapshot: "Draft the summary")
+
+    #expect(stub.recordedRequests.isEmpty)
+    #expect(outcome == .failed)
+    #expect(try Self.records(in: context).isEmpty)
+
+    // A real Todoist identifier is accepted, so the rule is a filter rather than
+    // a wall.
+    #expect(TodoistAPI.isOpaqueIdentifier("6XGgmFVcrG5RRjVr"))
+    #expect(TodoistAPI.isOpaqueIdentifier("a/../..") == false)
+    #expect(TodoistAPI.isOpaqueIdentifier("") == false)
+  }
+
   // MARK: Helpers
 
   private static func client(_ transport: StubTodoistTransport) -> TodoistClient {
     TodoistClient(
       transport: transport,
-      tokens: InMemoryTokenStore(),
+      tokens: FakeTokenStore(),
       waiting: RecordingRetryWaiting())
   }
 

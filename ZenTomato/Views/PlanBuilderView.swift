@@ -87,8 +87,16 @@ struct PlanBuilderView: View {
     .presentationDragIndicator(.visible)
     .task {
       readToken()
-      await refresh()
-      if opensOnThePlan, plan.isEmpty == false, hasToken {
+      // `force: false`: opening the sheet is not the same as asking for a
+      // refresh, and opening the app straight into it used to fire this and the
+      // foreground sweep together.
+      await refresh(force: false)
+      // NOT PAST THE TOKEN SCREEN. If the refresh just found a revoked
+      // credential, the root of this stack is now the screen that says so —
+      // and pushing the session plan on top of it would hide the single most
+      // important sentence this feature can say behind a list, leaving somebody
+      // to discover it later as a Complete button that does not work.
+      if opensOnThePlan, plan.isEmpty == false, hasToken, signIn.banner == nil {
         path = [.sessionPlan]
       }
     }
@@ -114,10 +122,17 @@ struct PlanBuilderView: View {
       // "Asked us to slow down" — the "us" is correct and is the whole point.
       // This is the app's traffic, not the reader's behaviour. No "you", no
       // "too many requests", no status code.
+      //
+      // **It does not claim the app is trying again**, because it is not. There
+      // is no timer and no scheduled retry behind this screen — the pull is the
+      // retry, and it is held back until the wait is over. A sentence promising
+      // an automatic attempt with a number that never counts down is the kind of
+      // small untruth that teaches a reader to stop believing the quiet lines.
       guard let seconds = retryAfter.map({ Int($0.components.seconds) }), seconds > 0 else {
-        return .stale("Todoist asked us to slow down. Trying again shortly — nothing is lost.")
+        return .stale("Todoist asked us to slow down. Pull down to try again shortly — nothing is lost.")
       }
-      return .stale("Todoist asked us to slow down. Trying again in \(seconds) seconds — nothing is lost.")
+      return .stale(
+        "Todoist asked us to slow down. Pull down to try again in \(seconds) seconds — nothing is lost.")
 
     case .offline, .server, .malformedResponse, .paginationDidNotTerminate, .notSignedIn, .tokenRejected:
       return syncedAt == nil ? .nothingYet : .stale(cacheAge(syncedAt))
@@ -148,6 +163,14 @@ struct PlanBuilderView: View {
   @State private var selections: [SessionPlanStore.Selection] = []
 
   @State private var freshness: Freshness = .fresh
+
+  /// Until when Todoist has asked us to stop asking, or `nil`.
+  ///
+  /// It exists so the banner's sentence is true. The copy used to say the app
+  /// was trying again when nothing was, and a pull during the stated wait went
+  /// straight out to Todoist — which is the one thing a rate limit asks you not
+  /// to do.
+  @State private var rateLimitedUntil: Date?
 
   /// Whether there is a credential. Read rather than watched, because the
   /// Keychain does not publish changes.
@@ -187,6 +210,22 @@ struct PlanBuilderView: View {
       })
   }
 
+  /// What the line along the bottom of the picker says.
+  ///
+  /// **With nothing newly chosen it reports the plan that already exists**, and
+  /// that is not cosmetic. This bar is the only route to the session plan, so a
+  /// bar that said "Nothing planned yet" over a three-item plan was both untrue
+  /// and a dead end: back out of the plan screen and there was no way back to
+  /// it, and no way to reach Skip or Remove without destroying the plan to get
+  /// there. Choosing anything switches it to the selection being built, which is
+  /// what will replace the plan when the sheet is finished with.
+  private var planBarContents: PlanBar.Contents {
+    guard selections.isEmpty else {
+      return PlanBar.Contents(count: selections.count, nextTitle: selections.first?.titleSnapshot)
+    }
+    return PlanBar.Contents(count: plan.items.count, nextTitle: plan.currentItem?.titleSnapshot)
+  }
+
   /// The token screen, or the picker.
   @ViewBuilder
   private var root: some View {
@@ -195,9 +234,10 @@ struct PlanBuilderView: View {
         picker: picker,
         freshness: freshness,
         selections: $selections,
+        planBar: planBarContents,
         onOpenProject: { path.append(.project(id: $0.id, name: $0.name)) },
         onOpenPlan: openPlan,
-        onRefresh: refresh)
+        onRefresh: { await refresh() })
     } else {
       TodoistSignInView(model: signIn, onConnected: connected)
     }
@@ -213,8 +253,9 @@ struct PlanBuilderView: View {
         picker: picker,
         freshness: freshness,
         selections: $selections,
+        planBar: planBarContents,
         onOpenPlan: openPlan,
-        onRefresh: refresh)
+        onRefresh: { await refresh() })
 
     case .sessionPlan:
       SessionPlanView(plan: plan, onDone: finish)
@@ -241,10 +282,20 @@ struct PlanBuilderView: View {
   /// **No request is made per keystroke and none is made on a timer.** This runs
   /// when the sheet opens and when somebody pulls the list down, and that is the
   /// whole of this feature's traffic apart from one close.
-  private func refresh() async {
+  private func refresh(force: Bool = true) async {
     guard hasToken else { return }
+    // HAMMERING THE LIST MUST NOT EXTEND THE LOCKOUT. Todoist has said how long
+    // to wait; a pull-to-refresh inside that window re-shows the banner and
+    // re-announces it, and sends nothing. Swallowing the gesture silently would
+    // read as the app being frozen, which is why the banner is posted again
+    // rather than the pull being ignored.
+    if let until = rateLimitedUntil, Date() < until {
+      freshness = Self.stillWaiting(until: until, now: Date())
+      return
+    }
+    rateLimitedUntil = nil
     do {
-      try await cache.refresh()
+      try await cache.refresh(force: force)
       freshness = .fresh
     } catch {
       freshness = Self.freshness(after: error, syncedAt: cache.lastSyncedAt)
@@ -253,6 +304,13 @@ struct PlanBuilderView: View {
         // else is: the mirror, the plan and everything recorded stay exactly as
         // they were. A stale credential is not a decision to disconnect.
         signIn = SignInScreenModel(tokens: tokens, cache: cache, banner: .revoked)
+        // Said in both places, so nothing downstream can conclude there is still
+        // a usable token — the timer screen does the same thing on its own
+        // refresh.
+        hasToken = false
+      }
+      if case TodoistError.rateLimited(let retryAfter) = error {
+        rateLimitedUntil = Self.deadline(after: retryAfter, from: Date())
       }
     }
   }
@@ -280,6 +338,25 @@ struct PlanBuilderView: View {
     selections = []
   }
 
+  /// When the wait Todoist asked for is over.
+  ///
+  /// With no stated wait there is nothing to count, so nothing is held back: the
+  /// next pull goes out. Guessing a number Todoist did not give would be the app
+  /// inventing a rule on somebody's behalf.
+  static func deadline(after retryAfter: Duration?, from now: Date) -> Date? {
+    guard let retryAfter else { return nil }
+    let seconds = Double(retryAfter.components.seconds)
+    guard seconds > 0 else { return nil }
+    return now.addingTimeInterval(seconds)
+  }
+
+  /// The same sentence, with the time that is actually left on it.
+  static func stillWaiting(until deadline: Date, now: Date) -> Freshness {
+    let seconds = max(1, Int(deadline.timeIntervalSince(now).rounded(.up)))
+    return .stale(
+      "Todoist asked us to slow down. Pull down to try again in \(seconds) seconds — nothing is lost.")
+  }
+
   /// "Can't reach Todoist. This is your list as it was at 14:02 — pick from it
   /// as normal."
   ///
@@ -294,75 +371,5 @@ struct PlanBuilderView: View {
       ? "at \(syncedAt.formatted(date: .omitted, time: .shortened))"
       : "on \(syncedAt.formatted(date: .abbreviated, time: .shortened))"
     return "Can't reach Todoist. This is your list as it was \(when) — pick from it as normal."
-  }
-}
-
-// MARK: - PlanBar
-
-/// The line pinned along the bottom of the picker and of every project screen.
-///
-/// **When the plan is empty it is inert, and that is what removes the need for
-/// an "Add" button anywhere on this sheet.** The plan is only ever reached from
-/// the picker, so the way to put something in it is the picker you are already
-/// standing in.
-struct PlanBar: View {
-  // MARK: Internal
-
-  /// What has been chosen so far, in order.
-  let selections: [SessionPlanStore.Selection]
-
-  /// Tapping it opens the session plan. Only called when there is something in
-  /// the plan to open.
-  let onOpen: () -> Void
-
-  var body: some View {
-    content
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.xs)
-      .frame(maxWidth: .infinity)
-      .background(Color(.surfaceRaised))
-      .overlay(alignment: .top) {
-        // Decoration, and one of the few places the decorative border role is
-        // correct. It carries no information, so VoiceOver is told to skip it.
-        Rectangle()
-          .fill(Color(.border))
-          .frame(height: Spacing.borderHairline)
-          .accessibilityHidden(true)
-      }
-  }
-
-  // MARK: Private
-
-  @ViewBuilder
-  private var content: some View {
-    if let first = selections.first {
-      Button(action: onOpen) {
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
-          Text(Self.summary(count: selections.count))
-            .font(Typography.label)
-            .foregroundStyle(Color(.textPrimary))
-          Text("Next · \(first.titleSnapshot)")
-            .font(Typography.label)
-            .foregroundStyle(Color(.textMuted))
-            .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(minHeight: Spacing.controlHeight)
-        .contentShape(Rectangle())
-      }
-      .buttonStyle(.plain)
-      .accessibilityHint(Text("Opens your session plan."))
-    } else {
-      Text("Nothing planned yet")
-        .font(Typography.label)
-        .foregroundStyle(Color(.textMuted))
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: Spacing.controlHeight)
-    }
-  }
-
-  /// The singular matters: a plan of one item is the commonest plan there is.
-  private static func summary(count: Int) -> String {
-    "Plan · \(count) \(count == 1 ? "item" : "items")"
   }
 }

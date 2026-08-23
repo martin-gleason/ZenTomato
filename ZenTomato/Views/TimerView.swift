@@ -86,7 +86,7 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       // The toll on the one exit a running block has. Presented rather than
       // acted on: tapping Stop opens this, and the block keeps running until a
       // reason is written and confirmed. Nothing here can end a block silently.
-      .sheet(isPresented: $isAskingWhyStopping) {
+      .sheet(isPresented: $isAskingWhyStopping, onDismiss: stopSheetClosed) {
         StopReasonSheet(
           reason: $stopReason,
           // D14: the tap sentences ride along in the same sheet rather than
@@ -105,7 +105,7 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
           completion: completionSubject,
           completionControl: completionControl,
           completionFailure: completionFailure,
-          onComplete: { completionRequest = UUID() })
+          onComplete: startCompletion)
       }
       // The end-of-block sheet. Presented by *item* rather than by a boolean:
       // there is either a reflection to ask about or there is not, and a value
@@ -119,7 +119,7 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
           completion: completionSubject,
           completionControl: completionControl,
           completionFailure: completionFailure,
-          onComplete: { completionRequest = UUID() })
+          onComplete: startCompletion)
       }
       // The Todoist sheet: the token screen, the picker, the session plan.
       // Presented from the attachment line and from one row in Settings.
@@ -162,6 +162,10 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
         // the footer line cannot change its mind while somebody is reading it.
         reflectionBreakIsRunning = engine.isRunning
         closedReflectionPrompts = taken.prompts
+        // Frozen here, before the control is worked out from it. See the note
+        // on `completionSubject`: this is the subject of the one write, and a
+        // block can begin behind this sheet.
+        completionSubject = currentCompletionSubject()
         resetCompletionControl()
         reflection = taken
       }
@@ -189,12 +193,15 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       // Read once, and again whenever the Todoist sheet closes. The Keychain
       // does not publish changes, so there is nothing to watch.
       .task { readToken() }
-      // THE MIRROR IS FILLED ON THE WAY IN, AND NOWHERE ELSE EXCEPT A PULL.
+      // THE MIRROR IS FILLED ON THE WAY IN.
       //
-      // Not on a timer, not per keystroke, not on every redraw. Together with
-      // the picker's pull-to-refresh this is the whole of the feature's read
-      // traffic, which is what keeps it far under any published ceiling by
-      // design rather than by a budget somebody has to maintain.
+      // Three things ask for a refresh in the whole app: this, the Todoist
+      // sheet opening, and somebody pulling the picker down. Not on a timer, not
+      // per keystroke, not on every redraw. This one passes `force: false`,
+      // because nobody asked for it — a phone picked up forty times in a quarter
+      // of an hour used to be forty full sweeps of three paginated lists, and
+      // Todoist publishes no ceiling for these addresses at all. The floor lives
+      // on the store, where the other automatic trigger meets it.
       .task(id: scenePhase) {
         guard scenePhase == .active, hasToken else { return }
         await refreshMirror()
@@ -210,12 +217,23 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       // not the finished-block row, not the alarm. And it does not close the
       // sheet: the sheet's exits are exactly what they were.
       .task(id: completionRequest) {
-        guard completionRequest != nil, let subject = completionSubject else { return }
-        await complete(subject)
+        guard let request = completionRequest else { return }
+        await complete(request.subject)
       }
   }
 
   // MARK: Private
+
+  /// One tap on Complete, and the exact task it was a tap on.
+  ///
+  /// The task travels **with** the request rather than being looked up when the
+  /// write runs, so there is no window at all between the finger and the bytes
+  /// in which the subject could change. The identifier makes two taps on the
+  /// same task two different requests, which is what restarts the work.
+  private struct CompletionRequest: Equatable {
+    let id = UUID()
+    let subject: TaskCompletionSection.Subject
+  }
 
   /// How often the number is redrawn while a block runs.
   private static let refreshInterval: TimeInterval = 1
@@ -330,9 +348,24 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
   /// What went wrong with the last completion, if anything.
   @State private var completionFailure: String?
 
-  /// Set to a fresh value by the Complete button, which is what starts the one
-  /// write this app can make.
-  @State private var completionRequest: UUID?
+  /// The task the sheet on screen is offering to tick off, frozen at the moment
+  /// that sheet was presented.
+  ///
+  /// **THE SUBJECT OF THE ONE WRITE IS A SNAPSHOT, NOT A LOOKUP, AND THIS IS
+  /// WHY.** By D4 the end-of-block sheet sits over a break that is already
+  /// running, and nothing closes it at a boundary. With auto-start on, that
+  /// break can finish, the next focus block can begin behind the open sheet, and
+  /// the plan hands that block the *next* item. A live read would then have the
+  /// button close a task the person has never worked on while the one they
+  /// finished stays open — one irreversible network write, silently retargeted,
+  /// with no way back because reopening a task is not on the allowlist. The
+  /// same file already freezes `stopPrompts` and `reflectionBreakIsRunning` for
+  /// a milder version of the same reason.
+  @State private var completionSubject: TaskCompletionSection.Subject?
+
+  /// Set by the Complete button, which is what starts the one write this app can
+  /// make. It carries the task with it — see `CompletionRequest`.
+  @State private var completionRequest: CompletionRequest?
 
   /// The screen, redrawn once a second only while something is actually counting.
   @ViewBuilder
@@ -471,11 +504,16 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
 
   /// The task the end-of-block sheets may offer to tick off, or `nil`.
   ///
+  /// **Called at exactly two moments — when either sheet is presented — and
+  /// never while one is open.** What it answers changes as the timer moves on;
+  /// what the sheet shows and what the button writes must not. See
+  /// `completionSubject`, which is where the answer is kept.
+  ///
   /// `nil` for a block with nothing attached, for a block attached to a whole
   /// **project** — there is no project-close endpoint on the allowlist and there
   /// never will be — and whenever there is no token. The section is then not
   /// rendered at all rather than drawn switched off.
-  private var completionSubject: TaskCompletionSection.Subject? {
+  private func currentCompletionSubject() -> TaskCompletionSection.Subject? {
     guard hasToken,
           let attachment = plan.attachmentForTheBlockJustWorked(),
           let taskID = attachment.taskID,
@@ -513,7 +551,7 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
   /// with a plain sentence rather than queueing a write nobody can see.
   private func refreshMirror() async {
     do {
-      try await cache.refresh()
+      try await cache.refresh(force: false)
       todoistIsReachable = true
     } catch {
       todoistIsReachable = false
@@ -547,6 +585,16 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
   /// Nothing here touches the timer, the break, the block's own row, its
   /// distraction rows or its stop reason. A block you stopped early stays
   /// stopped early even if the task got ticked off.
+  /// The Complete button was tapped.
+  ///
+  /// The task is taken from the frozen snapshot and travels with the request, so
+  /// what gets closed is what the sheet was showing when it opened — not
+  /// whatever the timer has moved on to since.
+  private func startCompletion() {
+    guard let subject = completionSubject else { return }
+    completionRequest = CompletionRequest(subject: subject)
+  }
+
   private func complete(_ subject: TaskCompletionSection.Subject) async {
     completionControl = .working
     completionFailure = nil
@@ -562,8 +610,12 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
     case .offline:
       todoistIsReachable = false
     case .tokenRejected:
+      // The client took the credential out of the Keychain. The control is
+      // already switched off by `control(after:)`; this is what makes the rest
+      // of the screen agree — the attachment line goes, and the next sheet opens
+      // on the same switched-off state rather than on a live button.
       hasToken = false
-    case .failed:
+    case .rateLimited, .failed:
       break
     }
   }
@@ -651,8 +703,18 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
   private func stopBlock() {
     stopReason = ""
     stopPrompts = engine.currentBlockDistractions
+    completionSubject = currentCompletionSubject()
     resetCompletionControl()
     isAskingWhyStopping = true
+  }
+
+  /// The stop sheet has gone, by either button or by being swiped away.
+  ///
+  /// The only thing this does is let go of the frozen task. Nothing about the
+  /// block, the reason or the sentences is decided here; those belong to the
+  /// two buttons, which have already run by the time this does.
+  private func stopSheetClosed() {
+    completionSubject = nil
   }
 
   /// The person wrote a reason and confirmed. Now the block ends.
@@ -703,6 +765,7 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
   private func reflectionSheetClosed() {
     saveDrafts(for: closedReflectionPrompts)
     closedReflectionPrompts = []
+    completionSubject = nil
     noteDrafts = [:]
   }
 

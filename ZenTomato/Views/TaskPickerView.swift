@@ -20,6 +20,13 @@ import SwiftUI
 /// Not a button, not a greyed button, not a placeholder row. `CLAUDE.md` calls
 /// the no-capture rule a standing rule from the owner's productivity system
 /// rather than a feature gap, and this is the screen where the difference shows.
+///
+/// AN EMPTY SECTION IS STILL DRAWN
+/// `SPEC.md` locks that all projects, sections and tasks are visible. A section
+/// somebody has just cleared is still one of their sections, and quietly
+/// dropping it would be the app disagreeing with Todoist about what is in
+/// somebody's account. It is drawn as a heading with nothing under it — a
+/// heading is text, so this adds no control anywhere.
 struct TaskPickerView: View {
   // MARK: Internal
 
@@ -35,6 +42,10 @@ struct TaskPickerView: View {
   /// The plan being built, in the order it was chosen.
   @Binding var selections: [SessionPlanStore.Selection]
 
+  /// What the line along the bottom says — the selection being built, or the
+  /// plan that already exists when nothing new has been chosen.
+  let planBar: PlanBar.Contents
+
   let onOpenPlan: () -> Void
   let onRefresh: () async -> Void
 
@@ -44,11 +55,13 @@ struct TaskPickerView: View {
         StaleMirrorBanner(note: note)
       }
 
-      if rows.isEmpty {
+      // The sentence and the headings are not alternatives. A project with two
+      // emptied sections has nothing to work on *and* two sections, and both are
+      // facts about Todoist that this screen reports.
+      if hasNothingToWorkOn {
         emptyProject
-      } else {
-        content
       }
+      content
     }
     .scrollContentBackground(.hidden)
     .background(Color(.surfacePrimary).ignoresSafeArea())
@@ -56,22 +69,32 @@ struct TaskPickerView: View {
     .navigationTitle(projectName)
     .navigationBarTitleDisplayMode(.inline)
     .safeAreaInset(edge: .bottom, spacing: Spacing.none) {
-      PlanBar(selections: selections, onOpen: onOpenPlan)
+      PlanBar(contents: planBar, onOpen: onOpenPlan)
     }
   }
 
   // MARK: Private
 
-  private var rows: [PickerScreenModel.Row] {
-    picker.rows(inProject: projectID)
+  /// The headings and their tasks, **worked out by the model** rather than here.
+  ///
+  /// The screen draws exactly what `PickerScreenModelTests` examines. This was
+  /// once computed twice — once in the model and once in this file — which meant
+  /// the tested implementation was not the shipped one and the two could drift
+  /// apart with the suite still green.
+  private var groups: [PickerScreenModel.TaskGroup] {
+    picker.groups(inProject: projectID)
+  }
+
+  /// Whether this project holds no open task at all.
+  ///
+  /// Counted from the groups rather than from whether there are any rows,
+  /// because a project can now draw headings and still have nothing in it.
+  private var hasNothingToWorkOn: Bool {
+    groups.allSatisfy { $0.tasks.isEmpty }
   }
 
   /// Sections become headed groups; tasks not in a section sit under a heading
   /// of their own, in Todoist's order throughout.
-  ///
-  /// The rows arrive already ordered from the model, so this only decides where
-  /// a heading starts. Nothing is sorted here — inventing an order is exactly
-  /// what the mirror exists to avoid.
   @ViewBuilder
   private var content: some View {
     ForEach(groups) { group in
@@ -92,41 +115,6 @@ struct TaskPickerView: View {
       .listRowBackground(Color(.surfaceRaised))
     }
   }
-
-  /// The sections of this project that have anything in them, then everything
-  /// loose in the project under a heading of its own.
-  ///
-  /// Nothing is sorted here. The sections and the tasks arrive in Todoist's own
-  /// order, which the mirror copied and this screen keeps — inventing an order
-  /// is exactly what mirroring exists to avoid.
-  private var groups: [TaskGroup] {
-    let mine = picker.tasks.filter { $0.projectID == projectID }
-    let mySections = picker.sections.filter { $0.projectID == projectID }
-
-    var groups: [TaskGroup] = []
-    for section in mySections {
-      let inSection = mine.filter { $0.sectionID == section.id }
-      guard inSection.isEmpty == false else { continue }
-      groups.append(TaskGroup(id: section.id, name: section.name, tasks: inSection))
-    }
-
-    let sectionIDs = Set(mySections.map(\.id))
-    let loose = mine.filter { task in
-      guard let sectionID = task.sectionID else { return true }
-      // A task whose section was not mirrored is drawn loose rather than
-      // dropped. Losing a task from a picker is worse than filing it oddly.
-      return sectionIDs.contains(sectionID) == false
-    }
-    if loose.isEmpty == false {
-      groups.append(TaskGroup(id: Self.looseGroupID, name: "Not in a section", tasks: loose))
-    }
-    return groups
-  }
-
-  /// An identity for the one heading that is not a Todoist section. It is not a
-  /// Todoist id and could never collide with one — Todoist's are opaque strings
-  /// with no spaces in them.
-  private static let looseGroupID = "not in a section"
 
   private var emptyProject: some View {
     Text(PickerScreenModel.emptyProjectMessage)
@@ -152,17 +140,4 @@ struct TaskPickerView: View {
       selections.append(selection)
     }
   }
-}
-
-// MARK: - TaskGroup
-
-/// One heading and the tasks under it, for the list to draw.
-///
-/// A layout value and nothing more: it is built when the screen is drawn,
-/// thrown away when it is not, and never stored. It defines no hierarchy the
-/// plan could inherit.
-struct TaskGroup: Identifiable {
-  let id: String
-  let name: String
-  let tasks: [PickerScreenModel.TaskItem]
 }
