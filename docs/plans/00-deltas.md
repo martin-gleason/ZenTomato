@@ -456,6 +456,20 @@ Raised during the F2 device review and parked deliberately, so they are neither 
   else." AlarmKit takes an `AlertConfiguration.AlertSound`, so the mechanism is one parameter — the
   work is the picker and the settings field, both of which need a delta. **Do not add a seventh
   settings field before that delta exists.**
-- **Dynamic Island presentation.** Already implemented in F2 and unverified on hardware; the owner
-  rates it as very much the point of the island. If it does not appear, that is an F2 bug to fix now,
-  not a v1.1 feature.
+- **~~Dynamic Island presentation.~~ Verified working on device 2026-08-23.** Not a v1.1 item after
+  all — it shipped in F2 and it works.
+- **A tomato that builds itself as the block runs (v1.1).** The owner's idea, and a good one: instead
+  of a countdown readout, the Live Activity draws a tomato that assembles as the minutes pass, so the
+  Lock Screen shows progress as a *picture* rather than a number.
+
+  Worth stating why it is genuinely v1.1 and not a quick swap. The countdown works today because
+  `Text(timerInterval:)` renders client-side from the alarm's `fireDate` with no updates pushed at
+  all — that is the entire reason the wall-clock design holds and the Live Activity costs nothing. A
+  drawing that changes with time cannot use that trick: SwiftUI's timer text is a special case, and an
+  arbitrary view has to be re-rendered, which means pushed activity updates, which means an update
+  budget and a battery cost. It is buildable — most likely by drawing the tomato in discrete stages
+  and pushing one update per stage rather than continuously — but it is a real design problem with a
+  real cost, not a change of view code.
+
+  It also needs the icon's vector artwork factored out of `Design/icon/make-icon.sh` and into
+  something the widget can draw. **Do not start any of this before a ratified delta.**
