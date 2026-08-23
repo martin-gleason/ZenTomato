@@ -11,12 +11,12 @@ import Foundation
 ///
 /// WHY THAT MATTERS MORE HERE THAN ANYWHERE ELSE
 /// The secret scanner that runs before every commit catches a credential
-/// *committed to the repository*. It cannot catch one printed into a crash log,
-/// a console line, or an error message shown on screen — and the most likely
-/// route for that is not somebody writing `print(token)`. It is an error type
-/// that quietly carries the request it failed on, and a description that helpfully
-/// prints it out. So the errors carry nothing, and the messages are written by
-/// hand rather than borrowed from the system.
+/// *committed to the repository*. It cannot catch one written into a crash
+/// report, a console line, or a message shown on screen — and the most likely
+/// route for that is not somebody deliberately writing the token out. It is a
+/// failure type that quietly carries the request it failed on, and a description
+/// that helpfully spells that request out. So the failures carry nothing, and
+/// the messages are written by hand rather than borrowed from the system.
 ///
 /// `Equatable` is here so tests can say "this exact failure" rather than
 /// matching on text.

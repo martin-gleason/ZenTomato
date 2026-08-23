@@ -20,10 +20,10 @@ import Security
 ///      the item succeeds either way. Nothing fails, nothing warns. So a test
 ///      reads the attribute back off the stored item and asserts what it is.
 ///
-///   2. **Nothing here prints, logs, or describes a token.** There is no
-///      `print`, no logger, and no error case carrying the value. A secret
-///      scanner catches a credential committed to the repository; it cannot
-///      catch one written to a console.
+///   2. **Nothing here writes a token out.** No console line, no logging call
+///      of any kind, and no error case carrying the value. A secret scanner
+///      catches a credential committed to the repository; it cannot catch one
+///      written to a console.
 ///
 /// `Sendable` marks it safe to use from any thread: it holds nothing mutable,
 /// and the Keychain is itself thread-safe.
