@@ -2,6 +2,7 @@
 
 ## Description: 
 My attempt at a ZTD compliant Pomodoro app that's open source.
+git add
 ## PR 1
 Set up scaffolding; address plan and deltas.
 
@@ -10,3 +11,18 @@ I learned that xcode does not use .env. it uses xconfig. I stored my secrets in 
 
 ## What I will do differently in pr2
 I don't know. It would be nice to write a function in swift. 
+
+----
+
+PR-4/F2
+
+## Description: 
+set up the alarm and timer, as well as Internal and External ditraction tracker. I've set up the tool to work in the activity island as well.
+
+## What I learned
+Guard syntax, and how to use case and test based dev in xcode. what a good use of the tie. I should learn more about basic swift, but, this was very helpful to learn how to read and write swift.
+
+## What would I do different?
+- More basic swift work first
+- maybe learn how to write a swift test second
+- I stuck with the plan and refused to divert from the spec.
