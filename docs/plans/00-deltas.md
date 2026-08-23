@@ -400,3 +400,62 @@ when a block's alarm *fires*. Reaching it now implies the alarm was sounding, so
 fallback — record it as completed — is correct rather than merely tolerable. The engine still asks
 rather than assumes: it compares the clock to the block's end time, so the rule lives in one tested
 place.
+
+---
+
+## D13 — One exit, and it costs a sentence
+
+**Ratified 2026-08-23, from the F2 device review.**
+
+The owner, having run the timer on the phone: *"I didn't want a stop button. When a pomodoro starts,
+it doesn't stop."*
+
+That is the classic technique's own rule — the pomodoro is **indivisible**; interrupt it and it is
+void rather than paused. F2 shipped Skip and Stop as two free, single-tap exits because the plan
+assumed them, not because `SPEC.md` asked for either.
+
+**Proposed:**
+
+1. **Skip is removed.** There is no way to cut a block short and move to the next one. The only way
+   past a block is to finish it.
+2. **Stop is the single exit, and it demands a written reason.** Tapping Stop presents a sheet asking
+   why. The confirm button stays disabled until something is written; a "Keep going" button dismisses
+   the sheet and lets the block continue. The reason is stored on the session.
+3. `PomodoroSession` gains `abandonReason: String?` — non-nil exactly when a person stopped a block
+   and said why.
+
+**Why an exit has to exist at all.** A block that genuinely cannot be ended means a mistyped
+120-minute focus length traps you for two hours with an alarm you cannot call off. The only remaining
+escape would be force-quitting the app — and a force-quit reconciles from the stored end time and
+records the block as *completed*, which is precisely the false-count bug D12 just removed from the
+Lock Screen, arriving through a different door. The exit is not a weakening of the rule; it is what
+stops the rule producing wrong data.
+
+**Why the sentence is required rather than skippable.** F5's distraction prompt treats skipping as a
+first-class outcome, and that is right there: a tap already carries the data, and the sentence is a
+bonus. This is the opposite case. The *fact* of stopping is one bit; the reason is the entire content.
+And the day you least want to write it — the day you bailed out and would rather not think about
+why — is the day it is worth the most. A stop is the largest distraction event there is, and the app
+currently records nothing about it.
+
+**This is not a capture surface.** The no-capture rule forbids the app accepting a new *task*. This
+field accepts a reflection, which is the same thing F5's end-of-pomodoro prompt already does and which
+`SPEC.md` explicitly asks for. It creates nothing in Todoist and nothing that could become a task.
+
+**Consequence for F6 (noted, not built):** `abandonReason` is a column the export will want — "why I
+stopped" beside "what distracted me" is the shape of a real review. F6 decides at its own gate.
+
+---
+
+## Recorded for after v0.1 — not built, not prepared for
+
+Raised during the F2 device review and parked deliberately, so they are neither lost nor smuggled in:
+
+- **A choice of alarm sound (v1.1).** *"This alarm kinda stinks — folks will want to change it."*
+  Agreed, and out of scope: `SPEC.md`'s customization list is closed at six values and says "Nothing
+  else." AlarmKit takes an `AlertConfiguration.AlertSound`, so the mechanism is one parameter — the
+  work is the picker and the settings field, both of which need a delta. **Do not add a seventh
+  settings field before that delta exists.**
+- **Dynamic Island presentation.** Already implemented in F2 and unverified on hardware; the owner
+  rates it as very much the point of the island. If it does not appear, that is an F2 bug to fix now,
+  not a v1.1 feature.
