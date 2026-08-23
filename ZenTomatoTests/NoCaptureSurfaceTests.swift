@@ -1,0 +1,188 @@
+import Foundation
+import Testing
+
+@testable import ZenTomato
+
+/// The standing no-capture rule, as a test rather than as a promise.
+///
+/// THE RULE
+/// `CLAUDE.md`: *"The app never accepts a new task from the user. This is a
+/// standing rule from the owner's productivity system, not a feature gap."*
+/// Tasks are made in Todoist. This app reads them and, once, ticks one off.
+///
+/// THE TWO PLACES IT COULD BREAK, AND WHY THEY ARE BOTH HERE
+///
+///   1. **The token field.** It is a text field on a screen in an app that
+///      otherwise has almost none, and it is the one input this feature adds.
+///      It accepts a credential, and everything about it has to say so.
+///   2. **The picker's search.** An empty result is exactly where every other
+///      app on the phone offers to create the thing you just typed — not because
+///      anybody decides to, but because the framework's own empty-state view has
+///      a slot for an action and every tutorial fills it.
+///
+/// HOW A TEST CAN CHECK THIS AT ALL
+/// Two ways, and both are used below:
+///
+///   * **By shape.** The picker's model can produce exactly three kinds of row.
+///     The test below switches over that list with no catch-all clause, so
+///     adding a fourth kind stops this file compiling. That is enforcement, not
+///     observation.
+///   * **By words.** Every sentence these screens can put in front of somebody
+///     is collected and checked for the vocabulary of creation. A control that
+///     offered to make a task would have to be labelled, and this is what would
+///     catch the label.
+///
+/// `@MainActor` on the whole suite, because the token screen's state is a
+/// main-thread type like every other screen model in this app.
+@Suite("NoCaptureSurface")
+@MainActor
+struct NoCaptureSurfaceTests {
+  // MARK: By shape
+
+  /// The picker can draw a project, a section, or a task. **There is no fourth
+  /// kind of row**, in any state — not at the end of a list, not under a search
+  /// with no matches, not in an empty project.
+  ///
+  /// This switch has no `default`, which is the whole mechanism: a new case on
+  /// `PickerScreenModel.Row` stops the test bundle compiling, and the only way
+  /// past it is for somebody to change this test in a diff the owner reads.
+  @Test("thePickerCanOnlyDrawProjectsSectionsAndTasks")
+  func thePickerCanOnlyDrawProjectsSectionsAndTasks() {
+    let everyRow = Self.corpus.projectRows
+      + Self.corpus.rows(inProject: "p1")
+      + Self.corpus.rows(matching: "draft")
+
+    for row in everyRow {
+      switch row {
+      case .project, .section, .task:
+        continue
+      }
+    }
+
+    #expect(everyRow.isEmpty == false)
+  }
+
+  /// A search with no matches produces **no rows at all** — so there is nothing
+  /// for a trailing "create this" row to be appended to.
+  @Test("aSearchWithNoMatchesOffersNothing")
+  func aSearchWithNoMatchesOffersNothing() {
+    #expect(Self.corpus.rows(matching: "deploy the thing").isEmpty)
+  }
+
+  /// An empty project produces no rows, so the screen has one sentence to draw
+  /// and nothing else.
+  @Test("anEmptyProjectOffersNothing")
+  func anEmptyProjectOffersNothing() {
+    #expect(Self.corpus.rows(inProject: "p3").isEmpty)
+    #expect(PickerScreenModel.emptyProjectMessage == "No tasks in this project.")
+  }
+
+  // MARK: By words
+
+  /// Nothing this feature can say invites making a task.
+  ///
+  /// The words are the ones a create control would have to be labelled with. The
+  /// check is deliberately blunt: it would object to a perfectly innocent
+  /// sentence containing "add", and that is the right trade on the one rule this
+  /// project cares most about — an objection costs a rewording, and a miss costs
+  /// the rule.
+  @Test("noSentenceOnThesePickerScreensInvitesCreatingATask")
+  func noSentenceOnThesePickerScreensInvitesCreatingATask() {
+    for sentence in Self.everySentenceThePickerCanSay {
+      for word in Self.creationWords {
+        #expect(
+          sentence.range(of: word, options: .caseInsensitive) == nil,
+          "“\(sentence)” contains “\(word)”.")
+      }
+    }
+  }
+
+  /// The one place tasks come from is named out loud, in the place every other
+  /// app puts a button.
+  @Test("theNoMatchStateSaysWhereTasksComeFrom")
+  func theNoMatchStateSaysWhereTasksComeFrom() {
+    #expect(PickerScreenModel.noMatchHeading == "No tasks match that.")
+    #expect(PickerScreenModel.noMatchOrigin == "Tasks are created in Todoist, not here.")
+    #expect(PickerScreenModel.noMatchDetail(for: "deploy the thing").contains("deploy the thing"))
+  }
+
+  /// The search field's prompt is a verb that **reads**.
+  @Test("theSearchPromptIsAVerbThatReads")
+  func theSearchPromptIsAVerbThatReads() {
+    #expect(PickerScreenModel.searchPrompt == "Search your Todoist tasks")
+  }
+
+  // MARK: The credential field
+
+  /// The token screen's own state can hold a credential and can do exactly one
+  /// thing with it. It has no notion of a task, and with nothing behind it —
+  /// which is the state a preview is in — it cannot even connect.
+  @Test("theTokenScreenAcceptsACredentialAndNothingElse")
+  func theTokenScreenAcceptsACredentialAndNothingElse() async {
+    let model = SignInScreenModel()
+
+    // Whitespace is not a credential, and a trimmed paste is what gets judged.
+    model.token = "   "
+    #expect(model.canConnect == false)
+
+    // A paste arrives trimmed of the newline it usually comes with, and it is
+    // revealed so somebody can see what landed.
+    model.paste(["  not-a-real-token\n"])
+    #expect(model.token == "not-a-real-token")
+    #expect(model.isRevealed)
+    #expect(model.canConnect)
+
+    // With no store and no copy of Todoist behind it there is nothing it can
+    // do, and it says so by doing nothing rather than by pretending.
+    #expect(await model.connect() == false)
+  }
+
+  /// The wording a revoked credential lands on says "revoked", never "an error
+  /// occurred" — and never a character of the credential itself.
+  @Test("theRevokedWordingNamesWhatHappened")
+  func theRevokedWordingNamesWhatHappened() {
+    let message = SignInScreenModel.Banner.revoked.message
+
+    #expect(message.contains("revoked"))
+    #expect(message.contains("not-a-real-token") == false)
+    for word in Self.creationWords {
+      #expect(message.range(of: word, options: .caseInsensitive) == nil)
+    }
+  }
+
+  // MARK: Private
+
+  /// The vocabulary a control that made a task would have to use.
+  ///
+  /// "Create" is checked as a whole word through the phrases below rather than
+  /// as a substring, because the one sentence that is *allowed* to contain it is
+  /// the one that says tasks are created somewhere else — and that sentence is
+  /// checked separately, by name.
+  private static let creationWords = ["add ", "new task", "create a", "create your", "compose", "+ "]
+
+  /// Every sentence these screens can put in front of somebody.
+  private static let everySentenceThePickerCanSay = [
+    PickerScreenModel.searchPrompt,
+    PickerScreenModel.emptyProjectMessage,
+    PickerScreenModel.noMatchHeading,
+    PickerScreenModel.noMatchOrigin,
+    PickerScreenModel.noMatchDetail(for: "deploy the thing")
+  ]
+
+  private static let corpus = PickerScreenModel(
+    projects: [
+      PickerScreenModel.Project(id: "p1", name: "Deep work", openTaskCount: 1),
+      PickerScreenModel.Project(id: "p3", name: "Someday", openTaskCount: 0)
+    ],
+    sections: [
+      PickerScreenModel.Section(id: "s1", name: "This week", projectID: "p1")
+    ],
+    tasks: [
+      PickerScreenModel.TaskItem(
+        id: "t1",
+        title: "Draft the Q3 summary",
+        projectID: "p1",
+        projectName: "Deep work",
+        sectionID: "s1")
+    ])
+}
