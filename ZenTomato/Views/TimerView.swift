@@ -29,6 +29,15 @@ struct TimerView: View {
       .sheet(isPresented: $showingSettings, onDismiss: settingsSheetClosed) {
         SettingsView()
       }
+      // The toll on the one exit a running block has. Presented rather than
+      // acted on: tapping Stop opens this, and the block keeps running until a
+      // reason is written and confirmed. Nothing here can end a block silently.
+      .sheet(isPresented: $isAskingWhyStopping) {
+        StopReasonSheet(
+          reason: $stopReason,
+          onConfirm: confirmStop,
+          onCancel: { isAskingWhyStopping = false })
+      }
       // A blocking cover, presented *by this screen*, which is what gives the two
       // failure screens their order: if the database will not open this view is
       // never built, so the alarm explainer can never be drawn on top of the
@@ -67,6 +76,14 @@ struct TimerView: View {
 
   @State private var showingSettings = false
 
+  /// Whether the "why are you stopping?" sheet is up. Tapping Stop sets this;
+  /// nothing else does.
+  @State private var isAskingWhyStopping = false
+
+  /// What has been typed into that sheet. Owned here rather than inside the
+  /// sheet so a dismissal cannot strand a half-written sentence out of reach.
+  @State private var stopReason = ""
+
   /// The screen, redrawn once a second only while something is actually counting.
   @ViewBuilder
   private var screen: some View {
@@ -95,7 +112,6 @@ struct TimerView: View {
     TimerScreen(
       model: model(at: instant),
       onStart: { self.startBlock() },
-      onSkip: { self.skipBlock() },
       onStop: { self.stopBlock() },
       onOpenSettings: { self.showingSettings = true })
   }
@@ -170,12 +186,20 @@ struct TimerView: View {
     Task { await engine.start() }
   }
 
-  private func skipBlock() {
-    Task { await engine.skip() }
+  /// Stop was tapped. This does not stop anything yet — it opens the sheet that
+  /// asks why. Nothing is recorded and the block keeps running until a reason is
+  /// written and confirmed.
+  private func stopBlock() {
+    stopReason = ""
+    isAskingWhyStopping = true
   }
 
-  private func stopBlock() {
-    Task { await engine.stop() }
+  /// The person wrote a reason and confirmed. Now the block ends.
+  private func confirmStop() {
+    let reason = stopReason.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard reason.isEmpty == false else { return }
+    isAskingWhyStopping = false
+    Task { await engine.stop(reason: reason) }
   }
 
   /// The settings sheet has closed.

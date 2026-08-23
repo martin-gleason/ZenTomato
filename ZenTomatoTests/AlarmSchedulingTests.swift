@@ -37,32 +37,24 @@ struct AlarmSchedulingTests {
     try context.fetch(FetchDescriptor<PomodoroSession>())
   }
 
-  /// Nothing is left outstanding after a skip.
-  @Test("skipCancelsAlarm")
-  func skipCancelsAlarm() async throws {
-    await engine.start()
-    #expect(alarms.outstanding != nil)
-
-    await engine.skip()
-
-    #expect(alarms.outstanding == nil)
-    #expect(alarms.callLog == ["schedule", "cancelOutstanding"])
-  }
-
   /// Nothing is left outstanding after a stop.
   @Test("stopCancelsAlarm")
   func stopCancelsAlarm() async throws {
     await engine.start()
-    await engine.stop()
+    await engine.stop(reason: "test")
 
     #expect(alarms.outstanding == nil)
     #expect(alarms.callLog == ["schedule", "cancelOutstanding"])
   }
 
-  /// The order, when a skip leads straight into another block: the old alarm is
-  /// called off BEFORE the new one is set. An alarm sounding four minutes after
-  /// the block it belonged to was skipped is this feature's most likely
-  /// user-visible bug, and it is an ordering bug rather than a logic one.
+  /// The order, when auto-start leads one block straight into the next: the old
+  /// alarm is called off BEFORE the new one is set. An alarm sounding four
+  /// minutes after the block it belonged to has ended is this feature's most
+  /// likely user-visible bug, and it is an ordering bug rather than a logic one.
+  ///
+  /// This is now the ONLY path on which one block chains into another. Skip used
+  /// to be a second one and was removed with D13, which makes this test the sole
+  /// guard on the ordering rather than one of two.
   @Test("cancelPrecedesTheNextSchedule")
   func cancelPrecedesTheNextSchedule() async throws {
     let stored = try AppSettings.current(in: context)
@@ -70,7 +62,8 @@ struct AlarmSchedulingTests {
     try context.save()
 
     await engine.start()
-    await engine.skip()
+    clock.advance(by: 25 * 60)
+    await engine.boundaryReached()
 
     #expect(alarms.callLog == ["schedule", "cancelOutstanding", "schedule"])
     #expect(alarms.outstanding != nil)
@@ -117,7 +110,7 @@ struct AlarmSchedulingTests {
     await engine.start()
     alarms.cancelError = SpyAlarmScheduler.Failure()
 
-    await engine.stop()
+    await engine.stop(reason: "test")
 
     #expect(engine.lastFailure == .alarmCancellationFailed)
     #expect(engine.isRunning == false)
@@ -147,7 +140,7 @@ struct AlarmSchedulingTests {
     alarms.authorizationAnswer = .authorized
 
     await engine.start()
-    await engine.skip()
+    await engine.stop(reason: "testing the prompt")
     await engine.start()
 
     #expect(alarms.callLog.filter { $0 == "requestAuthorization" }.count == 1)

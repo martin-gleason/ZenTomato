@@ -61,10 +61,13 @@ struct TimerEngineTests {
     #expect(engine.endsAt == runningEnd)
     #expect(engine.remaining(at: clock.now) == .seconds(25 * 60))
 
-    // Cross two boundaries by hand to reach the next focus block.
-    await engine.skip()
+    // Cross two boundaries to reach the next focus block. Skip is gone (D13), so
+    // the only way past a block is to let it end.
+    clock.advance(by: 25 * 60)
+    await engine.boundaryReached()
     await engine.start()
-    await engine.skip()
+    clock.advance(by: 5 * 60)
+    await engine.boundaryReached()
     await engine.start()
 
     #expect(engine.kind == .work)
@@ -87,22 +90,44 @@ struct TimerEngineTests {
     #expect(engine.completedInSprint == 0)
   }
 
-  /// A skipped focus block is recorded, marked abandoned, and does not become a
-  /// pomodoro. The short break still follows: skipping advances the cycle, it
-  /// just does not earn anything.
-  @Test("skippedWorkBlockIsAbandoned")
-  func skippedWorkBlockIsAbandoned() async throws {
+  /// A stopped focus block is recorded, marked abandoned, carries the reason the
+  /// person gave, and does not become a pomodoro.
+  @Test("stoppedWorkBlockIsAbandoned")
+  func stoppedWorkBlockIsAbandoned() async throws {
     await engine.start()
     clock.advance(by: 120)
-    await engine.skip()
+    await engine.stop(reason: "Fire alarm went off.")
 
     let rows = try sessions()
     #expect(rows.count == 1)
     #expect(rows.first?.kind == .work)
     #expect(rows.first?.wasAbandoned == true)
+    // The reason is the whole point of making stop the only exit. A row marked
+    // abandoned with no reason would mean the sheet let somebody past without
+    // one.
+    #expect(rows.first?.abandonReason == "Fire alarm went off.")
     #expect(engine.completedInSprint == 0)
-    #expect(engine.kind == .shortBreak)
+    // Stop ends the SPRINT, not just the block, so the timer goes idle with a
+    // focus block queued rather than advancing to a break. Skip used to advance;
+    // skip is gone (D13), and this is the difference between the two.
+    #expect(engine.kind == .work)
     #expect(engine.isRunning == false)
+  }
+
+  /// A block that runs to its end carries no reason. `abandonReason` is what
+  /// separates "I stopped this and here is why" from "this finished", and a
+  /// completed block acquiring one would make the two indistinguishable in the
+  /// export.
+  @Test("completedBlockHasNoAbandonReason")
+  func completedBlockHasNoAbandonReason() async throws {
+    await engine.start()
+    clock.advance(by: 25 * 60)
+    await engine.boundaryReached()
+
+    let rows = try sessions()
+    #expect(rows.count == 1)
+    #expect(rows.first?.wasAbandoned == false)
+    #expect(rows.first?.abandonReason == nil)
   }
 
   /// With auto-start switched ON, the end of a long break returns the timer to
@@ -182,7 +207,7 @@ struct TimerEngineTests {
 
     // A minute into the break, so the two rows have distinguishable end times.
     clock.advance(by: 60)
-    await engine.stop()
+    await engine.stop(reason: "test")
 
     #expect(engine.isRunning == false)
     #expect(engine.kind == .work)

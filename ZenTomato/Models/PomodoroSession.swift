@@ -44,14 +44,37 @@ final class PomodoroSession {
   /// every count.
   var wasAbandoned: Bool
 
+  /// Why the person stopped, in their own words. `nil` for every block that ran
+  /// to its end, and non-nil for every one they stopped.
+  ///
+  /// **This is the most valuable field on the row, and it is the only one the app
+  /// cannot derive.** Everything else here is bookkeeping the timer knows by
+  /// itself: when the block began, when it ended, whether it finished. Why it
+  /// ended early is a thing only the person knows, and the moment they know it
+  /// best is the moment they are stopping.
+  ///
+  /// The app therefore refuses to stop a block without one — see the stop sheet.
+  /// That is a deliberate departure from how the distraction prompt behaves,
+  /// where saying nothing is a normal outcome: there, the tap has already
+  /// recorded the fact and the sentence adds colour. Here the fact of stopping
+  /// is a single bit and the sentence is the whole content.
+  var abandonReason: String?
+
   /// Creates a finished-block row. Every value is required: there is no
   /// sensible default for any of them, and a default would only ever hide a
   /// caller that forgot to say.
-  init(id: UUID, kind: BlockKind, startedAt: Date, endedAt: Date, wasAbandoned: Bool) {
+  init(
+    id: UUID,
+    kind: BlockKind,
+    startedAt: Date,
+    endedAt: Date,
+    wasAbandoned: Bool,
+    abandonReason: String? = nil) {
     self.id = id
     self.kind = kind
     self.startedAt = startedAt
     self.endedAt = endedAt
     self.wasAbandoned = wasAbandoned
+    self.abandonReason = abandonReason
   }
 }

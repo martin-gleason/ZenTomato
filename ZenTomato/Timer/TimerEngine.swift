@@ -194,26 +194,24 @@ final class TimerEngine {
     await begin(kind: kind, completedInSprint: completedInSprint, settings: readSettings())
   }
 
-  /// Ends the current block early and moves to the next one. A skipped block is
-  /// recorded as abandoned, and a skipped *focus* block does not count towards
-  /// the sprint: the long break is earned by finished pomodoros, not attempts.
-  func skip() async {
-    guard isRunning, let state else { return }
-    lastFailure = nil
-    // Called off first. An alarm sounding four minutes after the block it
-    // belonged to was skipped is this feature's most likely user-visible bug.
-    cancelAlarm()
-    await end(state: state, completed: false, at: clock.now, mayAutoStart: true)
-  }
-
-  /// Abandons the sprint: records the running block, calls off the alarm,
-  /// returns the sprint count to zero and goes idle with a focus block queued.
-  /// That reset is the whole difference between this and `skip()`.
-  func stop() async {
+  /// Abandons the sprint: records the running block with the reason the person
+  /// gave, calls off the alarm, returns the sprint count to zero and goes idle
+  /// with a focus block queued.
+  ///
+  /// **This is the only way out of a running block, and it is deliberately the
+  /// only one.** A pomodoro is indivisible: it is finished or it is void, never
+  /// paused and never quietly skipped. An exit still has to exist, because a
+  /// mistyped two-hour focus length would otherwise be inescapable — but it is
+  /// priced. The caller must supply a reason, and the screen will not let anyone
+  /// past without writing one.
+  ///
+  /// The reason is required by the *type*, not merely by the screen. A second
+  /// caller added later cannot quietly stop a block without one.
+  func stop(reason: String) async {
     guard isRunning, let state else { return }
     lastFailure = nil
     cancelAlarm()
-    recordSession(state: state, endedAt: clock.now, wasAbandoned: true)
+    recordSession(state: state, endedAt: clock.now, wasAbandoned: true, abandonReason: reason)
     lastCompletedSprintSize = nil
     goIdle(kind: .work, completedInSprint: 0)
     persist()
@@ -414,10 +412,14 @@ final class TimerEngine {
 
   /// Writes the finished-block row. Saving is left to the caller so the row and
   /// the new timer state are written in one go.
-  private func recordSession(state: TimerState, endedAt: Date, wasAbandoned: Bool) {
+  private func recordSession(
+    state: TimerState,
+    endedAt: Date,
+    wasAbandoned: Bool,
+    abandonReason: String? = nil) {
     let session = PomodoroSession(
       id: state.sessionID, kind: state.kind, startedAt: state.startedAt,
-      endedAt: endedAt, wasAbandoned: wasAbandoned)
+      endedAt: endedAt, wasAbandoned: wasAbandoned, abandonReason: abandonReason)
     context.insert(session)
   }
 

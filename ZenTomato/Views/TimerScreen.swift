@@ -16,7 +16,6 @@ struct TimerScreen: View {
   let model: TimerScreenModel
 
   var onStart: () -> Void = { }
-  var onSkip: () -> Void = { }
   var onStop: () -> Void = { }
   var onOpenSettings: () -> Void = { }
 
@@ -170,23 +169,27 @@ struct TimerScreen: View {
         .accessibilityLabel(Text(spokenLabel))
 
     case .running:
-      // Skip leads and Stop follows, so that reading order matches escalation:
-      // end this block, then end the session. There is no confirmation on
-      // either, and that is a decision — the cost of a mis-tapped Stop is one
-      // abandoned block and one tap to restart, while the cost of a confirmation
-      // sheet is a modal interruption during every single focus block. Two
-      // 44-point controls separated by a gap is the mitigation.
-      HStack(spacing: Spacing.sm) {
-        Button("Skip") { onSkip() }
-          .buttonStyle(SecondaryButtonStyle())
-          .accessibilityLabel(Text("Skip this block"))
-          .accessibilityHint(Text("Ends the block now. It won't be counted."))
-
-        Button("Stop") { onStop() }
-          .buttonStyle(SecondaryButtonStyle(emphasis: .quiet))
-          .accessibilityLabel(Text("Stop the timer"))
-          .accessibilityHint(Text("Ends the block and the sprint."))
-      }
+      // ONE CONTROL, AND IT IS QUIET.
+      //
+      // A pomodoro is indivisible: it finishes or it is void. There was a Skip
+      // button beside this one and it is gone — an exit that costs a single tap
+      // is not an exit from a focus block, it is a way of not having one.
+      //
+      // Stop remains because an exit has to exist. A mistyped two-hour focus
+      // length would otherwise be inescapable, and the only remaining way out
+      // would be force-quitting the app — which the engine reconciles from the
+      // stored end time and records as a *finished* pomodoro. That is the same
+      // false count this app removed from the Lock Screen, arriving by another
+      // door. So the exit exists, and instead of being cheap it is priced: it
+      // asks why, and will not proceed until it is told.
+      //
+      // Quiet emphasis, deliberately. The one piece of colour on this screen is
+      // the word above the number. A filled Stop button would advertise stopping
+      // as an encouraged thing to do, sixty times an hour, for the whole block.
+      Button("Stop") { onStop() }
+        .buttonStyle(SecondaryButtonStyle(emphasis: .quiet))
+        .accessibilityLabel(Text("Stop the timer"))
+        .accessibilityHint(Text("Asks why, then ends the block and the sprint."))
     }
   }
 
