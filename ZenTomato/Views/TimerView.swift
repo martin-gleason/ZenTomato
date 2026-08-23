@@ -1,280 +1,287 @@
 import SwiftData
 import SwiftUI
 
-/// The timer screen — and, in this first version, the whole app.
+/// The timer screen, wired to the engine.
 ///
-/// **What is on it.** Three things and nothing else: a small green word saying
-/// what kind of block this is, a large number saying how long it lasts, and a
-/// Start button that is switched off. No navigation bar, no toolbar, no settings
-/// button, no card, no shadow.
+/// WHAT THIS FILE DOES AND WHAT IT DELIBERATELY DOES NOT
+/// It reads the engine, turns what it finds into finished strings and numbers,
+/// and hands them to `TimerScreen`, which draws them. It owns the settings sheet
+/// and the blocking cover that appears when alarms are switched off. It contains
+/// no layout and no colours; those are all in `TimerScreen`.
 ///
-/// **What is deliberately missing.** There is no timer behind this. Nothing
-/// counts down, and the Start button does nothing when tapped because it cannot
-/// be tapped. That is the agreed shape of this piece of work: it exists to prove
-/// that the app launches, that the database opens, and that a saved setting comes
-/// back out again. The countdown itself is the next piece of work.
+/// THE NUMBER IS NOT COUNTED DOWN
+/// Nothing in this app decrements a number once a second. The engine records the
+/// wall-clock instant the block ends, and this screen asks it "how much is left
+/// *at this moment*" each time it redraws. That is the difference between a timer
+/// that survives being backgrounded and one that quietly loses four minutes
+/// because iOS suspended the app.
 ///
-/// **Where the number comes from.** The `25` is read out of the database, not
-/// typed into this file. That is the point of the screen: if the store failed to
-/// open, or the settings row failed to save, this number would be wrong — and it
-/// is wrong in a way that is visible from across the room.
+/// The redraw comes from `TimelineView`, which is SwiftUI's own once-a-second
+/// heartbeat. It is used rather than a repeating timer for one reason: it stops
+/// on its own when the screen goes away, so there is no cancellation to get
+/// wrong. It is only a nudge to redraw — never the record of how much time has
+/// passed — and while no block is running it is not used at all.
 struct TimerView: View {
   // MARK: Internal
 
   var body: some View {
-    VStack(spacing: Spacing.none) {
-      // Two equal spacers, one above the block and one below it. Because they
-      // are equal, the word-and-number pair centres itself in the space *above*
-      // the button, which lands it slightly above the true middle of the screen.
-      // That is where an eye expects a single focal element; a mathematically
-      // centred number with a button underneath reads as sitting too low.
-      Spacer(minLength: Spacing.xl)
-
-      focusBlock
-
-      Spacer(minLength: Spacing.xl)
-
-      startButton
-    }
-    .padding(.horizontal, Spacing.md)
-    .padding(.bottom, Spacing.lg)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    // Only the *background* runs under the status bar and the home indicator.
-    // The content stays inside the safe area, so the number never slides under
-    // the camera cutout and the button never sits under the home bar.
-    .background(Color(.surfacePrimary).ignoresSafeArea())
+    screen
+      .sheet(isPresented: $showingSettings, onDismiss: settingsSheetClosed) {
+        SettingsView()
+      }
+      // A blocking cover, presented *by this screen*, which is what gives the two
+      // failure screens their order: if the database will not open this view is
+      // never built, so the alarm explainer can never be drawn on top of the
+      // database explainer. The precedence is structural rather than a condition
+      // somebody has to remember.
+      .fullScreenCover(isPresented: alarmsAreOff) {
+        AlarmPermissionView()
+      }
   }
 
   // MARK: Private
 
-  /// Reads the settings row out of the database.
-  ///
-  /// This comes back as a list because that is the only shape SwiftData offers,
-  /// but there is exactly one settings row by design — see `AppSettings`.
-  @Query private var settings: [AppSettings]
-
-  /// The size of the countdown numeral, after the reader's text-size setting has
-  /// been applied to it.
-  ///
-  /// `@ScaledMetric` is the tool for exactly this job: it takes a number that
-  /// means "points on screen" and grows it the way text grows, so the numeral
-  /// tracks the reader's Settings choice even though its size is stated directly
-  /// rather than taken from a named text style. `relativeTo: .largeTitle` picks
-  /// *which* growth curve — the one for very large text, which flattens off at
-  /// the top accessibility sizes instead of running away. That flattening is the
-  /// reason this reads correctly at AX5: without it a number starting at 96
-  /// points would ask for several times the width of the phone.
-  @ScaledMetric(relativeTo: .largeTitle) private var numeralSize = Typography.numeralBaseSize
+  /// How often the number is redrawn while a block runs.
+  private static let refreshInterval: TimeInterval = 1
 
   /// What the screen shows when there is no settings row to read.
   ///
-  /// **Why it is not just `25:00`.** This screen's job is to prove that the
-  /// database opened and that a saved setting came back out of it. It used to
-  /// fall back to the number 25 — which is also the number a healthy first
-  /// launch produces — so a store that opened but held nothing looked exactly
-  /// like a store that was working perfectly. The screen could not do the job it
-  /// exists for. Dashes cannot be mistaken for a working timer from across the
-  /// room, which is the whole point.
-  ///
-  /// It cannot happen in practice: the app creates the row at launch, before
-  /// this screen is ever shown. This is what the code says instead of Swift's
-  /// crash-on-purpose operator, which would take the whole app down over
-  /// something a person could read past.
+  /// It cannot happen in practice: the app creates the row at launch, before this
+  /// screen is ever shown. It used to fall back to the number 25 — which is also
+  /// the number a healthy first launch produces — so a database that opened but
+  /// held nothing looked exactly like one that was working perfectly. Dashes
+  /// cannot be mistaken for a working timer from across the room, which is the
+  /// whole point.
   private static let missingReading = "--:--"
 
-  /// How far the small green word may shrink before it would otherwise overflow.
-  /// It never needs to at any text size available today; the floor is here so a
-  /// longer word later ("Long break") cannot be cut off.
-  private static let kickerMinimumScale: CGFloat = 0.7
+  /// The running timer. Handed down by the app, which owns it.
+  @Environment(TimerEngine.self) private var engine
 
-  /// How far the large number may shrink.
+  /// The settings row. This comes back as a list because that is the only shape
+  /// SwiftData offers, but there is exactly one row by design.
   ///
-  /// At the very largest accessibility text sizes it would otherwise ask for more
-  /// width than the phone has. Shrinking is correct and truncating is not: a
-  /// countdown missing a digit is wrong information, whereas a slightly smaller
-  /// countdown is still — even after shrinking — by far the biggest thing on the
-  /// screen.
-  private static let numeralMinimumScale: CGFloat = 0.5
+  /// The screen does not read the six values out of it — the engine holds those,
+  /// and reading them twice is how two numbers on one screen start to disagree.
+  /// It is here to answer one question: is there a settings row at all?
+  @Query private var settings: [AppSettings]
 
-  /// The number of minutes in a focus block, as saved by the user, or `nil` if
-  /// there is no settings row to read one from.
-  private var workMinutes: Int? {
-    settings.first?.workMinutes
-  }
+  @State private var showingSettings = false
 
-  /// The word and the number, treated as one thing.
-  private var focusBlock: some View {
-    VStack(spacing: Spacing.sm) {
-      Text("Focus")
-        .font(Typography.kicker)
-        .textCase(.uppercase)
-        // The one piece of colour on the entire screen. Everything else is a
-        // neutral grey. Scarcity is what makes it mean something.
-        .foregroundStyle(Color(.action))
-        .lineLimit(1)
-        .minimumScaleFactor(Self.kickerMinimumScale)
-
-      Text(workMinutes.map(Self.countdownLabel(minutes:)) ?? Self.missingReading)
-        .font(Typography.timerNumeral(size: numeralSize))
-        // Pulls the characters fractionally closer together. At this size the
-        // default spacing reads as gaps between words rather than between digits.
-        // The amount is a fraction of the size, so it holds at every text size.
-        .tracking(numeralSize * Typography.numeralTrackingRatio)
-        // Quieter ink for the dashes, so "there is nothing to show" reads
-        // differently from "here is your time" at a glance as well as in words.
-        .foregroundStyle(workMinutes == nil ? Color(.textSubtle) : Color(.textPrimary))
-        .lineLimit(1)
-        .minimumScaleFactor(Self.numeralMinimumScale)
+  /// The screen, redrawn once a second only while something is actually counting.
+  @ViewBuilder
+  private var screen: some View {
+    if engine.isRunning {
+      TimelineView(.periodic(from: .now, by: Self.refreshInterval)) { context in
+        timerScreen(at: context.date)
+      }
+    } else {
+      timerScreen(at: .now)
     }
-    // VoiceOver reads these two as one sentence rather than two fragments. Left
-    // alone it would announce the word in isolation and then read the number as
-    // "twenty-five colon zero zero", pronouncing the colon out loud. The spoken
-    // value is built from the same saved setting as the printed one, so the two
-    // can never disagree.
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel(Text("Focus block"))
-    .accessibilityValue(Text(workMinutes.map { "\($0) minutes" } ?? "length not available"))
   }
 
-  /// The Start button, switched off in this version.
+  /// Whether the alarm explainer should be covering the screen.
   ///
-  /// VoiceOver announces it as "Start, dimmed, button". There is deliberately no
-  /// spoken hint explaining *why* it is dimmed: that would bake a temporary state
-  /// of this codebase into a sentence that ships.
-  private var startButton: some View {
-    // The action is empty because the button cannot be pressed. The countdown
-    // that will fill it in is the next piece of work; landing it removes the
-    // `.disabled` below and changes nothing else on this screen.
-    Button("Start") { }
-      .buttonStyle(StartButtonStyle())
-      .disabled(true)
+  /// A one-way binding: the cover has no way to close itself, so nothing writes
+  /// back. It lifts when the answer changes, which happens on the app's next
+  /// return to the foreground — and since the only place the switch can be
+  /// changed is the Settings app, coming back is unavoidable. That is what makes
+  /// the promise in the cover's own words ("come back to this screen and it'll
+  /// let you through by itself") a promise the code keeps.
+  private var alarmsAreOff: Binding<Bool> {
+    Binding(get: { self.engine.authorization == .denied }, set: { _ in })
   }
 
-  /// Formats a whole number of minutes as a clock reading, e.g. `25` → `"25:00"`.
+  private func timerScreen(at instant: Date) -> TimerScreen {
+    TimerScreen(
+      model: model(at: instant),
+      onStart: { self.startBlock() },
+      onSkip: { self.skipBlock() },
+      onStop: { self.stopBlock() },
+      onOpenSettings: { self.showingSettings = true })
+  }
+
+  // MARK: Turning the engine into something to draw
+
+  private func model(at instant: Date) -> TimerScreenModel {
+    guard settings.first != nil else {
+      return .noSettingsRow(numeral: Self.missingReading)
+    }
+
+    let kind = engine.kind
+    // While a block runs this is what is left of it; while the screen is idle the
+    // engine returns the whole length of the block Start would begin, because
+    // nothing has run yet and all of it is left. One question, one answer, in
+    // both states — which is why the idle screen cannot show a different number
+    // from the one the next block will actually use.
+    let secondsLeft = Self.wholeSeconds(engine.remaining(at: instant))
+    let spokenBlock = Self.spokenName(for: kind)
+
+    return TimerScreenModel(
+      blockName: spokenBlock.capitalizedFirst,
+      kicker: kind.displayName,
+      numeral: Self.clockLabel(seconds: secondsLeft),
+      spokenNumeral: engine.isRunning
+        ? Self.spokenRemaining(seconds: secondsLeft)
+        : Self.spokenMinutes(secondsLeft / 60),
+      progress: progress,
+      completionNote: completionNote,
+      // Written by the engine, not by this screen. There is one wording for each
+      // failure and it lives with the thing that can fail.
+      failureNote: engine.lastFailure?.message,
+      controls: engine.isRunning
+        ? .running
+        : .start(
+          isEnabled: true,
+          spokenLabel: "Start \(spokenBlock), \(Self.spokenMinutes(secondsLeft / 60))"))
+  }
+
+  /// How many pomodoros to draw as done, out of how many.
   ///
-  /// Deliberately a small private function rather than a shared helper: this
-  /// screen is the only thing that needs it today, and inventing a shared
-  /// formatting type for one caller would be building for a caller that does not
-  /// exist.
-  private static func countdownLabel(minutes: Int) -> String {
-    String(format: "%02d:00", minutes)
+  /// While a sprint has just finished the engine's own count is already back to
+  /// zero — correctly, because the next sprint starts from nothing — so the rule
+  /// reads the size of the sprint that just ended instead. It is the only idle
+  /// state in which every segment is filled.
+  private var progress: TimerScreenModel.Progress? {
+    if let size = engine.lastCompletedSprintSize {
+      return TimerScreenModel.Progress(completed: size, total: size)
+    }
+    return TimerScreenModel.Progress(
+      completed: engine.completedInSprint,
+      total: engine.pomodorosPerSprint)
+  }
+
+  private var completionNote: String? {
+    guard let size = engine.lastCompletedSprintSize else { return nil }
+    // The singular matters: a sprint of one pomodoro is a real setting, and it is
+    // the first thing a reader would notice written as "1 pomodoros done".
+    let unit = size == 1 ? "pomodoro" : "pomodoros"
+    return "Sprint complete — \(size) \(unit) done."
+  }
+
+  // MARK: Commands
+
+  /// Each of these hands the engine a job from inside a button, which is a
+  /// synchronous place, so a small piece of asynchronous work is started to carry
+  /// it. That is safe here for one specific reason: the engine writes down what
+  /// happened *before* it waits for anything, so a piece of work that is
+  /// cancelled part way through can lose an alarm — which the app repairs on its
+  /// next return to the foreground — and can never lose a block.
+  private func startBlock() {
+    Task { await engine.start() }
+  }
+
+  private func skipBlock() {
+    Task { await engine.skip() }
+  }
+
+  private func stopBlock() {
+    Task { await engine.stop() }
+  }
+
+  /// The settings sheet has closed.
+  ///
+  /// The engine keeps its own copy of the six values, taken at the last block
+  /// boundary, and a running block is never allowed to notice a change. But an
+  /// *idle* screen must show the new focus length as soon as the sheet is
+  /// dismissed, so the engine is asked to re-read. This is the only thing that
+  /// happens when the sheet closes: there is no Save, because every change was
+  /// already written the moment it was made.
+  private func settingsSheetClosed() {
+    Task { await engine.synchronize() }
+  }
+
+  // MARK: Formatting
+
+  /// How VoiceOver names the block inside a sentence: "Start focus block, 25
+  /// minutes".
+  private static func spokenName(for kind: BlockKind) -> String {
+    switch kind {
+    case .work: "focus block"
+    case .shortBreak: "short break"
+    case .longBreak: "long break"
+    }
+  }
+
+  /// Rounds a remaining time up to whole seconds.
+  ///
+  /// Up rather than down, so that a block which has just started reads `25:00`
+  /// rather than `24:59`, and `00:00` appears exactly when the block is over
+  /// rather than for the whole of its last second.
+  private static func wholeSeconds(_ remaining: Duration) -> Int {
+    let parts = remaining.components
+    guard parts.seconds > 0 || parts.attoseconds > 0 else { return 0 }
+    return Int(parts.seconds) + (parts.attoseconds > 0 ? 1 : 0)
+  }
+
+  /// Minutes are not carried into hours. A two-hour block reads `120:00`, which
+  /// is longer than it is pretty and is unambiguous, where `2:00:00` next to
+  /// `04:31` on another day would not be.
+  private static func clockLabel(seconds: Int) -> String {
+    String(format: "%02d:%02d", seconds / 60, seconds % 60)
+  }
+
+  private static func spokenMinutes(_ minutes: Int) -> String {
+    "\(minutes) \(minutes == 1 ? "minute" : "minutes")"
+  }
+
+  private static func spokenRemaining(seconds: Int) -> String {
+    let wholeMinutes = seconds / 60
+    let remainder = seconds % 60
+    let secondsPart = "\(remainder) \(remainder == 1 ? "second" : "seconds")"
+    guard wholeMinutes > 0 else { return "\(secondsPart) remaining" }
+    return "\(spokenMinutes(wholeMinutes)) \(secondsPart) remaining"
   }
 }
 
-// MARK: - StartButtonStyle
+// MARK: - String helper
 
-/// How the Start button is drawn.
-///
-/// **Why the app defines this instead of using an iOS button.** The system's
-/// prominent button is heavily rounded — sixteen to twenty-six points — which is
-/// the opposite of this design system's sharp-cornered character. This style
-/// changes three things and nothing else: the fill, the ink, and the corner
-/// radius. Everything a button *does* — responding to a tap, reporting itself to
-/// VoiceOver, growing with the reader's text size, meeting the minimum tappable
-/// size — is still iOS's, untouched.
-///
-/// A second, quieter reason: iOS dims a *standard* button automatically when it
-/// is switched off, by making it see-through. That lets the page show through the
-/// button and reads as a rendering fault rather than as "off". A custom style
-/// receives no automatic dimming, so the treatment below is the whole treatment
-/// and it survives every accessibility setting, including Increase Contrast.
-private struct StartButtonStyle: ButtonStyle {
-  // MARK: Internal
-
-  func makeBody(configuration: Configuration) -> some View {
-    // `makeBody` is not itself a screen element, which means it cannot ask the
-    // system whether the button is currently switched on. The small view below
-    // can. Without this indirection a switched-off button would draw as if it
-    // were switched on.
-    Content(configuration: configuration)
-  }
-
-  // MARK: Private
-
-  private struct Content: View {
-    // MARK: Internal
-
-    let configuration: ButtonStyleConfiguration
-
-    var body: some View {
-      configuration.label
-        .font(Typography.button)
-        .foregroundStyle(ink)
-        // Two lines, because at the largest accessibility text sizes the label
-        // no longer fits on one, and wrapping beats truncating.
-        .lineLimit(2)
-        .multilineTextAlignment(.center)
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.xs)
-        // A *minimum* height applied after the padding, so 44pt is the floor for
-        // the whole control while the label stays free to grow past it. A fixed
-        // height would clip its own label at large text sizes.
-        .frame(maxWidth: .infinity, minHeight: Spacing.controlHeight)
-        .background(fill, in: shape)
-        // The outline is what makes a switched-off button legible at all. Its
-        // sunken fill is almost exactly the brightness of the page behind it
-        // (measured at 1.17:1 in light and 1.06:1 in dark), so without an
-        // outline the button would be effectively invisible — and in dark it
-        // would read as a hole in the page rather than as a control. This
-        // outline clears the 3:1 legibility floor against both the page and the
-        // fill, in both appearances.
-        .overlay {
-          if !isEnabled {
-            shape.strokeBorder(Color(.borderStrong), lineWidth: Spacing.borderHairline)
-          }
-        }
-        .contentShape(shape)
-    }
-
-    // MARK: Private
-
-    /// Whether the button is currently switched on. Set by `.disabled(_:)` at
-    /// the place the button is used, and read from the surroundings here.
-    @Environment(\.isEnabled) private var isEnabled
-
-    /// Six points of corner radius, against the sixteen to twenty-six that iOS
-    /// rounds its own buttons by. That sharpness is the design system's
-    /// signature. Defined once so the fill, the outline and the tappable area
-    /// can never disagree about the shape.
-    private var shape: RoundedRectangle {
-      RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
-    }
-
-    private var fill: Color {
-      isEnabled ? Color(.action) : Color(.surfaceInset)
-    }
-
-    private var ink: Color {
-      isEnabled ? Color(.onAction) : Color(.textSubtle)
-    }
+private extension String {
+  /// "focus block" becomes "Focus block".
+  ///
+  /// The same phrase is needed in two shapes: inside a sentence VoiceOver reads
+  /// ("Start focus block, 25 minutes") and on its own as the name of the element
+  /// ("Focus block"). Deriving one from the other means they cannot drift apart,
+  /// and it keeps the phrase written down exactly once.
+  var capitalizedFirst: String {
+    guard let first else { return self }
+    return first.uppercased() + dropFirst()
   }
 }
 
 // MARK: - Previews
 
-/// Hosts `TimerView` inside Xcode's preview canvas.
+/// The wired screen, on a throwaway database that lives in memory only.
+///
+/// Every *state* of this screen is previewed next door in `TimerScreen.swift`,
+/// where neither a database nor a timer is needed. This pair exists to check the
+/// wiring itself — that the engine reaches the screen, in both appearances.
+#Preview("Wired, light") {
+  TimerViewPreviewHost(appearance: .light)
+}
+
+#Preview("Wired, dark") {
+  TimerViewPreviewHost(appearance: .dark)
+}
+
+/// Preview scaffolding, never part of what ships.
 ///
 /// A preview has no running app around it, so no database is open and the timer
 /// would have nothing to read. This opens a throwaway store that lives in memory
-/// only and disappears when the preview closes. It is preview scaffolding and
-/// never part of what ships.
-private struct TimerPreviewHost: View {
+/// only and disappears when the preview closes.
+private struct TimerViewPreviewHost: View {
   // MARK: Internal
 
-  /// Forces the preview into light or dark, so the pair of previews below is a
-  /// real check that colours resolve for both.
+  /// Forces the preview into light or dark, so the pair is a real check that
+  /// colours resolve for both.
   let appearance: ColorScheme
 
-  /// The reader's chosen text size. Defaults to the standard one.
-  var textSize: DynamicTypeSize = .large
-
   var body: some View {
-    switch store {
-    case .success(let container):
+    switch bootstrap {
+    case .success(let running):
       TimerView()
-        .modelContainer(container)
+        .modelContainer(running.container)
+        .environment(running.engine)
         .preferredColorScheme(appearance)
-        .dynamicTypeSize(textSize)
 
     case .failure(let error):
       StoreUnavailableView(technicalDetail: error.localizedDescription)
@@ -283,27 +290,21 @@ private struct TimerPreviewHost: View {
 
   // MARK: Private
 
-  /// Held as state so the throwaway store is opened once per preview rather than
-  /// every time the canvas redraws.
-  @State private var store: Result<ModelContainer, any Error> = Result {
-    try AppModelContainer.make(.inMemory)
+  /// A container and an engine, built once per preview rather than on every
+  /// redraw of the canvas.
+  private struct PreviewRun {
+    let container: ModelContainer
+    let engine: TimerEngine
   }
-}
 
-/// Light appearance. Together with the dark preview below, this is the check that
-/// the colour system actually responds to the phone's setting: if a colour had
-/// been written as a fixed value by mistake, these two would look identical.
-#Preview("Light") {
-  TimerPreviewHost(appearance: .light)
-}
-
-/// Dark appearance.
-#Preview("Dark") {
-  TimerPreviewHost(appearance: .dark)
-}
-
-/// The largest text size iOS offers, which is the one that breaks layouts.
-/// Nothing here may be cut off or overlap at this size.
-#Preview("Largest text") {
-  TimerPreviewHost(appearance: .light, textSize: .accessibility5)
+  @State private var bootstrap: Result<PreviewRun, any Error> = Result {
+    let container = try AppModelContainer.make(.inMemory)
+    _ = try AppSettings.current(in: container.mainContext)
+    return PreviewRun(
+      container: container,
+      engine: TimerEngine(
+        context: container.mainContext,
+        clock: SystemTimerClock(),
+        alarms: AlarmKitScheduler()))
+  }
 }
