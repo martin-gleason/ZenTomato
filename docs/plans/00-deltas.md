@@ -458,6 +458,12 @@ Raised during the F2 device review and parked deliberately, so they are neither 
   settings field before that delta exists.**
 - **~~Dynamic Island presentation.~~ Verified working on device 2026-08-23.** Not a v1.1 item after
   all — it shipped in F2 and it works.
+- **Gamification, in v1.5.** `SPEC.md`'s out-of-scope list ends with *"streaks, badges, or any
+  gamification layered on top of Todoist's own"*, and the owner has placed that at v1.5 rather than
+  never. Nothing changes for v0.1 — the exclusion stands and F6's review is still pointed at it,
+  because a stats screen is exactly where that pressure appears first. Noted so the eventual delta is
+  a decision rather than a drift.
+
 - **A tomato that builds itself as the block runs (v1.1).** The owner's idea, and a good one: instead
   of a countdown readout, the Live Activity draws a tomato that assembles as the minutes pass, so the
   Lock Screen shows progress as a *picture* rather than a number.
@@ -473,3 +479,58 @@ Raised during the F2 device review and parked deliberately, so they are neither 
 
   It also needs the icon's vector artwork factored out of `Design/icon/make-icon.sh` and into
   something the widget can draw. **Do not start any of this before a ratified delta.**
+
+---
+
+## D16 — Designed so bi-directional sync is *possible* later, without preparing for it now
+
+**Ratified 2026-08-23.** The owner: *"I want, eventually, actions from ZenTomato to write to Todoist
+as well as be updated from Todoist. It should be bi-directional. Stick to the 1.0 spec on this, but
+build the functions in such a way to allow for this to be updated in v1.1 or v1.5."*
+
+This sits directly on a non-negotiable — *"Do not build it, stub it, or 'prepare for it.'"* — so the
+line has to be exact, because both halves are right.
+
+### The distinction
+
+**Good design that happens to be extensible is not preparation.** Preparation is code that exists
+only to serve a feature that does not. The test is simple: *would I write this the same way if
+bi-directional sync were never coming?* If yes, it is design. If no, it is preparation.
+
+### What v0.1 does, all of which passes that test
+
+| | Why it is design, not preparation |
+|---|---|
+| **Every Todoist request in one type.** `TodoistAPI.swift` holds the base URL, the version and every endpoint constant. | Already in F3's plan, written before this delta existed. Scattering HTTP through views is bad regardless. |
+| **The endpoint allowlist stays.** `scripts/todoist-allowed-endpoints.txt`, enforced pre-commit and in CI. | This is the *mechanism* by which a future write is added: a visible, committed, reviewable diff. It does not need loosening later; it needs to keep working. |
+| **The cache is a genuine mirror.** No invented fields, no local ordering, no local hierarchy. | The rule already. It also happens to mean there is no divergent local state to reconcile when sync arrives. |
+| **Title snapshots on records.** | Already required so a two-week-old review reads truthfully. Independently, it means history is not rewritten when Todoist changes. |
+| **Reads and the single write are separate paths.** | Ordinary separation of concerns. |
+
+### What v0.1 must NOT contain
+
+Every one of these fails the test — it would only exist for a feature that does not:
+
+- A `TodoistWriting` protocol, or any method named `create`, `update`, `move` or `comment`, however
+  it is stubbed or documented.
+- A pending-changes queue, an outbox, a dirty flag, a `syncedAt` used for anything but cache freshness.
+- Conflict-resolution machinery, merge policy, or last-writer-wins bookkeeping.
+- Any locally mutable task field. The cache is read-only to the app.
+- Weakening or removing the no-writes hook "so it is easier later".
+
+### The honest part
+
+**Nothing done now makes bi-directional sync easy later.** It is a hard problem in its own right —
+conflict resolution, offline queues, deletion semantics, idempotent retries, and deciding what wins
+when the same task changed in both places. No amount of foresight in v0.1 removes that work.
+
+What v0.1 *can* do is avoid making it **harder**, and the way it does that is by accumulating no local
+state that would later have to be reconciled. A v0.1 that invented its own task ordering, or let you
+rename a cached task, would leave a v1.1 sync facing a divergence it did not create. This one will not.
+
+### One consequence to flag now
+
+Expanding writes makes **D9** sharper, not softer. The Todoist client secret is embedded in the app;
+today it can only ever complete a task. A build that can create, edit and delete on the user's behalf
+with a published secret is a materially different risk. **D9 should be decided before write scope
+grows, not after.**
