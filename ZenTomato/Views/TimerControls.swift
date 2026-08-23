@@ -170,11 +170,21 @@ struct SecondaryButtonStyle: ButtonStyle {
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.xs)
         .frame(maxWidth: .infinity, minHeight: Spacing.controlHeight)
-        // No fill at rest: the page shows through, which is what makes this
-        // button quiet. Nothing is painted rather than something transparent
-        // being painted, so it is correct on any ground.
+        // No fill at rest *while it is switched on*: the page shows through,
+        // which is what makes this button quiet. Nothing is painted rather than
+        // something transparent being painted, so it is correct on any ground.
+        //
+        // A SWITCHED-OFF BUTTON IS FILLED, AND THAT IS THE WHOLE POINT.
+        // iOS dims a *standard* button automatically when it is switched off. A
+        // custom style receives no dimming at all, so until this branch existed
+        // a disabled quiet button was drawn pixel-identical to a live one —
+        // and the only `.disabled(_:)` on this style in the app is "Stop the
+        // timer" on the stop sheet, whose entire job is to say that a reason
+        // has not been written yet. It said nothing. The sunken fill plus the
+        // subtle ink is the same treatment `StartButtonStyle` uses for the same
+        // state, so one switched-off appearance is learned once.
         .background {
-          if configuration.isPressed {
+          if configuration.isPressed || !isEnabled {
             shape.fill(Color(.surfaceInset))
           }
         }
@@ -188,14 +198,25 @@ struct SecondaryButtonStyle: ButtonStyle {
 
     // MARK: Private
 
+    /// Whether the button is currently switched on. Set by `.disabled(_:)` at
+    /// the place the button is used, and read from the surroundings here — the
+    /// style itself cannot ask, which is why this lives in a view.
+    @Environment(\.isEnabled) private var isEnabled
+
     private var shape: RoundedRectangle {
       RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
     }
 
+    /// Switched off, both emphases collapse to one ink.
+    ///
+    /// `textSubtle` on `surfaceInset` measures 4.13:1, which the design system
+    /// documents as legal precisely and only inside a *disabled* control — this
+    /// is that control. No new role and no new token is needed.
     private var ink: Color {
+      guard isEnabled else { return Color(.textSubtle) }
       switch emphasis {
-      case .normal: Color(.textPrimary)
-      case .quiet: Color(.textMuted)
+      case .normal: return Color(.textPrimary)
+      case .quiet: return Color(.textMuted)
       }
     }
   }
@@ -240,6 +261,14 @@ private struct ButtonStylePreviewRows: View {
         Button("Stop") { }
           .buttonStyle(SecondaryButtonStyle(emphasis: .quiet))
       }
+
+      // The quiet button, switched off. "Stop the timer" on the stop sheet is
+      // the one place in the app this state is reached, and it was drawn
+      // identically to the live button until this branch existed — because no
+      // preview ever showed it. This row is here so that it is looked at.
+      Button("Stop the timer") { }
+        .buttonStyle(SecondaryButtonStyle(emphasis: .quiet))
+        .disabled(true)
     }
     .padding(.horizontal, Spacing.md)
     .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -1,6 +1,22 @@
 import SwiftData
 import SwiftUI
 
+// swiftlint:disable file_length
+//
+// THE ONLY LINT RULE THIS FILE TURNS OFF, AND WHY.
+// `file_length` counts documentation, and this file is now more than half
+// documentation — a little over three hundred lines of it. Most of that is one
+// argument, made in several places because it is the argument the whole
+// distraction feature rests on: that a tap becomes a durable row before
+// anything else happens, and that every signal a person gets is driven by that
+// row existing rather than by the touch. Where the ordering matters it is
+// explained where it is written, because the code reads as if the obvious order
+// would do, and the next person to tidy it will need to know why it is the way
+// round it is. Splitting the file would move the lines and separate that
+// argument from the four or five places it constrains. The same exemption, for
+// the same reason, is already taken by `TimerEngine.swift`. Every other rule
+// stays on.
+
 /// The timer screen, wired to the engine.
 ///
 /// WHAT THIS FILE DOES AND WHAT IT DELIBERATELY DOES NOT
@@ -21,6 +37,20 @@ import SwiftUI
 /// on its own when the screen goes away, so there is no cancellation to get
 /// wrong. It is only a nudge to redraw — never the record of how much time has
 /// passed — and while no block is running it is not used at all.
+///
+/// THE ONE PLACE A DISTRACTION IS RECORDED FROM
+/// Tapping Internal or External calls `engine.recordDistraction(_:)`, which is
+/// **synchronous**: it writes the row and commits it to disk before it returns,
+/// and it answers `true` only if that worked. Everything else — the buzz, the
+/// count under the word, the two words VoiceOver speaks — is driven by that
+/// answer, so no signal can ever fire for a row that does not exist.
+///
+/// **There is deliberately no `Task` on that path**, unlike Start and Stop two
+/// screens' width away in this same file. Their asynchronous hop is safe because
+/// the engine writes the block down before it waits for anything. A capture has
+/// no such margin: the whole feature is the claim that a tap cannot be lost
+/// between the finger and the disk, and starting a piece of work to do the
+/// writing would put a gap back in exactly the place the claim is about.
 struct TimerView: View {
   // MARK: Internal
 
@@ -35,8 +65,76 @@ struct TimerView: View {
       .sheet(isPresented: $isAskingWhyStopping) {
         StopReasonSheet(
           reason: $stopReason,
+          // D14: the tap sentences ride along in the same sheet rather than
+          // arriving as a second modal behind this one. Empty for most stops,
+          // and then this is exactly the sheet that shipped in F2.
+          //
+          // Taken as a snapshot when the sheet opened rather than read live off
+          // the engine. A block can reach its natural end while somebody is
+          // still writing their reason, and the engine empties its list of the
+          // running block's taps when the next block begins — so a live read
+          // would make the fields disappear from under a finger mid-sentence.
+          prompts: stopPrompts,
+          notes: $noteDrafts,
           onConfirm: confirmStop,
-          onCancel: { isAskingWhyStopping = false })
+          onCancel: keepGoing)
+      }
+      // The end-of-block sheet. Presented by *item* rather than by a boolean:
+      // there is either a reflection to ask about or there is not, and a value
+      // that cannot be two things at once cannot present two sheets at once.
+      .sheet(item: $reflection, onDismiss: reflectionSheetClosed) { reflection in
+        BlockReflectionSheet(
+          reflection: reflection,
+          notes: $noteDrafts,
+          breakIsRunning: reflectionBreakIsRunning,
+          onDone: { self.reflection = nil })
+      }
+      // THE PROMPT IS TAKEN, NOT WATCHED.
+      //
+      // The engine offers a reflection at most once, at the end of a work block
+      // it was awake to see end. Consuming it hands it over and clears it in the
+      // same call, so it cannot be read twice and therefore cannot be presented
+      // twice — which is the defect D14 exists to prevent, arriving by a
+      // different door. Nothing re-offers it later: a block whose sheet was
+      // never seen keeps its rows and their notes stay empty.
+      //
+      // NOT WHILE ANOTHER SHEET IS UP, AND FOR THE STOP SHEET THAT IS D14.
+      // A block can reach its natural end while somebody is still writing their
+      // reason for stopping. The stop sheet in front of them already carries a
+      // field for every one of those taps, so there is nothing left to ask —
+      // and presenting a second modal on top of it, at the moment somebody has
+      // decided to quit, is the precise thing D14 exists to prevent. The offer
+      // is left unconsumed and is harmlessly replaced the next time a block
+      // ends.
+      //
+      // The settings sheet is in the guard for a duller reason and it is not
+      // optional: SwiftUI will not present a second sheet from the same view
+      // while one is up, so without this clause the offer would be consumed,
+      // cleared, and never drawn — no error, no amber row, just a prompt that
+      // silently did not happen. Left unconsumed it stays on the engine, and is
+      // harmlessly replaced the next time a block ends, exactly as the stop-sheet
+      // case already behaves.
+      .onChange(of: engine.pendingReflection) { _, offered in
+        guard offered != nil, isAskingWhyStopping == false, showingSettings == false else { return }
+        guard let taken = engine.consumePendingReflection() else { return }
+        // Snapshotted at the moment of presentation rather than read live, so
+        // the footer line cannot change its mind while somebody is reading it.
+        reflectionBreakIsRunning = engine.isRunning
+        closedReflectionPrompts = taken.prompts
+        reflection = taken
+      }
+      // A REFUSED TAP BELONGS TO THE BLOCK IT HAPPENED IN.
+      //
+      // `endsAt` changes exactly once per block — when one begins, and again
+      // when everything stops — so this clears the message at a boundary and at
+      // no other time. Without it an amber line about a tap made twenty minutes
+      // ago would still be sitting over a fresh block. That is precisely the
+      // defect F2's review found on the alarm-failure row, where a chained block
+      // inherited the previous block's warning; the engine clears its own
+      // failures at a boundary for the same reason, and this is the one message
+      // the engine does not own.
+      .onChange(of: engine.endsAt) { _, _ in
+        captureFailureNote = nil
       }
       // A blocking cover, presented *by this screen*, which is what gives the two
       // failure screens their order: if the database will not open this view is
@@ -63,6 +161,23 @@ struct TimerView: View {
   /// whole point.
   private static let missingReading = "--:--"
 
+  /// What the screen says when a tap could not be written.
+  ///
+  /// It is short and it asks for the one thing that might work, because the
+  /// person reading it is in the middle of a focus block and has already spent
+  /// the second this feature is supposed to cost. It appears in the same amber
+  /// row as an alarm failure, and is announced to VoiceOver by the same
+  /// mechanism, so there is one way this app says something went wrong.
+  private static let captureFailedNote = "That tap wasn't saved. Tap again."
+
+  /// Shown when the store refuses the sentences somebody wrote.
+  ///
+  /// It says what actually failed. The taps themselves were written down when
+  /// the buttons were pressed and are not at risk here — only the sentences
+  /// are — so this must not borrow the engine's block-loss wording, which would
+  /// tell somebody their pomodoro may be gone because a note did not save.
+  private static let notesFailedNote = "Those sentences weren't saved. The taps themselves are safe."
+
   /// The running timer. Handed down by the app, which owns it.
   @Environment(TimerEngine.self) private var engine
 
@@ -83,6 +198,43 @@ struct TimerView: View {
   /// What has been typed into that sheet. Owned here rather than inside the
   /// sheet so a dismissal cannot strand a half-written sentence out of reach.
   @State private var stopReason = ""
+
+  /// The sentences being written about individual taps, keyed by the id of the
+  /// tap each belongs to.
+  ///
+  /// **Owned here, and deliberately shared by both sheets.** A sentence typed
+  /// into the stop sheet is about a tap that really happened; it is not
+  /// conditional on the stop. So changing your mind and going back to work
+  /// keeps it, and if the block then runs to its natural end the same field
+  /// comes back with the same sentence in it, because both sheets are reading
+  /// the same drafts. Emptied once the notes have been handed to the engine.
+  ///
+  /// These are drafts, not records. The records were written when the buttons
+  /// were tapped, minutes ago.
+  @State private var noteDrafts: [UUID: String] = [:]
+
+  /// The block whose end-of-block sheet is up, or `nil`.
+  ///
+  /// Purely in-memory and never persisted, which is the mechanism behind a
+  /// ratified decision: killed with this sheet open, the app does not come back
+  /// with it. The rows survive, their notes stay empty, and there is no queue of
+  /// prompts waiting to nag. A sentence written an hour after the fact is not
+  /// the data the spec asks for.
+  @State private var reflection: BlockReflection?
+
+  /// Whether a break was counting at the moment that sheet was presented.
+  @State private var reflectionBreakIsRunning = false
+
+  /// The taps of the block being stopped, frozen when the stop sheet opened.
+  @State private var stopPrompts: [DistractionPrompt] = []
+
+  /// The taps of the reflection sheet that is open, kept so that its dismissal
+  /// knows how far back to look when it writes the sentences down. `reflection`
+  /// itself is already `nil` by the time `onDismiss` runs.
+  @State private var closedReflectionPrompts: [DistractionPrompt] = []
+
+  /// Set when a tap was refused, cleared by the next tap that works.
+  @State private var captureFailureNote: String?
 
   /// The screen, redrawn once a second only while something is actually counting.
   @ViewBuilder
@@ -113,7 +265,10 @@ struct TimerView: View {
       model: model(at: instant),
       onStart: { self.startBlock() },
       onStop: { self.stopBlock() },
-      onOpenSettings: { self.showingSettings = true })
+      onOpenSettings: { self.showingSettings = true },
+      // Called and finished on the spot. No `Task`, no `await`, nothing queued.
+      onInternalDistraction: { self.record(.internalInterruption) },
+      onExternalDistraction: { self.record(.externalInterruption) })
   }
 
   // MARK: Turning the engine into something to draw
@@ -141,9 +296,17 @@ struct TimerView: View {
         : Self.spokenMinutes(secondsLeft / 60),
       progress: progress,
       completionNote: completionNote,
-      // Written by the engine, not by this screen. There is one wording for each
-      // failure and it lives with the thing that can fail.
-      failureNote: engine.lastFailure?.message,
+      // ONE AMBER ROW, AND THE MOST RECENT THING WINS IT.
+      //
+      // Almost every failure wording is written by the engine, not by this
+      // screen — there is one wording per failure and it lives with the thing
+      // that can fail. A refused tap is the exception: the engine records only
+      // that a save was refused, and the sentence a person needs in that moment
+      // is about the tap they just made rather than about persistence. So it is
+      // worded here and it takes precedence, because it is the thing that just
+      // happened under their finger.
+      failureNote: captureFailureNote ?? engine.lastFailure?.message,
+      capture: capture,
       controls: engine.isRunning
         ? .running
         : .start(
@@ -166,6 +329,24 @@ struct TimerView: View {
       total: engine.pomodorosPerSprint)
   }
 
+  /// The capture buttons, or `nil` if there must not be any.
+  ///
+  /// The rule itself lives on `TimerScreenModel.Capture`, where it is a pure
+  /// function of three finished values and is tested without a database, a
+  /// timer or a screen. All this does is read those three values off the engine.
+  ///
+  /// `currentBlockDistractions` is a derived view of what is stored, not a
+  /// tally this screen keeps: the engine rebuilds it from the database when the
+  /// app launches and whenever it comes back to the foreground. So a count under
+  /// a button is a count of committed rows, and relaunching the app mid-block
+  /// shows the same numbers it showed before.
+  private var capture: TimerScreenModel.Capture? {
+    TimerScreenModel.Capture.forBlock(
+      isRunning: engine.isRunning,
+      kind: engine.kind,
+      taps: engine.currentBlockDistractions.map(\.kind))
+  }
+
   private var completionNote: String? {
     guard let size = engine.lastCompletedSprintSize else { return nil }
     // The singular matters: a sprint of one pomodoro is a real setting, and it is
@@ -183,7 +364,57 @@ struct TimerView: View {
   /// cancelled part way through can lose an alarm — which the app repairs on its
   /// next return to the foreground — and can never lose a block.
   private func startBlock() {
+    captureFailureNote = nil
     Task { await engine.start() }
+  }
+
+  /// A distraction was tapped. Everything below happens before this function
+  /// returns, and therefore before the finger has lifted.
+  ///
+  /// THE ORDER HERE IS THE WHOLE FEATURE, AND IT IS THE OPPOSITE OF THE OBVIOUS
+  /// ONE. The natural sequence to write is tap, buzz, then save — it feels
+  /// responsive. This does tap, **save**, then buzz. The engine's method is
+  /// synchronous and answers `true` only once the row is committed to disk, so
+  /// the buzz in your hand is a *receipt* for a record that already exists
+  /// rather than a promise that one is coming. That distinction matters because
+  /// most of these taps are made without looking at the screen — looking at the
+  /// screen is the distraction — so the buzz is all the confirmation there is,
+  /// and it must never be able to lie.
+  ///
+  /// If the write is refused, nothing at all happens except the amber row: no
+  /// buzz, no count, nothing spoken. Silence is the correct signal for "that did
+  /// not happen".
+  private func record(_ kind: DistractionKind) {
+    guard engine.recordDistraction(kind) else {
+      captureFailureNote = Self.captureFailedNote
+      return
+    }
+
+    captureFailureNote = nil
+    CaptureHaptic.tapRecorded()
+    announce(kind)
+  }
+
+  /// Says what was just written, in two words.
+  ///
+  /// WHY AN ANNOUNCEMENT AND NOT ONLY THE BUTTON'S VALUE
+  /// Each button carries its count as an accessibility value, and VoiceOver
+  /// re-reads a focused element's value when the reader's own action changes
+  /// it — which is the confirmation. But whether the element is still focused is
+  /// a runtime behaviour no comment can promise, so the receipt is also spoken
+  /// outright. This uses the same announcement mechanism the screen already runs
+  /// for its failure row, rather than inventing a second one.
+  ///
+  /// **Two words, and no more.** Not "Internal distraction recorded, that is
+  /// your second internal distraction of this block": a long sentence spoken
+  /// during a focus block is itself the interruption this app exists to measure.
+  /// High priority, so the receipt arrives now rather than queued behind
+  /// something else — for a receipt, late is the same as confusing.
+  private func announce(_ kind: DistractionKind) {
+    let tally = engine.currentBlockDistractions.filter { $0.kind == kind }.count
+    var spoken = AttributedString("\(kind.captureLabel), \(tally)")
+    spoken.accessibilitySpeechAnnouncementPriority = .high
+    AccessibilityNotification.Announcement(spoken).post()
   }
 
   /// Stop was tapped. This does not stop anything yet — it opens the sheet that
@@ -191,15 +422,79 @@ struct TimerView: View {
   /// written and confirmed.
   private func stopBlock() {
     stopReason = ""
+    stopPrompts = engine.currentBlockDistractions
     isAskingWhyStopping = true
   }
 
   /// The person wrote a reason and confirmed. Now the block ends.
+  ///
+  /// THE NOTES ARE SAVED BEFORE THE BLOCK IS STOPPED, AND THE ORDER IS NOT
+  /// ARBITRARY. Attaching first means that if the app dies between the two
+  /// steps, the sentences are on disk and the block is still running — a state
+  /// the app recovers from on its own. The other order loses the sentences for
+  /// good. Attaching is synchronous, so there is no window between them worth
+  /// worrying about; the order is chosen for the case where there is.
   private func confirmStop() {
     let reason = stopReason.trimmingCharacters(in: .whitespacesAndNewlines)
     guard reason.isEmpty == false else { return }
     isAskingWhyStopping = false
+    saveDrafts(for: stopPrompts)
+    noteDrafts = [:]
     Task { await engine.stop(reason: reason) }
+  }
+
+  /// They decided to keep going. The block is untouched — and the sentences are
+  /// kept.
+  ///
+  /// Those sentences are about taps that really happened. They were not
+  /// conditional on the stop, so a change of mind must not throw away real
+  /// reflection. The *reason for stopping* is the thing discarded here, because
+  /// no stop occurred; it is cleared again the next time Stop is pressed.
+  ///
+  /// The drafts themselves are deliberately not emptied. If this block then runs
+  /// to its natural end, the end-of-block sheet opens with those same fields
+  /// already carrying those same sentences, because both sheets read the same
+  /// drafts.
+  private func keepGoing() {
+    isAskingWhyStopping = false
+    saveDrafts(for: stopPrompts)
+  }
+
+  /// The end-of-block sheet has closed, by the Done button or by being swiped
+  /// away.
+  ///
+  /// **Those two are the same action, and neither discards anything.** This
+  /// mirrors the rule already documented on the settings sheet, so the app
+  /// teaches one thing about sheets rather than two. Whatever was typed is
+  /// written onto rows that already exist; whatever was left blank stays blank,
+  /// which is a first-class outcome rather than a failure.
+  ///
+  /// Nothing here can lose a record. The rows were written when the buttons were
+  /// tapped. This only ever adds an optional sentence to one.
+  private func reflectionSheetClosed() {
+    saveDrafts(for: closedReflectionPrompts)
+    closedReflectionPrompts = []
+    noteDrafts = [:]
+  }
+
+  /// Writes the drafts onto the rows they belong to, and says so if the store
+  /// refuses them.
+  ///
+  /// WHY THE TAPS ARE HANDED IN RATHER THAN LEFT TO THE ENGINE TO FIND
+  /// The engine bounds its query at the oldest tap being annotated instead of
+  /// reading the whole distraction log. That log is the one table in this app
+  /// designed to grow for its whole life, and this runs on the main thread every
+  /// time either sheet closes — which, by D4, is the moment a break has already
+  /// started counting behind it.
+  ///
+  /// An empty list means there is nothing to write, so nothing is read either.
+  private func saveDrafts(for prompts: [DistractionPrompt]) {
+    guard let earliest = prompts.map(\.timestamp).min() else { return }
+    if engine.attachNotes(noteDrafts, notEarlierThan: earliest) {
+      if captureFailureNote == Self.notesFailedNote { captureFailureNote = nil }
+    } else {
+      captureFailureNote = Self.notesFailedNote
+    }
   }
 
   /// The settings sheet has closed.
