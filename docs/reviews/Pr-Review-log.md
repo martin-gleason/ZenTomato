@@ -2,7 +2,6 @@
 
 ## Description: 
 My attempt at a ZTD compliant Pomodoro app that's open source.
-git add
 ## PR 1
 Set up scaffolding; address plan and deltas.
 
