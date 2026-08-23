@@ -1,0 +1,219 @@
+@preconcurrency import MusicKit
+import Foundation
+
+/// The only file in this app that talks to Apple's music player.
+///
+/// Everything above it speaks the seven verbs of `MusicPlaying` and knows
+/// nothing about Apple Music. That is what makes the whole of this feature's
+/// logic provable against a stand-in on a machine with no music library, no
+/// subscription and no speaker, and it is what confines a framework this app
+/// depends on to three files out of a hundred.
+///
+/// **`@preconcurrency import` IS DELIBERATE AND IT IS THE PRESCRIBED REMEDY.**
+/// This app is built in Swift 6 with the strictest thread-safety checking the
+/// compiler offers. The music framework was built in an older language mode and
+/// says nothing about which thread its types belong to, so the compiler assumes
+/// the worst about every one of them. The import above says "this framework
+/// predates those rules; hold it to the older ones" — and the safety is then
+/// supplied here instead, by this class being main-thread-only and by Apple's
+/// player being reached through the one accessor below. The alternative that
+/// engineers reach for under time pressure is an escape hatch that switches the
+/// checking off at the point of use, which would move the player off the main
+/// thread and quietly reintroduce exactly the ordering defect the timer's own
+/// review spent a blocking finding on. It does not appear anywhere in this
+/// feature.
+///
+/// **THE SYSTEM'S OWN CONTROLS CANNOT BE SWITCHED OFF.** Control Centre, the
+/// Lock Screen, headphones and CarPlay all offer play, pause and go-back for
+/// whatever is playing, because that is iOS's contract with the person holding
+/// the phone. What this app controls is its own screen. `isPlaying` below is
+/// read from the player every time rather than remembered, so that when the two
+/// disagree this app follows what is actually happening.
+@MainActor
+final class AppleMusicPlayer: MusicPlaying {
+  // MARK: What the coordinator reads
+
+  /// What is queued right now, or `nil` when nothing is.
+  ///
+  /// This app's own record of what it put in the queue, rather than a question
+  /// asked of the player — because the question that matters is *"is what is
+  /// queued the thing the person chose"*, and only this app knows what they
+  /// chose. Cleared by `stop()`, which is what makes the first focus block of a
+  /// new sprint start the playlist from the top.
+  private(set) var loaded: MusicSelection?
+
+  /// Whether sound is actually coming out right now.
+  ///
+  /// Asked of the player each time. Anything other than playing — paused,
+  /// stopped, or taken away by a phone call — is not playing, and the skip
+  /// button on the timer screen follows this and nothing else.
+  var isPlaying: Bool {
+    player.state.playbackStatus == .playing
+  }
+
+  // MARK: The seven verbs
+
+  /// Queues the chosen item, sets it to loop for ever, and starts it.
+  ///
+  /// **The order of the four steps matters and is the whole of the risk in this
+  /// file.** The session has to be claimed before anything is queued; the queue
+  /// has to be assigned before the looping is set, because the looping belongs
+  /// to the player's playback state and setting it against a queue that has not
+  /// been assigned yet is dropped without complaint; and starting comes last.
+  /// Only the last of those makes a noise, which is what makes this the moment
+  /// this app takes the speaker from whatever else was using it — the ratified
+  /// decision that switching music on means this app handles the audio.
+  ///
+  /// - Parameter selection: the playlist or song to play.
+  /// - Throws: `MusicPlaybackError.selectionMissing` when the item is not in the
+  ///   person's library any more, `MusicPlaybackError.playbackFailed` for
+  ///   anything else. Both leave a silent working timer.
+  func load(_ selection: MusicSelection) async throws {
+    // Cleared first: if any step below fails, this app must not go on believing
+    // the right thing is queued, or the next focus block would try to continue
+    // something that is not there.
+    loaded = nil
+
+    do {
+      try AudioSessionInterruptions.prepareForPlayback()
+    } catch {
+      throw MusicPlaybackError.playbackFailed
+    }
+
+    // **NO ERROR FROM APPLE'S FRAMEWORK LEAVES THIS FILE.** The whole
+    // architecture of this feature is that the framework is confined to three
+    // files and everything above them speaks the two words in
+    // `MusicPlaybackError`. A library lookup can throw, and until this was
+    // wrapped, whatever it threw travelled straight out through the protocol —
+    // past two doc comments promising it could not — and was saved only by a
+    // catch-all one level up. The next caller to handle the two known cases
+    // properly would have mis-read a real library failure as something else.
+    //
+    // A cancellation is re-thrown untouched, because it is not a failure: it is
+    // the coordinator calling this off, and the coordinator's own handling of
+    // it depends on recognising it.
+    switch selection.kind {
+    case .playlist:
+      let found: Playlist?
+      do {
+        found = try await playlist(withIdentifier: selection.identifier)
+      } catch is CancellationError {
+        throw CancellationError()
+      } catch {
+        throw MusicPlaybackError.playbackFailed
+      }
+      guard let item = found else { throw MusicPlaybackError.selectionMissing }
+      player.queue = ApplicationMusicPlayer.Queue(for: [item])
+
+    case .song:
+      let found: Song?
+      do {
+        found = try await song(withIdentifier: selection.identifier)
+      } catch is CancellationError {
+        throw CancellationError()
+      } catch {
+        throw MusicPlaybackError.playbackFailed
+      }
+      guard let item = found else { throw MusicPlaybackError.selectionMissing }
+      player.queue = ApplicationMusicPlayer.Queue(for: [item])
+    }
+
+    // Loop for ever, which is the contract's "playlist loops when it ends". A
+    // single chosen song loops the same way. This is the one place in the whole
+    // app where the looping is set, and there is no way to unset it: nothing
+    // above this file has a word for it.
+    player.state.repeatMode = .all
+
+    do {
+      try await player.play()
+    } catch {
+      throw MusicPlaybackError.playbackFailed
+    }
+
+    loaded = selection
+  }
+
+  /// Continues from wherever the queue already stands.
+  ///
+  /// Takes no position, because there is no position to take: starting the
+  /// player again from a paused state continues the same track at the same
+  /// second. That is the whole of "resumes mid-track" and it needs no
+  /// bookkeeping of this app's own.
+  func resume() async throws {
+    guard loaded != nil else { return }
+    do {
+      try await player.play()
+    } catch {
+      throw MusicPlaybackError.playbackFailed
+    }
+  }
+
+  /// Silence, keeping the queue and the place in it. This is what a break is.
+  func pause() {
+    player.pause()
+  }
+
+  /// Silence, and let the queue go. This is what the end of a sprint is.
+  ///
+  /// After this the player is left alone: this app is no longer holding
+  /// anybody's audio, which is the ratified decision that at sprint end it
+  /// stops and leaves the system's player to itself.
+  func stop() {
+    player.stop()
+    loaded = nil
+  }
+
+  /// Moves to the next track.
+  ///
+  /// - Throws: `MusicPlaybackError.playbackFailed` if the player refused.
+  func skipForward() async throws {
+    do {
+      try await player.skipToNextEntry()
+    } catch {
+      throw MusicPlaybackError.playbackFailed
+    }
+  }
+
+  // MARK: Private
+
+  /// Apple's player, scoped to this app alone.
+  ///
+  /// **THIS IS THE APPLICATION PLAYER, NOT THE ONE THE MUSIC APP USES.** The
+  /// framework offers two. The other one drives the queue the person sees in
+  /// the Music app itself, so choosing it would mean that starting a pomodoro
+  /// wipes out whatever they had lined up elsewhere — they would come back to
+  /// their own music replaced by this app's playlist, with nothing to undo it.
+  /// This one has its own queue that begins and ends with this app. The name of
+  /// the other player appears nowhere in this repository, which is checkable
+  /// with a search, and this comment is the record of why.
+  private var player: ApplicationMusicPlayer {
+    ApplicationMusicPlayer.shared
+  }
+
+  /// Finds a playlist in the person's own library by its identifier.
+  ///
+  /// A library request and never a catalogue one. The contract's wording is
+  /// *"an existing playlist or song from their library"*, and something from
+  /// the Apple Music catalogue is something the person does not own.
+  ///
+  /// - Returns: the playlist, or `nil` when it is not in the library any more.
+  private func playlist(withIdentifier identifier: String) async throws -> Playlist? {
+    var request = MusicLibraryRequest<Playlist>()
+    request.filter(matching: \.id, equalTo: MusicItemID(identifier))
+    // One item is being looked for by its identifier, so one is all that is
+    // wanted back. On a library of several thousand this is the difference
+    // between an instant answer and a visible pause at the start of a block.
+    request.limit = 1
+    return try await request.response().items.first
+  }
+
+  /// Finds a song in the person's own library by its identifier.
+  ///
+  /// - Returns: the song, or `nil` when it is not in the library any more.
+  private func song(withIdentifier identifier: String) async throws -> Song? {
+    var request = MusicLibraryRequest<Song>()
+    request.filter(matching: \.id, equalTo: MusicItemID(identifier))
+    request.limit = 1
+    return try await request.response().items.first
+  }
+}

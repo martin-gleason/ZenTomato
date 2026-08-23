@@ -45,6 +45,17 @@ struct TimerScreen: View {
   /// A distraction from outside was tapped.
   var onExternalDistraction: () -> Void = { }
 
+  /// The music switch was flipped, to the position it carries. Only reachable
+  /// while the timer is idle — see `MusicRowModel.isTogglable`.
+  var onToggleMusic: (Bool) -> Void = { _ in }
+
+  /// The music line was tapped. Only reachable while the timer is idle.
+  var onOpenMusic: () -> Void = { }
+
+  /// Skip forward was pressed. **The only transport control in this app**, and
+  /// only reachable while a focus block is actually playing something.
+  var onSkipTrack: () -> Void = { }
+
   var body: some View {
     VStack(spacing: Spacing.none) {
       centreColumn
@@ -174,6 +185,52 @@ struct TimerScreen: View {
         SprintProgressView(completed: progress.completed, total: progress.total)
           .padding(.top, Spacing.lg)
           .accessibilitySortPriority(2)
+      }
+
+      // ONE FULL-WIDTH ROW, AND ITS HEIGHT DOES NOT CHANGE FOR A WHOLE CYCLE.
+      //
+      // It sits here rather than anywhere else for three reasons. Not above the
+      // numeral: the top band already carries the attachment line, and a second
+      // muted line there pushes the 96-point number down, which is the loudest
+      // thing in every state. Not below the capture pair: the forty-eight points
+      // between a capture button and Stop is a priced safety margin and is not
+      // spendable. Above the notes, so that a failure or completion note
+      // appearing mid-block pushes the capture pair — which already happens
+      // today — and never the music row.
+      //
+      // The cost is about seventy-six points at the default text size (sixteen
+      // above, forty-four of row, sixteen below), absorbed by the
+      // column's two equally flexible spacers, so the word-and-number pair sits
+      // a little higher than it did before F4. **That is a static difference
+      // against the screen F3 shipped, not motion during a cycle**: the ratified
+      // rule governs movement within a cycle, and this row never moves within
+      // one. See `MusicRow` for how the height is held.
+      if let music = model.music {
+        MusicRow(
+          model: music,
+          onToggleMusic: onToggleMusic,
+          onOpenMusic: onOpenMusic,
+          onSkipTrack: onSkipTrack)
+          .padding(.top, Spacing.md)
+          // SIXTEEN POINTS BELOW IT AS WELL, AND THE SIXTEEN IS PRICED.
+          //
+          // The capture pair already carries thirty-two points above itself, so
+          // without this the skip button's 44-point target sits thirty-two
+          // points above the External capture button, directly in line with it.
+          // A downward mis-tap from a transport control would then write a
+          // distraction that never happened, into the one dataset this app
+          // exists to produce. This screen already prices that kind of
+          // adjacency: the gap above Stop is forty-eight, on the argument that
+          // the two failure modes are not the same size, so the two gaps are not
+          // the same size. Sixteen here brings this one to the same forty-eight.
+          //
+          // Constant across the whole cycle, and in particular not conditioned
+          // on whether the skip button is drawn — which is what keeps D19.3
+          // intact.
+          .padding(.bottom, Spacing.md)
+          // After the sprint rule and before Stop. A fraction is legal here and
+          // avoids renumbering five elements that were reviewed already.
+          .accessibilitySortPriority(1.5)
       }
 
       if let completionNote = model.completionNote {
@@ -572,6 +629,66 @@ struct TimerScreen: View {
     .dynamicTypeSize(.accessibility5)
 }
 
+// MARK: The D19.3 pair
+//
+// THESE TWO ARE THE REGRESSION TEST FOR THE RESERVED HEIGHT, AND THEY ONLY WORK
+// SIDE BY SIDE. Open "Focus running, music playing" and "Short break, music
+// paused" together: the countdown must be at exactly the same height in both.
+// The only difference between them is the word above the number and a skip
+// button that has left its slot without taking the slot with it. If the number
+// moves between these two, the music row's height is not being held and D19.3 is
+// broken — see `MusicRow`.
+
+#Preview("Focus running, music playing") {
+  TimerScreen(model: .previewMusicPlaying)
+    .preferredColorScheme(.light)
+}
+
+#Preview("Short break, music paused") {
+  TimerScreen(model: .previewMusicPausedForBreak)
+    .preferredColorScheme(.light)
+}
+
+#Preview("Focus running, music playing, dark") {
+  TimerScreen(model: .previewMusicPlaying)
+    .preferredColorScheme(.dark)
+}
+
+/// Music switched off, with a block running. The row stays, dimmed, and says so.
+#Preview("Focus running, music off") {
+  TimerScreen(model: .previewMusicOffWhileRunning)
+    .preferredColorScheme(.light)
+}
+
+/// Muted, never amber: the block is running, the alarm is set, the capture
+/// buttons work. Nothing is broken; it is quiet.
+#Preview("Focus running, music didn't start") {
+  TimerScreen(model: .previewMusicDidNotStart)
+    .preferredColorScheme(.light)
+}
+
+/// Idle with no Apple Music subscription. One plain line, no warning triangle,
+/// and a timer that is exactly as usable as it was before.
+#Preview("Idle, no subscription") {
+  TimerScreen(model: .previewNoSubscription)
+    .preferredColorScheme(.light)
+}
+
+/// The same pair at the largest text size iOS offers, where the music row stacks
+/// and the whole column scrolls. Nothing may be cut off, and the two must still
+/// agree with each other.
+#Preview("Focus running, music playing, largest text") {
+  TimerScreen(model: .previewMusicPlaying)
+    .preferredColorScheme(.light)
+    .dynamicTypeSize(.accessibility5)
+}
+
+#Preview("Short break, music paused, largest text") {
+  TimerScreen(model: .previewMusicPausedForBreak)
+    .preferredColorScheme(.light)
+    .dynamicTypeSize(.accessibility5)
+}
+
 /// Preview fixtures, never part of what ships.
 private extension TimerScreenModel {
   /// First launch, and after Stop.
@@ -581,6 +698,7 @@ private extension TimerScreenModel {
     numeral: "25:00",
     spokenNumeral: "25 minutes",
     progress: Progress(completed: 0, total: 4),
+    music: .previewIdleOff,
     controls: .start(isEnabled: true, spokenLabel: "Start focus block, 25 minutes"))
 
   static let previewWorkRunning = TimerScreenModel(
@@ -590,6 +708,7 @@ private extension TimerScreenModel {
     spokenNumeral: "24 minutes remaining",
     progress: Progress(completed: 2, total: 4),
     capture: Capture(internalCount: 0, externalCount: 0),
+    music: .previewPlaying,
     controls: .running)
 
   /// The state the receipt exists for: a block that has already been
@@ -601,6 +720,7 @@ private extension TimerScreenModel {
     spokenNumeral: "18 minutes remaining",
     progress: Progress(completed: 2, total: 4),
     capture: Capture(internalCount: 2, externalCount: 1),
+    music: .previewPlaying,
     controls: .running)
 
   /// A tap that could not be written. No count, no receipt, and the same amber
@@ -613,6 +733,7 @@ private extension TimerScreenModel {
     progress: Progress(completed: 2, total: 4),
     failureNote: "That tap wasn't saved. Tap again.",
     capture: Capture(internalCount: 1, externalCount: 0),
+    music: .previewPlaying,
     controls: .running)
 
   static let previewShortBreakRunning = TimerScreenModel(
@@ -621,6 +742,7 @@ private extension TimerScreenModel {
     numeral: "04:31",
     spokenNumeral: "4 minutes remaining",
     progress: Progress(completed: 3, total: 4),
+    music: .previewBreakPaused,
     controls: .running)
 
   static let previewSprintComplete = TimerScreenModel(
@@ -630,6 +752,7 @@ private extension TimerScreenModel {
     spokenNumeral: "25 minutes",
     progress: Progress(completed: 4, total: 4),
     completionNote: "Sprint complete — 4 pomodoros done.",
+    music: .previewIdleOn,
     controls: .start(isEnabled: true, spokenLabel: "Start focus block, 25 minutes"))
 
   static let previewAlarmFailed = TimerScreenModel(
@@ -640,6 +763,7 @@ private extension TimerScreenModel {
     progress: Progress(completed: 2, total: 4),
     failureNote: TimerEngineFailure.alarmSchedulingFailed.message,
     capture: Capture(internalCount: 0, externalCount: 0),
+    music: .previewPlaying,
     controls: .running)
 
   static let previewLongestSprint = TimerScreenModel(
@@ -649,6 +773,7 @@ private extension TimerScreenModel {
     spokenNumeral: "24 minutes remaining",
     progress: Progress(completed: 11, total: 12),
     capture: Capture(internalCount: 3, externalCount: 2),
+    music: .previewPlaying,
     controls: .running)
 
   /// A focus block with a task attached.
@@ -664,6 +789,7 @@ private extension TimerScreenModel {
       isFocusRunning: true,
       runningBlock: .previewDraft,
       nextItem: .previewReplyItem),
+    music: .previewPlaying,
     controls: .running)
 
   static let previewBreakWithNextItem = TimerScreenModel(
@@ -677,6 +803,7 @@ private extension TimerScreenModel {
       isFocusRunning: false,
       runningBlock: nil,
       nextItem: .previewReplyItem),
+    music: .previewBreakPaused,
     controls: .running)
 
   static let previewNothingAttached = TimerScreenModel(
@@ -690,6 +817,58 @@ private extension TimerScreenModel {
       isFocusRunning: false,
       runningBlock: nil,
       nextItem: nil),
+    music: .previewIdleNothingChosen,
+    controls: .start(isEnabled: true, spokenLabel: "Start focus block, 25 minutes"))
+
+  /// A focus block with sound coming out. The skip button is drawn.
+  static let previewMusicPlaying = TimerScreenModel(
+    blockName: "Focus block",
+    kicker: "Focus",
+    numeral: "18:04",
+    spokenNumeral: "18 minutes remaining",
+    progress: Progress(completed: 2, total: 4),
+    capture: Capture(internalCount: 0, externalCount: 0),
+    music: .previewPlaying,
+    controls: .running)
+
+  /// The same screen one second into the break. The skip button has gone and its
+  /// space has not.
+  static let previewMusicPausedForBreak = TimerScreenModel(
+    blockName: "Short break",
+    kicker: "Short break",
+    numeral: "04:31",
+    spokenNumeral: "4 minutes remaining",
+    progress: Progress(completed: 3, total: 4),
+    music: .previewBreakPaused,
+    controls: .running)
+
+  static let previewMusicOffWhileRunning = TimerScreenModel(
+    blockName: "Focus block",
+    kicker: "Focus",
+    numeral: "18:04",
+    spokenNumeral: "18 minutes remaining",
+    progress: Progress(completed: 2, total: 4),
+    capture: Capture(internalCount: 0, externalCount: 0),
+    music: .previewRunningOff,
+    controls: .running)
+
+  static let previewMusicDidNotStart = TimerScreenModel(
+    blockName: "Focus block",
+    kicker: "Focus",
+    numeral: "24:58",
+    spokenNumeral: "24 minutes remaining",
+    progress: Progress(completed: 2, total: 4),
+    capture: Capture(internalCount: 0, externalCount: 0),
+    music: .previewDidNotStart,
+    controls: .running)
+
+  static let previewNoSubscription = TimerScreenModel(
+    blockName: "Focus block",
+    kicker: "Focus",
+    numeral: "25:00",
+    spokenNumeral: "25 minutes",
+    progress: Progress(completed: 0, total: 4),
+    music: .previewNoSubscription,
     controls: .start(isEnabled: true, spokenLabel: "Start focus block, 25 minutes"))
 
   static let previewAttachedTaskGone = TimerScreenModel(
@@ -705,6 +884,7 @@ private extension TimerScreenModel {
       runningBlock: .previewReply,
       runningBlockIsGone: true,
       nextItem: nil),
+    music: .previewPlaying,
     controls: .running)
 }
 
@@ -725,4 +905,75 @@ private extension SessionAttachment {
   static let previewReply = SessionAttachment(
     taskID: "preview-reply",
     taskTitle: "Reply to Anna")
+}
+
+/// Music-row fixtures for this file's previews. Never part of what ships.
+///
+/// They are built through the same rule the running app uses rather than by
+/// hand, so a preview cannot show a combination the rule would never produce —
+/// which is what makes the two D19.3 previews a real check rather than two
+/// pictures somebody drew.
+private extension MusicRowModel {
+  static let previewChoice = MusicSelection(
+    kind: .playlist,
+    identifier: "p.preview",
+    title: "Deep Focus")
+
+  static let previewIdleOff = MusicRowModel.forTimer(
+    isRunning: false,
+    kind: .work,
+    isEnabled: false,
+    availability: .ready,
+    selection: previewChoice)
+
+  static let previewIdleOn = MusicRowModel.forTimer(
+    isRunning: false,
+    kind: .work,
+    isEnabled: true,
+    availability: .ready,
+    selection: previewChoice)
+
+  static let previewIdleNothingChosen = MusicRowModel.forTimer(
+    isRunning: false,
+    kind: .work,
+    isEnabled: false,
+    availability: .notAsked,
+    selection: nil)
+
+  static let previewPlaying = MusicRowModel.forTimer(
+    isRunning: true,
+    kind: .work,
+    isEnabled: true,
+    availability: .ready,
+    selection: previewChoice,
+    playback: .playing)
+
+  static let previewBreakPaused = MusicRowModel.forTimer(
+    isRunning: true,
+    kind: .shortBreak,
+    isEnabled: true,
+    availability: .ready,
+    selection: previewChoice)
+
+  static let previewRunningOff = MusicRowModel.forTimer(
+    isRunning: true,
+    kind: .work,
+    isEnabled: false,
+    availability: .ready,
+    selection: previewChoice)
+
+  static let previewDidNotStart = MusicRowModel.forTimer(
+    isRunning: true,
+    kind: .work,
+    isEnabled: true,
+    availability: .ready,
+    selection: previewChoice,
+    playback: .didNotStart)
+
+  static let previewNoSubscription = MusicRowModel.forTimer(
+    isRunning: false,
+    kind: .work,
+    isEnabled: true,
+    availability: .noSubscription,
+    selection: previewChoice)
 }

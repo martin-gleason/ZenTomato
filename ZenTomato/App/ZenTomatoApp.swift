@@ -53,23 +53,51 @@ struct ZenTomatoApp: App {
       let client = TodoistClient(transport: URLSessionTransport(), tokens: credentials)
       let plan = SessionPlanStore(context: container.mainContext)
 
+      // THE MUSIC STACK, BUILT THE SAME WAY AND FOR THE SAME REASON.
+      //
+      // Reading upwards: the one place that touches the player, the one place
+      // that asks about permission and subscription, the one place that reads
+      // the library, and the row on disk remembering the switch and the choice.
+      // The coordinator is handed all four and is the only thing that can decide
+      // to make a sound.
+      //
+      // **Nothing here plays anything and nothing asks for a permission.**
+      // Building the stack is inert; `start()` below is what begins the work,
+      // and the permission is asked the first time somebody switches music on.
+      let library = AppleMusicLibrary()
+      let musicCoordinator = MusicCoordinator(
+        player: AppleMusicPlayer(),
+        availability: AppleMusicAvailability(),
+        library: library,
+        preferences: MusicPreferenceStore(context: container.mainContext))
+
+      // Named rather than built inline, because two things now need it: the app
+      // hands it to the screen, and the music observer subscribes to it.
+      let engine = TimerEngine(
+        context: container.mainContext,
+        // Real time, and real alarms. The engine names neither: it is handed a
+        // clock and an alerting system, which is what lets its tests hand it a
+        // clock that does not move and an alarm system that does not exist.
+        clock: SystemTimerClock(),
+        alarms: AlarmKitScheduler(),
+        // The one thing the timer knows about Todoist, and it is a read: at
+        // the start of each focus block it asks the plan for the next item.
+        // The timer never sees a request, a token or a cached row.
+        attachments: plan)
+
       return RunningApp(
         container: container,
-        engine: TimerEngine(
-          context: container.mainContext,
-          // Real time, and real alarms. The engine names neither: it is handed a
-          // clock and an alerting system, which is what lets its tests hand it a
-          // clock that does not move and an alarm system that does not exist.
-          clock: SystemTimerClock(),
-          alarms: AlarmKitScheduler(),
-          // The one thing the timer knows about Todoist, and it is a read: at
-          // the start of each focus block it asks the plan for the next item.
-          // The timer never sees a request, a token or a cached row.
-          attachments: plan),
+        engine: engine,
         tokens: credentials,
         cache: TodoistCacheStore(context: container.mainContext, client: client),
         plan: plan,
-        completion: TaskCompletion(context: container.mainContext, client: client))
+        completion: TaskCompletion(context: container.mainContext, client: client),
+        music: musicCoordinator,
+        library: library,
+        // The one thing that tells music a block has changed. It subscribes to
+        // the engine's own published state — F4 adds no hook to the engine and
+        // invents no second notion of "the block changed".
+        blockPhase: BlockPhaseObserver(engine: engine, coordinator: musicCoordinator))
     }
 
     bootstrapResult = result
@@ -115,6 +143,18 @@ struct ZenTomatoApp: App {
 
     /// The one thing in this app that can change anything in Todoist.
     let completion: TaskCompletion
+
+    /// The switch, the choice, and the only thing in this app that can make a
+    /// sound.
+    let music: MusicCoordinator
+
+    /// Somebody's music library, read-only.
+    let library: any MusicLibraryReading
+
+    /// Turns the engine's own published block changes into calls on the
+    /// coordinator. Held here so it lives exactly as long as the app does, and
+    /// so nothing in this codebase starts a piece of work with no owner.
+    let blockPhase: BlockPhaseObserver
   }
 
   /// Either the running app, or the error that prevented it.
@@ -136,9 +176,27 @@ struct ZenTomatoApp: App {
         tokens: running.tokens,
         cache: running.cache,
         plan: running.plan,
-        completion: running.completion)
+        completion: running.completion,
+        music: running.music,
+        library: running.library)
         .modelContainer(running.container)
         .environment(running.engine)
+        // MUSIC BEGINS OBSERVING HERE, AND NOT ONE MOMENT EARLIER.
+        //
+        // Two subscriptions start: the coordinator's, which notices a permission
+        // or a subscription changing underneath the app, and the block observer's,
+        // which turns the engine's own published state into "a block changed".
+        // **Neither of them asks for a permission and neither plays anything** —
+        // permission is asked the first time somebody switches music on, and
+        // sound is only ever produced by the coordinator's one decision point.
+        //
+        // A `.task` rather than loose work, so both are tied to the screen's
+        // lifetime and cancelled with it. There is no unattended work anywhere in
+        // this app.
+        .task {
+          running.music.start()
+          running.blockPhase.start()
+        }
         // Runs once at launch and again on every change of phase, which is what
         // makes returning to the app the moment the timer catches up: a block
         // that ended while the app was asleep is recorded, a clock that moved is
@@ -150,6 +208,15 @@ struct ZenTomatoApp: App {
         .task(id: scenePhase) {
           guard scenePhase == .active else { return }
           await running.engine.synchronize()
+          // AND THE MUSIC CATCHES UP TOO, WHICH IS THE WAY BACK FROM A REFUSED
+          // PERMISSION. Whether this app may play music was read once at launch
+          // and never again, so the commonest first-run outcome — one mis-tap on
+          // the system prompt — left music dead for the life of the process,
+          // while the app's own sheet told the person to go to the Settings app
+          // and offered a button that took them there. They granted it, came
+          // back, and nothing had changed. This line is what makes coming back
+          // mean something. It reads; it can prompt for nothing.
+          running.music.refreshAvailability()
         }
 
     case .failure(let error):

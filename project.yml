@@ -124,6 +124,35 @@ targets:
         NSAlarmKitUsageDescription: >-
           ZenTomato sets an alarm for the end of each focus block and each break,
           so a block can end while your phone is silent or in a Focus.
+        # THE TWO KEYS BELOW ARRIVE WITH F4 AND NOT BEFORE.
+        # F2's scope fence forbade both of them by name, because a background
+        # mode and a music permission string in a timer that plays nothing are
+        # capabilities claimed for work that has not been done. F4 is the
+        # feature that legitimately needs them — see docs/plans/00-deltas.md,
+        # D19 — and this is where they land.
+        #
+        # Without this, iOS suspends the app a few seconds after the screen
+        # locks and the music simply stops. It presents as "music works until I
+        # put the phone down": no crash, no warning, nothing in the log. It is
+        # the key the spec's "verify background audio at build time" clause is
+        # pointing at, and the verification is the device check on a real phone
+        # rather than this line.
+        UIBackgroundModes:
+          - audio
+        # The sentence iOS shows the first time somebody switches music on.
+        # MusicKit refuses the permission request outright when it is missing,
+        # which presents as "music permission is always denied" with no
+        # explanation anywhere — the same silent failure NSAlarmKitUsageDescription
+        # above exists to prevent for alarms.
+        #
+        # The wording is true of what this feature does and of nothing more: it
+        # says the library is read, it says nothing in it is ever changed, and
+        # it names the pause-on-break behaviour, so a person reading the prompt
+        # learns what they are agreeing to.
+        NSAppleMusicUsageDescription: >-
+          ZenTomato plays a playlist or song from your Apple Music library during
+          focus blocks and pauses it during breaks. It only reads your library
+          and never changes anything in it.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.martingleason.ZenTomato

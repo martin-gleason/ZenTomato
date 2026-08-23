@@ -78,6 +78,15 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
   /// The one thing in this app that can change anything in Todoist.
   let completion: TaskCompletion
 
+  /// The switch, the choice, and the only thing in this app that can make a
+  /// sound. This screen reads it and hands it two commands — flip the switch,
+  /// skip forward — and never touches a player itself.
+  let music: MusicCoordinator
+
+  /// Somebody's music library, read-only. Used here for one question and nowhere
+  /// else: is the chosen playlist or song still there?
+  let library: any MusicLibraryReading
+
   var body: some View {
     screen
       .sheet(isPresented: $showingSettings, onDismiss: settingsSheetClosed) {
@@ -129,6 +138,17 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
           cache: cache,
           plan: plan,
           opensOnThePlan: plan.isEmpty == false)
+      }
+      // The Music sheet: the switch, what is chosen, and the library to choose
+      // from. Reached from the music row's line, which is a control only while
+      // the timer is idle — D19 says music is set before a sprint, and a screen
+      // offering a choice it will not honour is worse than one offering none.
+      .sheet(isPresented: $showingMusic) {
+        MusicPickerSheet(
+          music: music,
+          library: library,
+          isBlockRunning: engine.isRunning,
+          libraryIsEmpty: $musicLibraryIsEmpty)
       }
       // THE PROMPT IS TAKEN, NOT WATCHED.
       //
@@ -367,6 +387,17 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
   /// make. It carries the task with it — see `CompletionRequest`.
   @State private var completionRequest: CompletionRequest?
 
+  /// Whether the Music sheet is up.
+  @State private var showingMusic = false
+
+  /// Whether the library was read and held nothing.
+  ///
+  /// Filled by the Music sheet rather than read here. The timer screen must not
+  /// go through somebody's whole library to draw one line of grey text, and a
+  /// person who has never opened the sheet is shown the invitation instead,
+  /// which is true and is the door to the answer.
+  @State private var musicLibraryIsEmpty = false
+
   /// The screen, redrawn once a second only while something is actually counting.
   @ViewBuilder
   private var screen: some View {
@@ -400,7 +431,12 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       onOpenPlan: { self.openPlan() },
       // Called and finished on the spot. No `Task`, no `await`, nothing queued.
       onInternalDistraction: { self.record(.internalInterruption) },
-      onExternalDistraction: { self.record(.externalInterruption) })
+      onExternalDistraction: { self.record(.externalInterruption) },
+      onToggleMusic: { self.toggleMusic($0) },
+      onOpenMusic: { self.showingMusic = true },
+      // Straight through to the player, with nothing in between. It is the only
+      // transport control this app has.
+      onSkipTrack: { self.music.skipForward() })
   }
 
   // MARK: Turning the engine into something to draw
@@ -440,6 +476,7 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       failureNote: captureFailureNote ?? engine.lastFailure?.message,
       capture: capture,
       attachment: attachment,
+      music: musicRow,
       controls: engine.isRunning
         ? .running
         : .start(
@@ -527,6 +564,70 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
     // the first thing a reader would notice written as "1 pomodoros done".
     let unit = size == 1 ? "pomodoro" : "pomodoros"
     return "Sprint complete — \(size) \(unit) done."
+  }
+
+  // MARK: Music
+
+  /// The music row, worked out from the six facts that decide it.
+  ///
+  /// The rule itself lives on `MusicRowModel`, where it is a pure function and is
+  /// tested without a player, a timer or a database. All this does is read those
+  /// facts off the coordinator and the engine.
+  ///
+  /// **Nothing here can make a sound**, and nothing here decides anything. Every
+  /// value below is read; whether music plays is decided in one place inside the
+  /// coordinator, and this screen draws the consequences.
+  private var musicRow: MusicRowModel {
+    MusicRowModel.forTimer(
+      isRunning: engine.isRunning,
+      kind: engine.kind,
+      isEnabled: music.isEnabled,
+      availability: music.availability,
+      selection: music.selection,
+      // Whether the chosen item has left the library is the coordinator's answer,
+      // not this screen's. It is the only place with a library to ask, and asking
+      // twice would put a request on the path of a screen that redraws once a
+      // second.
+      selectionIsGone: music.selectionIsMissing,
+      libraryIsEmpty: musicLibraryIsEmpty,
+      playback: playback)
+  }
+
+  /// What the player is doing, as far as anybody can honestly tell.
+  ///
+  /// **Whether sound is coming out comes from the player rather than from what
+  /// this app last asked for**, which is what keeps the skip button honest: the
+  /// system's own controls can pause what this app started, and an answer taken
+  /// from this app's own intentions would leave a skip button on screen with
+  /// nothing to skip. The coordinator re-asks at every moment it could have
+  /// changed, including the app coming back to the front.
+  ///
+  /// The order matters. Sound first, because it is the only one of these that can
+  /// be observed rather than inferred; then the two states the coordinator
+  /// reports about its own last attempt. Anything else is silence.
+  private var playback: MusicRowModel.Playback {
+    if music.isPlaying { return .playing }
+    if music.isStarting { return .starting }
+    if music.lastPlaybackFailed { return .didNotStart }
+    return .silent
+  }
+
+  /// The music switch was flipped.
+  ///
+  /// **Turning it on is the moment permission is asked** — not at launch, and not
+  /// when the sheet opens. What comes back decides everything: refused, and the
+  /// coordinator leaves the switch off, so it springs back on the next redraw
+  /// rather than sitting in a position that is not true.
+  ///
+  /// **Turning it on with nothing ever chosen opens the Music sheet at once.**
+  /// "On, nothing chosen, plays nothing" is a control that silently does nothing,
+  /// which is the thing D19.1 rejects by name.
+  private func toggleMusic(_ isOn: Bool) {
+    Task {
+      await music.setEnabled(isOn)
+      guard isOn, music.isEnabled, music.selection == nil else { return }
+      showingMusic = true
+    }
   }
 
   // MARK: Todoist
@@ -909,7 +1010,9 @@ private struct TimerViewPreviewHost: View {
         tokens: running.tokens,
         cache: running.cache,
         plan: running.plan,
-        completion: running.completion)
+        completion: running.completion,
+        music: running.music,
+        library: running.library)
         .modelContainer(running.container)
         .environment(running.engine)
         .preferredColorScheme(appearance)
@@ -930,6 +1033,13 @@ private struct TimerViewPreviewHost: View {
     let cache: TodoistCacheStore
     let plan: SessionPlanStore
     let completion: TaskCompletion
+
+    /// The music stack, assembled exactly as the app assembles it. **Nothing
+    /// starts it**: `MusicCoordinator.start()` is what begins the permission and
+    /// interruption work, and a preview never calls it — so no preview asks for
+    /// a permission, plays anything, or makes a single library request.
+    let music: MusicCoordinator
+    let library: any MusicLibraryReading
   }
 
   @State private var bootstrap: Result<PreviewRun, any Error> = Result {
@@ -944,6 +1054,7 @@ private struct TimerViewPreviewHost: View {
     let credentials = PreviewTokenStore()
     let client = TodoistClient(transport: PreviewTransport(), tokens: credentials)
     let plan = SessionPlanStore(context: container.mainContext)
+    let library = AppleMusicLibrary()
 
     return PreviewRun(
       container: container,
@@ -955,7 +1066,13 @@ private struct TimerViewPreviewHost: View {
       tokens: credentials,
       cache: TodoistCacheStore(context: container.mainContext, client: client),
       plan: plan,
-      completion: TaskCompletion(context: container.mainContext, client: client))
+      completion: TaskCompletion(context: container.mainContext, client: client),
+      music: MusicCoordinator(
+        player: AppleMusicPlayer(),
+        availability: AppleMusicAvailability(),
+        library: library,
+        preferences: MusicPreferenceStore(context: container.mainContext)),
+      library: library)
   }
 }
 

@@ -151,6 +151,15 @@ struct DistractionScreenModelTests {
       spokenNumeral: "4 minutes remaining",
       progress: nil,
       capture: TimerScreenModel.Capture.forBlock(isRunning: true, kind: .shortBreak, taps: []),
+      // F4 made the music row a value every screen has to state. It is present
+      // in both of the states below, which is the point of it: the row exists in
+      // every state of a running timer, so it can never move the countdown.
+      music: MusicRowModel.forTimer(
+        isRunning: true,
+        kind: .shortBreak,
+        isEnabled: false,
+        availability: .notAsked,
+        selection: nil),
       controls: .running)
 
     #expect(breakScreen.isRunning)
@@ -167,6 +176,12 @@ struct DistractionScreenModelTests {
       spokenNumeral: "25 minutes",
       progress: nil,
       capture: TimerScreenModel.Capture.forBlock(isRunning: false, kind: .work, taps: []),
+      music: MusicRowModel.forTimer(
+        isRunning: false,
+        kind: .work,
+        isEnabled: false,
+        availability: .notAsked,
+        selection: nil),
       controls: .start(isEnabled: true, spokenLabel: "Start focus block, 25 minutes"))
 
     #expect(idle.isRunning == false)

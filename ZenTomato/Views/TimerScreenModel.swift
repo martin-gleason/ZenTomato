@@ -206,6 +206,27 @@ struct TimerScreenModel {
   /// What this pomodoro is attached to, or `nil` when there is no Todoist.
   let attachment: Attachment?
 
+  /// The music row, or `nil` when there must not be one.
+  ///
+  /// **`nil` here means one thing only: there is no settings row to read.** That
+  /// is the screen showing dashes with Start switched off — a timer that cannot
+  /// start has nothing for an accessory to accessorise, and no cycle can run
+  /// there for D19.3's movement rule to govern. `progress` is `nil` in exactly
+  /// the same state and for the same reason.
+  ///
+  /// **In every other state the row is present, including idle, including music
+  /// switched off, and including every way music can be unavailable.** That is
+  /// what makes it impossible for the row to move the countdown: it never
+  /// arrives and never leaves between Start and Stop. What changes inside it is
+  /// the skip button, and the space that button occupies is reserved whether it
+  /// is drawn or not — see `MusicRow`.
+  ///
+  /// **It has no default value**, deliberately. Every construction site,
+  /// including every preview in `TimerScreen.swift`, has to say what the music
+  /// row is doing in that state. A default would let a state be added that
+  /// nobody ever looked at with music on.
+  let music: MusicRowModel?
+
   let controls: Controls
 
   /// Whether a block is counting right now.
@@ -234,6 +255,7 @@ struct TimerScreenModel {
     failureNote: String? = nil,
     capture: Capture? = nil,
     attachment: Attachment? = nil,
+    music: MusicRowModel?,
     controls: Controls
   ) {
     self.blockName = blockName
@@ -246,6 +268,7 @@ struct TimerScreenModel {
     self.failureNote = failureNote
     self.capture = capture
     self.attachment = attachment
+    self.music = music
     self.controls = controls
   }
 
@@ -268,6 +291,8 @@ struct TimerScreenModel {
       numeralIsAReading: false,
       spokenNumeral: "length not available",
       progress: nil,
+      // The one state with no music row at all. See `music`.
+      music: nil,
       controls: .start(isEnabled: false, spokenLabel: "Start focus block"))
   }
 }
