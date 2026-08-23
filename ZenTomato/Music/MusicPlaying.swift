@@ -82,6 +82,25 @@ protocol MusicPlaying: AnyObject {
   /// can only redraw on a stored value.
   var isPlaying: Bool { get }
 
+  /// Called when the player's own playback status changes, for any reason.
+  ///
+  /// **This is a notification, not a control**, and it is the reason the skip
+  /// button is ever visible. `isPlaying` is read from the player rather than
+  /// inferred from what this app last asked for — but a player reports that it
+  /// is playing *asynchronously*, some time after `resume()` or `load()` has
+  /// already returned. A single reading taken at the end of those calls catches
+  /// the moment before the status flips, records "not playing", and is never
+  /// corrected; the skip button then stays hidden for the whole block.
+  ///
+  /// That is not a hypothetical. It shipped, and it presented as a skip button
+  /// that appeared in one sprint and not the next — a race, so it looked
+  /// intermittent rather than wrong.
+  ///
+  /// Adding this does **not** widen the skip-only fence: it carries nothing and
+  /// commands nothing. Nobody can seek, scrub or go back through a callback that
+  /// takes no arguments.
+  var onPlaybackStatusChanged: (() -> Void)? { get set }
+
   /// Queues this selection, sets it to loop for ever, and starts it.
   ///
   /// **The only thing in this app that can start a track from its beginning.**

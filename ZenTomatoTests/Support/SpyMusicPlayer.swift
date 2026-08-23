@@ -28,6 +28,19 @@ import Foundation
 /// requirement exists to prevent.
 @MainActor
 final class SpyMusicPlayer: MusicPlaying {
+  /// Set by the coordinator so it can be told when playback status changes.
+  ///
+  /// A test drives it with `announceStatusChange()` to reproduce what the real
+  /// player does: report that it has started playing some time AFTER the call
+  /// that started it has already returned.
+  var onPlaybackStatusChanged: (() -> Void)?
+
+  /// Fires the callback the way MusicKit's own player does — later, and out of
+  /// band with whatever asked for playback.
+  func announceStatusChange() {
+    onPlaybackStatusChanged?()
+  }
+
   /// One thing the coordinator asked for.
   enum Call: Equatable {
     case load(MusicSelection)

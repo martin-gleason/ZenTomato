@@ -92,6 +92,26 @@ final class MusicCoordinator {
     isEnabled = preferences.isEnabled
     selection = preferences.selection
     self.availability = availability.current
+
+    // LISTEN, RATHER THAN GUESS AT THE TIMING.
+    //
+    // `isPlaying` is a snapshot of the player, and the player reports that it
+    // has started playing some time AFTER `load()` or `resume()` has returned.
+    // Refreshing only at the end of those calls therefore reads the moment
+    // before the flip, records "not playing", and never corrects itself — and
+    // the skip button, which follows `isPlaying` and nothing else, stays hidden
+    // for the whole block.
+    //
+    // That shipped. It presented as a skip button that was there in one sprint
+    // and missing in the next, because whether the reading landed before or
+    // after the flip was a race rather than a rule.
+    //
+    // It also picks up the changes this app did not cause: pausing from Control
+    // Centre or unplugging headphones now hides the skip button, because there
+    // is nothing to skip.
+    self.player.onPlaybackStatusChanged = { [weak self] in
+      self?.refreshIsPlaying()
+    }
   }
 
   /// Nothing this object started outlives it. There are five pieces of work it
@@ -360,50 +380,6 @@ final class MusicCoordinator {
     }
   }
 
-  /// One audio interruption, routed to the only thing that can act on it.
-  ///
-  /// The two cases are deliberately lopsided and this method is where that is
-  /// visible. An interruption **beginning** is not something this app does
-  /// anything about: iOS has already silenced it by the time the notice
-  /// arrives, and there is no state worth keeping, because what happens next is
-  /// decided from scratch when the interruption ends or at the next block
-  /// boundary, whichever comes first. An interruption **ending** is a fact
-  /// worth asking the rule about.
-  ///
-  /// It is a method rather than a `switch` buried inside the listening loop so
-  /// that "nothing happens when an interruption begins" is a claim a test can
-  /// put to the real code — the whole path, from event to player — rather than
-  /// a comment nobody can check.
-  ///
-  /// - Parameter event: what iOS reported.
-  func handleInterruption(_ event: AudioSessionInterruptions.Event) {
-    switch event {
-    case .began:
-      break
-    case .ended(let mayResume):
-      interruptionEnded(mayResume: mayResume)
-    }
-  }
-
-  /// A phone call, or another app taking the audio, has finished.
-  ///
-  /// **`mayResume` is read as a permission, never as an instruction.** iOS says
-  /// whether it would be reasonable to make a noise again; it knows nothing
-  /// about breaks. So the answer is only ever used to decide whether to ask the
-  /// rule at all, and the rule decides the rest. A call that ends nine minutes
-  /// into a long break finds the block is not a focus block and the app stays
-  /// silent.
-  ///
-  /// Note what is not in this method: there is no `resume()` here, and no way
-  /// to reach one except through `apply()`, which cannot be argued with. That
-  /// is the guarantee, not the comment.
-  ///
-  /// - Parameter mayResume: whether iOS says making a noise again is reasonable.
-  func interruptionEnded(mayResume: Bool) {
-    guard mayResume else { return }
-    apply()
-  }
-
   /// A new answer about whether music may play at all.
   ///
   /// The one that matters is a subscription lapsing mid-sprint: the music
@@ -626,7 +602,7 @@ final class MusicCoordinator {
 
   // MARK: Private
 
-  private let player: any MusicPlaying
+  private var player: any MusicPlaying
   private let availabilityChecker: any MusicAvailabilityChecking
   private let library: any MusicLibraryReading
   private let preferences: any MusicPreferenceStoring
@@ -670,4 +646,60 @@ private enum MusicPlaybackOutcome {
   case itemHasGone
   /// The player refused for some other reason.
   case refused
+}
+
+// MARK: - Audio interruptions
+
+/// What happens when something else takes the audio away — a phone call, an
+/// alarm from another app, a video somebody tapped.
+///
+/// In an extension rather than in the type's body, because it is a coherent
+/// subject of its own and the body had grown past the length the linter allows.
+/// That limit is worth keeping: a coordinator is exactly the kind of type that
+/// accretes, and the honest answer to "one line too long" is to find the seam
+/// rather than to raise the number.
+extension MusicCoordinator {
+  /// One audio interruption, routed to the only thing that can act on it.
+  ///
+  /// The two cases are deliberately lopsided and this method is where that is
+  /// visible. An interruption **beginning** is not something this app does
+  /// anything about: iOS has already silenced it by the time the notice
+  /// arrives, and there is no state worth keeping, because what happens next is
+  /// decided from scratch when the interruption ends or at the next block
+  /// boundary, whichever comes first. An interruption **ending** is a fact
+  /// worth asking the rule about.
+  ///
+  /// It is a method rather than a `switch` buried inside the listening loop so
+  /// that "nothing happens when an interruption begins" is a claim a test can
+  /// put to the real code — the whole path, from event to player — rather than
+  /// a comment nobody can check.
+  ///
+  /// - Parameter event: what iOS reported.
+  func handleInterruption(_ event: AudioSessionInterruptions.Event) {
+    switch event {
+    case .began:
+      break
+    case .ended(let mayResume):
+      interruptionEnded(mayResume: mayResume)
+    }
+  }
+
+  /// A phone call, or another app taking the audio, has finished.
+  ///
+  /// **`mayResume` is read as a permission, never as an instruction.** iOS says
+  /// whether it would be reasonable to make a noise again; it knows nothing
+  /// about breaks. So the answer is only ever used to decide whether to ask the
+  /// rule at all, and the rule decides the rest. A call that ends nine minutes
+  /// into a long break finds the block is not a focus block and the app stays
+  /// silent.
+  ///
+  /// Note what is not in this method: there is no `resume()` here, and no way
+  /// to reach one except through `apply()`, which cannot be argued with. That
+  /// is the guarantee, not the comment.
+  ///
+  /// - Parameter mayResume: whether iOS says making a noise again is reasonable.
+  func interruptionEnded(mayResume: Bool) {
+    guard mayResume else { return }
+    apply()
+  }
 }

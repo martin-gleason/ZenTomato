@@ -1,4 +1,5 @@
 @preconcurrency import MusicKit
+import Combine
 import Foundation
 
 /// The only file in this app that talks to Apple's music player.
@@ -42,6 +43,9 @@ final class AppleMusicPlayer: MusicPlaying {
   /// new sprint start the playlist from the top.
   private(set) var loaded: MusicSelection?
 
+  /// Holds the subscription to the player's status. Releasing it stops listening.
+  private var statusObservation: AnyCancellable?
+
   /// Whether sound is actually coming out right now.
   ///
   /// Asked of the player each time. Anything other than playing — paused,
@@ -49,6 +53,36 @@ final class AppleMusicPlayer: MusicPlaying {
   /// button on the timer screen follows this and nothing else.
   var isPlaying: Bool {
     player.state.playbackStatus == .playing
+  }
+
+  /// Told when the player's status changes, so the screen can catch up.
+  ///
+  /// **Setting this starts listening.** `MusicPlayer.State` is a Combine
+  /// `ObservableObject`, which is the only honest way to know when playback
+  /// actually begins: `play()` returns before the status flips, so a reading
+  /// taken at the end of it records "not playing" and is never corrected.
+  ///
+  /// That bug shipped. The skip button appeared in one sprint and not the next,
+  /// because whether the single reading landed before or after the flip was a
+  /// race. Listening replaces guessing at the timing.
+  var onPlaybackStatusChanged: (() -> Void)? {
+    didSet { observeStatus() }
+  }
+
+  // MARK: Listening
+
+  /// Subscribes to the player's own status changes.
+  ///
+  /// `receive(on: RunLoop.main)` because the callback ends up touching
+  /// `@Observable` state that the screen reads, and everything in this feature
+  /// is main-actor bound. Cancelled and replaced rather than accumulated, so
+  /// setting the callback twice does not deliver twice.
+  private func observeStatus() {
+    statusObservation?.cancel()
+    guard let onPlaybackStatusChanged else { return }
+    statusObservation = player.state.objectWillChange
+      .receive(on: RunLoop.main)
+      .sink { onPlaybackStatusChanged() }
   }
 
   // MARK: The seven verbs

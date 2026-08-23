@@ -480,6 +480,20 @@ Raised during the F2 device review and parked deliberately, so they are neither 
   because a stats screen is exactly where that pressure appears first. Noted so the eventual delta is
   a decision rather than a drift.
 
+- **A tomato that fills as the block runs — on the TIMER SCREEN as well (v1.1).** The owner extended
+  the Live Activity idea below to the app's own countdown: an outline of a tomato that fills over the
+  focus block, rather than only a number.
+
+  On the timer screen this is much cheaper than in the Live Activity, because the app is in front of
+  you and redrawing is free — no update budget, no battery cost. The artwork already exists as vector
+  paths in `Design/icon/make-icon.sh`; the work is factoring them out of that script into something a
+  view can draw and stroke progressively.
+
+  The one design question to settle at that gate: the ratified rule is that the numeral is the loudest
+  thing on the screen and the countdown moves exactly once per cycle. A filling shape is continuous
+  movement by definition, so it either replaces the numeral or has to be quiet enough not to compete
+  with it. That is a real decision, not a detail.
+
 - **A tomato that builds itself as the block runs (v1.1).** The owner's idea, and a good one: instead
   of a countdown readout, the Live Activity draws a tomato that assembles as the minutes pass, so the
   Lock Screen shows progress as a *picture* rather than a number.
