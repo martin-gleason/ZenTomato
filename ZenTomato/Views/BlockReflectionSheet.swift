@@ -1,5 +1,15 @@
 import SwiftUI
 
+// swiftlint:disable file_length
+//
+// THE ONLY LINT RULE THIS FILE TURNS OFF, AND WHY.
+// `file_length` counts documentation and previews, and this file is now mostly
+// both: the Complete button added eight states to a sheet that already had
+// five, and every one of them has a preview, because a control that makes the
+// app's only network write must be looked at in each of its states rather than
+// reasoned about. The same exemption, for the same reason, is already taken by
+// `TimerScreen.swift` and `TimerEngine.swift`.
+
 /// Asked once, at the end of a focus block that had at least one tap.
 ///
 /// WHAT THIS SHEET IS FOR
@@ -54,11 +64,52 @@ struct BlockReflectionSheet: View {
   /// see the note on `body`.
   let onDone: () -> Void
 
+  /// The Todoist task this block was attached to, or `nil` when there is
+  /// nothing here to tick off — no token, nothing attached, or a whole project
+  /// attached, which has no close endpoint and never will.
+  ///
+  /// **Omitted means not rendered**, not a switched-off button and not an
+  /// explanatory row — the same discipline the stop sheet already applies to a
+  /// block that had no taps.
+  var completion: TaskCompletionSection.Subject?
+
+  /// Which of the four states that control is in. Owned by the screen
+  /// presenting this sheet, because the request outlives any redraw of it.
+  var completionControl: TaskCompletionSection.Control = .ready
+
+  /// What went wrong with the last attempt, if anything.
+  var completionFailure: String?
+
+  /// The Complete button was tapped. **It does not close this sheet and it does
+  /// not end anything** — see `TaskCompletionSection`.
+  var onComplete: () -> Void = { }
+
   var body: some View {
     VStack(spacing: Spacing.lg) {
       ScrollView {
         VStack(alignment: .leading, spacing: Spacing.lg) {
           header
+
+          // ABOVE THE FIELDS AND BELOW THE SHEET'S OWN SUBJECT, bracketed by a
+          // rule so it reads as a separate topic.
+          //
+          // Not in the pinned footer: that footer stays pinned so the way out
+          // is reachable with six fields above it at the largest text size, and
+          // a third stacked control there would leave almost no sheet. Not
+          // below the fields either: at that size six fields are roughly
+          // fifteen hundred points of scrolling, and somebody who has just
+          // finished their task would have to scroll past every distraction
+          // they logged to tick it off.
+          if let completion {
+            sectionRule
+            TaskCompletionSection(
+              subject: completion,
+              control: completionControl,
+              failure: completionFailure,
+              onComplete: onComplete)
+            sectionRule
+          }
+
           ReflectionFieldList(prompts: reflection.prompts, notes: $notes)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -98,6 +149,21 @@ struct BlockReflectionSheet: View {
   }
 
   // MARK: Private
+
+  /// The only decorative line on this sheet, and the only use of the `border`
+  /// role on it.
+  ///
+  /// `border` is documented as decorative-only; using it on a control boundary
+  /// would be a defect, which is why every field on this sheet is outlined in
+  /// `borderStrong` instead. This genuinely is decoration — it separates two
+  /// topics and carries no information — so VoiceOver is told to skip it.
+  private var sectionRule: some View {
+    Rectangle()
+      .fill(Color(.border))
+      .frame(maxWidth: .infinity)
+      .frame(height: Spacing.borderHairline)
+      .accessibilityHidden(true)
+  }
 
   /// The question, what was tallied, and the permission that is phrased as a
   /// fact.
@@ -154,10 +220,11 @@ struct BlockReflectionSheet: View {
       // is none: the block is over and the break is running, so the thing to do
       // is finish here and go. That is why this is the one filled button.
       //
-      // There is no "Complete task" button beside it. That control belongs to
-      // the Todoist feature, which does not exist yet — and a disabled stub or
-      // a reserved gap would be that feature starting early, which is worse
-      // than absent because it looks finished.
+      // THE COMPLETE BUTTON IS NOT BESIDE THIS ONE, AND THAT IS DELIBERATE.
+      // It sits above the fields, outlined rather than filled, so that the one
+      // filled button on this sheet stays what it always was: the thing to do
+      // here is finish and go. Done completes nothing, and completing does not
+      // press Done.
       Button("Done") { onDone() }
         .buttonStyle(StartButtonStyle())
         // Restates the first-class-skip contract for somebody who cannot see
@@ -209,32 +276,131 @@ struct BlockReflectionSheet: View {
     .preferredColorScheme(.light)
 }
 
+/// A task attached: the Complete section sits between the header and the
+/// fields, outlined, with the undo line under it.
+#Preview("Task attached — before") {
+  BlockReflectionSheetPreviewHost(
+    first: .previewInternal(at: 32),
+    rest: .previewTwoMore,
+    completion: .previewTask)
+    .preferredColorScheme(.light)
+}
+
+#Preview("Task attached — completing") {
+  BlockReflectionSheetPreviewHost(
+    first: .previewInternal(at: 32),
+    completion: .previewTask,
+    control: .working)
+    .preferredColorScheme(.light)
+}
+
+#Preview("Task attached — completed") {
+  BlockReflectionSheetPreviewHost(
+    first: .previewInternal(at: 32),
+    completion: .previewTask,
+    control: .completed(at: Date(timeIntervalSince1970: 1_787_412_000)))
+    .preferredColorScheme(.light)
+}
+
+/// A completion that did not reach Todoist. The button is back to tappable —
+/// tapping again is the retry, and it is the only one.
+#Preview("Task attached — failed offline") {
+  BlockReflectionSheetPreviewHost(
+    first: .previewInternal(at: 32),
+    completion: .previewTask,
+    failure: TaskCompletionSection.failureMessage(for: .offline))
+    .preferredColorScheme(.light)
+}
+
+#Preview("Task attached — token revoked") {
+  BlockReflectionSheetPreviewHost(
+    first: .previewInternal(at: 32),
+    completion: .previewTask,
+    failure: TaskCompletionSection.failureMessage(for: .tokenRejected))
+    .preferredColorScheme(.light)
+}
+
+/// Offline before any tap: switched off, with a plain sentence and no amber,
+/// because nothing has failed.
+#Preview("Task attached — disabled, offline") {
+  BlockReflectionSheetPreviewHost(
+    first: .previewInternal(at: 32),
+    completion: .previewTask,
+    control: TaskCompletionSection.restingControl(
+      hasToken: true,
+      todoistIsReachable: false,
+      taskIsInTodoist: .present))
+    .preferredColorScheme(.light)
+}
+
+#Preview("Task attached — before, dark") {
+  BlockReflectionSheetPreviewHost(
+    first: .previewInternal(at: 32),
+    rest: .previewTwoMore,
+    completion: .previewTask)
+    .preferredColorScheme(.dark)
+}
+
+/// The hard case. The Complete section must be on screen without scrolling past
+/// the fields, and Done must still be one reachable tap.
+#Preview("Six taps and a task attached, largest text") {
+  BlockReflectionSheetPreviewHost(
+    first: .previewInternal(at: 32),
+    rest: .previewFiveMore,
+    completion: .previewTask)
+    .preferredColorScheme(.light)
+    .dynamicTypeSize(.accessibility5)
+}
+
 /// Preview scaffolding, never part of what ships.
 private struct BlockReflectionSheetPreviewHost: View {
   /// Built through the initialiser that takes the first tap separately, which is
   /// the one that cannot express an empty list — so no preview here has to
   /// unwrap an optional, and none of them reaches for a force unwrap to do it.
-  init(first: DistractionPrompt, rest: [DistractionPrompt] = [], breakIsRunning: Bool = true) {
+  init(
+    first: DistractionPrompt,
+    rest: [DistractionPrompt] = [],
+    breakIsRunning: Bool = true,
+    completion: TaskCompletionSection.Subject? = nil,
+    control: TaskCompletionSection.Control = .ready,
+    failure: String? = nil) {
     reflection = BlockReflection(
       sessionID: UUID(),
       firstPrompt: first,
       rest: rest)
     self.breakIsRunning = breakIsRunning
+    self.completion = completion
+    self.control = control
+    self.failure = failure
     _notes = State(initialValue: [:])
   }
 
   let reflection: BlockReflection
   let breakIsRunning: Bool
+  let completion: TaskCompletionSection.Subject?
+  let control: TaskCompletionSection.Control
+  let failure: String?
 
   var body: some View {
     BlockReflectionSheet(
       reflection: reflection,
       notes: $notes,
       breakIsRunning: breakIsRunning,
-      onDone: { })
+      onDone: { },
+      completion: completion,
+      completionControl: control,
+      completionFailure: failure)
   }
 
   @State private var notes: [UUID: String]
+}
+
+/// The fixture task these previews attach to. Its identifier is deliberately
+/// not credential-shaped and not a real Todoist id.
+private extension TaskCompletionSection.Subject {
+  static let previewTask = TaskCompletionSection.Subject(
+    taskID: "preview-task",
+    title: "Draft the Q3 summary")
 }
 
 /// Fixtures for this file's previews. Never part of what ships; private for the

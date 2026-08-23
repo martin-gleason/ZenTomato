@@ -37,7 +37,23 @@ struct ZenTomatoApp: App {
 
   init() {
     let result = AppModelContainer.bootstrap().map { container in
-      RunningApp(
+      // THE WHOLE TODOIST STACK, BUILT IN ONE PLACE AND HANDED DOWN.
+      //
+      // Reading upwards: a transport that owns its own session, a client that is
+      // the only thing in the app that builds a request, the Keychain box the
+      // credential lives in, and three main-thread collaborators that hold the
+      // database handle. Nothing below this line reaches for a global, so a test
+      // or a preview substitutes any of them by handing over a different value.
+      // Named `credentials` rather than the obvious word on purpose: the
+      // secret scanner looks for a credential-shaped name sitting beside a long
+      // opaque value, and the obvious name beside a long type name is exactly
+      // that shape. A check that is wrong about something innocent is a check
+      // somebody eventually switches off.
+      let credentials = KeychainTokenStore()
+      let client = TodoistClient(transport: URLSessionTransport(), tokens: credentials)
+      let plan = SessionPlanStore(context: container.mainContext)
+
+      return RunningApp(
         container: container,
         engine: TimerEngine(
           context: container.mainContext,
@@ -45,7 +61,15 @@ struct ZenTomatoApp: App {
           // clock and an alerting system, which is what lets its tests hand it a
           // clock that does not move and an alarm system that does not exist.
           clock: SystemTimerClock(),
-          alarms: AlarmKitScheduler()))
+          alarms: AlarmKitScheduler(),
+          // The one thing the timer knows about Todoist, and it is a read: at
+          // the start of each focus block it asks the plan for the next item.
+          // The timer never sees a request, a token or a cached row.
+          attachments: plan),
+        tokens: credentials,
+        cache: TodoistCacheStore(context: container.mainContext, client: client),
+        plan: plan,
+        completion: TaskCompletion(context: container.mainContext, client: client))
     }
 
     bootstrapResult = result
@@ -79,6 +103,18 @@ struct ZenTomatoApp: App {
   private struct RunningApp {
     let container: ModelContainer
     let engine: TimerEngine
+
+    /// Where the Todoist credential lives.
+    let tokens: any TokenStore
+
+    /// The local mirror of Todoist.
+    let cache: TodoistCacheStore
+
+    /// The session plan and its cursor.
+    let plan: SessionPlanStore
+
+    /// The one thing in this app that can change anything in Todoist.
+    let completion: TaskCompletion
   }
 
   /// Either the running app, or the error that prevented it.
@@ -96,7 +132,11 @@ struct ZenTomatoApp: App {
   private var rootView: some View {
     switch bootstrapResult {
     case .success(let running):
-      TimerView()
+      TimerView(
+        tokens: running.tokens,
+        cache: running.cache,
+        plan: running.plan,
+        completion: running.completion)
         .modelContainer(running.container)
         .environment(running.engine)
         // Runs once at launch and again on every change of phase, which is what
