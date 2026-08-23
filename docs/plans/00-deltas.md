@@ -458,6 +458,22 @@ Raised during the F2 device review and parked deliberately, so they are neither 
   settings field before that delta exists.**
 - **~~Dynamic Island presentation.~~ Verified working on device 2026-08-23.** Not a v1.1 item after
   all — it shipped in F2 and it works.
+- **Calendar time-blocking, in v1.5 — and it is EventKit, not Fantastical.** The owner's shape:
+  *"time blocks in Fantastical, projects and to-dos in Todoist, and use pomodoro to work."*
+
+  The thing worth knowing before anyone starts: **Fantastical has no integration surface.** It is a
+  client, not a service — it reads and writes the system calendar, the same one Apple's Calendar app
+  uses. So "connect to Fantastical" is really **EventKit**, and the integration is with the calendar
+  store both apps share. That is good news: it works whatever calendar app is in front of it, it needs
+  no account, no API key and no network, and a block ZenTomato reads was authored in Fantastical
+  without either app knowing about the other.
+
+  Consequences to weigh at that gate: EventKit is a new permission prompt and a new privacy string; it
+  does NOT breach *"Local only… no network calls except Todoist and MusicKit"*, since EventKit is
+  entirely on-device; and the natural first version is **read-only** — see today's blocks, start a
+  pomodoro against one — which needs no write access at all and is a much smaller ask of the user than
+  full calendar access.
+
 - **Gamification, in v1.5.** `SPEC.md`'s out-of-scope list ends with *"streaks, badges, or any
   gamification layered on top of Todoist's own"*, and the owner has placed that at v1.5 rather than
   never. Nothing changes for v0.1 — the exclusion stands and F6's review is still pointed at it,
@@ -548,6 +564,25 @@ So the rule for v0.1 is unchanged and the reasoning is now sharper: **the cache 
 references, and neither invents.** When v1.5 builds a real local model it starts from a clean
 divergence-free base and gets to choose its own shape — rather than inheriting one that accumulated
 while nobody was looking.
+
+### The no-capture rule is what v1.5 is really deciding
+
+This has now come up three times in different clothes: *"plan my pomodoros with Todoist or the
+ZenTomato"*, *"a local task model will happen eventually"*, and *"put what's needed or unfinished in
+Todoist — or, if the moment is right, ZenTomato."*
+
+It is worth naming that these are all **one decision**, because they will otherwise be re-litigated
+one at a time. Writing a task to Todoist from ZenTomato *is* capture. The no-capture rule and the
+bi-directional sync plan are the same question seen from two sides, and v1.5 is where both are
+answered together or neither is.
+
+**Nothing changes for v0.1.** `CLAUDE.md` calls no-capture *"a standing rule from the owner's
+productivity system, not a feature gap"*, and it is enforced by a hook. That holds until it is
+deliberately replaced — not eroded by a search box that offers to create what you typed, or a plan
+item that quietly grows a title you can edit.
+
+What v1.5 inherits from holding the line now is a clean starting point: an app that has never invented
+a task, so the first one it ever writes is one somebody designed on purpose.
 
 ### One consequence to flag now
 
