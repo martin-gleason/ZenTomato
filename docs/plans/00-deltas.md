@@ -701,3 +701,47 @@ about whether it is a way to enter a task.
 This is also the shape bi-directional sync wants. Each user's token is their own, scoped to their own
 account, revocable by them from Todoist's settings without touching the app. There is no shared
 credential to rotate, and no single secret whose exposure affects every install.
+
+---
+
+## D19 — Three decisions taken at the F4 gate
+
+**Ratified 2026-08-23.**
+
+### 1. Switching music on means ZenTomato handles the audio
+
+If something else is already playing when a focus block starts with music on, ZenTomato takes over
+with the chosen playlist. When the sprint ends it stops and leaves the system player alone.
+
+**Why not "leave what's playing".** Because then the toggle sometimes does nothing, and whether it
+worked depends on something happening in another app. A control that silently no-ops is one you stop
+trusting — and you would have to remember what else was playing to predict what it does.
+
+### 2. No subscription, or authorization denied → the toggle dims and the timer is untouched
+
+Music is an accessory to this app, not the point. Every music failure degrades to a **silent working
+timer**, never a broken one, with one plain line saying why.
+
+**This is deliberately the opposite of F2's alarm permission**, where denial is blocking. The
+difference is whether the permission *is* the feature: a Pomodoro timer that cannot tell you a block
+ended has no working state to degrade into, whereas one that is merely quiet works fine. Same app,
+opposite handling, and the reason should be legible in both places.
+
+### 3. The skip button appears only while music is actually playing — in reserved space
+
+Skip is visible during work blocks when something is playing, and absent during breaks when it is
+paused and skipping would mean nothing. Nothing on screen offers a control that does nothing.
+
+**This runs straight into a ratified rule and must not break it.** The countdown moves exactly once in
+a whole cycle. A control that appears and disappears at every block boundary is precisely that
+movement — and this is not hypothetical: F3 suppressed an affordance for this same reason and made an
+entire feature unreachable, which took a device session to find.
+
+**The resolution is to reserve the space rather than suppress the control.** The music row occupies a
+fixed height for the whole cycle. The skip button appears and disappears *within* it; nothing above or
+below moves, and the countdown never shifts by a pixel. The rule is honoured by layout rather than by
+removing something the user needs.
+
+That is the general answer to this tension, and it is worth stating once here: **when a rule about
+movement conflicts with an affordance somebody needs, reserve the space.** Suppressing the affordance
+was tried in F3 and the cost was the whole feature.
