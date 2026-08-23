@@ -57,9 +57,9 @@ enum AppModelContainer {
   /// database.
   ///
   /// The schema is built here, freshly, on every call. It lists every kind of
-  /// object the app saves — currently exactly one, `AppSettings`. When a
-  /// future feature adds a saved type, it is added to this array and nowhere
-  /// else.
+  /// object the app saves — the settings row, the one row describing the
+  /// running timer, and one row per finished block. When a future feature adds
+  /// a saved type, it is added to this array and nowhere else.
   ///
   /// - Parameter location: where the store should live. Defaults to the real
   ///   app's location.
@@ -68,7 +68,7 @@ enum AppModelContainer {
   ///   file, a full disk, a path that cannot be written. The caller is
   ///   expected to show that to the user rather than crash; see `bootstrap()`.
   nonisolated static func make(_ location: StoreLocation = .appDefault) throws -> ModelContainer {
-    let schema = Schema([AppSettings.self])
+    let schema = Schema([AppSettings.self, TimerState.self, PomodoroSession.self])
 
     let configuration: ModelConfiguration
     switch location {

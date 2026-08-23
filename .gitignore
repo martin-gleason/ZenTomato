@@ -105,6 +105,9 @@ build/
 # working in one tree would corrupt it. Run `make generate` after a fresh clone.
 ZenTomato.xcodeproj/
 Support/ZenTomato-Info.plist
+# The widget extension's Info.plist, generated from project.yml for exactly the
+# same reason as the app's. It is a build product, not a source file.
+Support/ZenTomatoActivity-Info.plist
 
 # Build products and test results
 DerivedData/

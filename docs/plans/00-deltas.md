@@ -153,14 +153,14 @@ else, the client secret must move behind a token-exchange service and this note 
 - **C1** (repo, LICENSE, branch protection) — **done**
 - **C2** (minimum iOS, developer account, App ID with MusicKit) — **done**; answer is iOS 26 / watchOS 26, see D1
 - **C3** (Todoist OAuth app registered, credentials placed) — **done**; credentials in `Config/Secrets.xcconfig`, see D6b
-- **C4** (install builds on the iPhone) — deferred to beta. **This gates the device checks in F2, F3, F4, and F7.**
+- **C4** (install builds on the iPhone) — **done 2026-08-22**, moved up. `make device` installs to the iPhone 15 Pro Max on iOS 26.6. This no longer gates anything.
 - **C5** (fixed afternoon PR-review slot) — deferred to beta
 
-C4 being deferred means F2, F3, F4, and F7 can each be built and unit-tested to completion but **cannot
-close their gate**, because every one of their *Done when* clauses is a device check. Those features
-will queue in a `verified-pending-device` state until C4 lands. Front-loading C4 is the single highest-
-leverage thing you can do for the September 13 stop; leaving it to beta means discovering four features'
-worth of device-only bugs in one sitting.
+C4 was front-loaded on 2026-08-22 rather than left to beta, which was the right call: F2 immediately
+proved why. A simulator cannot answer a permission prompt, so **AlarmKit was never once authorised in
+any automated run** — every alarm-dependent behaviour in F2 is verified only against a protocol
+stand-in that cannot fail. Had C4 stayed deferred, four features would have queued up in a
+`verified-pending-device` state and their device-only bugs would all have surfaced in one sitting.
 
 ---
 
@@ -314,3 +314,162 @@ understanding that the app was personal.
 **No action needed now.** F1 ships no Todoist code, and F3 is two gates away. This is recorded so the
 decision is made deliberately at that gate rather than discovered during a release. If the answer is
 "personal token", F3's plan gets simpler, not harder.
+
+---
+
+## D10 — F2 gains the settings screen
+
+**Raised and ratified 2026-08-22, during the F2 gate.**
+
+**This is a spec defect, not a scope request.** `SPEC.md` line 30 locks *Timer customization — work
+length, short break, long break, pomodoros-per-sprint, sound on/off, auto-start next block on/off*.
+But F1 builds only the settings *model*, F2 only *reads* it, and no feature in F1–F6 ever builds a
+screen that writes one. As the feature list stands, v0.1 ships permanently locked at 25/5/15/4 and the
+locked decision on line 30 is unreachable.
+
+**Proposed:** amend F2 to read:
+
+> **F2 — Timer engine.** Pomodoro / short / long break cycle per settings, and the screen that sets
+> them — the six values in *Timer customization* and nothing else. Survives backgrounding…
+
+**Why F2 rather than a feature of its own.** F2 already reads all six values, so putting the writer
+beside the reader keeps one feature owning the whole of "the timer behaves the way you configured it".
+
+There is also a practical reason that matters more than the tidiness one: **F2's device check is
+otherwise 25 minutes of waiting.** With the screen in the same feature, the cycle can be exercised at
+one minute per block — so the whole work/short/work/short/work/short/work/long sequence takes eight
+minutes instead of two hours, and the full-length run becomes a final confirmation rather than the only
+way to see the engine work at all.
+
+**Scope fence, unchanged.** Six fields. No seventh. No theme control, no appearance setting, no music
+toggle — the music on/off is session state owned by F4, and `SPEC.md` says "Nothing else."
+
+---
+
+## D11 — Completed tasks are recorded and exported
+
+**Raised and ratified 2026-08-22.**
+
+F3 completes a task in Todoist, and F6 counts *pomodoros* per task, project and day. Neither records
+**which tasks were finished**, so the Rhodia review can say how much time went where but not what came
+out of it.
+
+**Proposed:** add to F3, "…and the completion is recorded locally with its timestamp"; and to F6's
+list, "…plus the tasks completed in the period."
+
+**Why record it rather than read Todoist.** Todoist knows what you completed and is the only place
+tasks live — that rule is not in question. But the export is a document assembled offline for a paper
+review, and reaching across the network to build it would make a two-week retrospective depend on being
+signed in and online. The local row is a *record of something this app did*, which is a different thing
+from a task model: it stores the task's id and a snapshot of its title, exactly as the pomodoro rows
+already do, and it is append-only. It creates no hierarchy, no local task list, and nothing that could
+grow into one.
+
+**Cost:** one small model and one export section. The recording lands in F3, the export in F6.
+
+
+---
+
+## D12 — The Live Activity has no controls
+
+**Ratified 2026-08-23, during F2's device review.**
+
+The running-block Live Activity shipped with a Dismiss button on the Lock Screen card and in the
+expanded Dynamic Island. Both are removed. The card now reads and does not act.
+
+**Why.** A Lock Screen button cannot be trusted to record what it did. iOS reclaims a backgrounded
+app's memory whenever it likes, and a Live Activity button reaches the app through an App Intent that
+does nothing at all if the app is not resident. The tap silently reached nothing; the block was left
+to be reconciled at the next foreground from its stored end time alone — and by then that time had
+passed, so it was recorded as **completed**.
+
+The consequence is the part that matters: deliberately abandoning a block from a locked phone added a
+pomodoro you had not earned. Not to a cosmetic counter, but to the one number the whole app exists to
+produce and that the two-week review is read from. It also directly contradicted the decision taken at
+this same gate that a block ended early is abandoned and excluded from counts.
+
+**Why removal rather than a fix.** Making the button honest needs a field on `TimerState` plus a
+cross-process channel from the widget back to the app — real design, and design for a control nobody
+asked for. `SPEC.md` never promised a Lock Screen control; F2's plan named "dismiss" as the one
+affordance the Live Activity would carry, and this delta withdraws it. Abandoning a block now happens
+in the app, where the engine is certainly running and can record what actually happened. That is one
+extra tap, on a deliberate act.
+
+**What is kept.** `DismissBlockIntent` survives as the Stop button on the full-screen alert iOS draws
+when a block's alarm *fires*. Reaching it now implies the alarm was sounding, so the reconciliation
+fallback — record it as completed — is correct rather than merely tolerable. The engine still asks
+rather than assumes: it compares the clock to the block's end time, so the rule lives in one tested
+place.
+
+---
+
+## D13 — One exit, and it costs a sentence
+
+**Ratified 2026-08-23, from the F2 device review.**
+
+The owner, having run the timer on the phone: *"I didn't want a stop button. When a pomodoro starts,
+it doesn't stop."*
+
+That is the classic technique's own rule — the pomodoro is **indivisible**; interrupt it and it is
+void rather than paused. F2 shipped Skip and Stop as two free, single-tap exits because the plan
+assumed them, not because `SPEC.md` asked for either.
+
+**Proposed:**
+
+1. **Skip is removed.** There is no way to cut a block short and move to the next one. The only way
+   past a block is to finish it.
+2. **Stop is the single exit, and it demands a written reason.** Tapping Stop presents a sheet asking
+   why. The confirm button stays disabled until something is written; a "Keep going" button dismisses
+   the sheet and lets the block continue. The reason is stored on the session.
+3. `PomodoroSession` gains `abandonReason: String?` — non-nil exactly when a person stopped a block
+   and said why.
+
+**Why an exit has to exist at all.** A block that genuinely cannot be ended means a mistyped
+120-minute focus length traps you for two hours with an alarm you cannot call off. The only remaining
+escape would be force-quitting the app — and a force-quit reconciles from the stored end time and
+records the block as *completed*, which is precisely the false-count bug D12 just removed from the
+Lock Screen, arriving through a different door. The exit is not a weakening of the rule; it is what
+stops the rule producing wrong data.
+
+**Why the sentence is required rather than skippable.** F5's distraction prompt treats skipping as a
+first-class outcome, and that is right there: a tap already carries the data, and the sentence is a
+bonus. This is the opposite case. The *fact* of stopping is one bit; the reason is the entire content.
+And the day you least want to write it — the day you bailed out and would rather not think about
+why — is the day it is worth the most. A stop is the largest distraction event there is, and the app
+currently records nothing about it.
+
+**This is not a capture surface.** The no-capture rule forbids the app accepting a new *task*. This
+field accepts a reflection, which is the same thing F5's end-of-pomodoro prompt already does and which
+`SPEC.md` explicitly asks for. It creates nothing in Todoist and nothing that could become a task.
+
+**Consequence for F6 (noted, not built):** `abandonReason` is a column the export will want — "why I
+stopped" beside "what distracted me" is the shape of a real review. F6 decides at its own gate.
+
+---
+
+## Recorded for after v0.1 — not built, not prepared for
+
+Raised during the F2 device review and parked deliberately, so they are neither lost nor smuggled in:
+
+- **A choice of alarm sound (v1.1).** *"This alarm kinda stinks — folks will want to change it."*
+  Agreed, and out of scope: `SPEC.md`'s customization list is closed at six values and says "Nothing
+  else." AlarmKit takes an `AlertConfiguration.AlertSound`, so the mechanism is one parameter — the
+  work is the picker and the settings field, both of which need a delta. **Do not add a seventh
+  settings field before that delta exists.**
+- **~~Dynamic Island presentation.~~ Verified working on device 2026-08-23.** Not a v1.1 item after
+  all — it shipped in F2 and it works.
+- **A tomato that builds itself as the block runs (v1.1).** The owner's idea, and a good one: instead
+  of a countdown readout, the Live Activity draws a tomato that assembles as the minutes pass, so the
+  Lock Screen shows progress as a *picture* rather than a number.
+
+  Worth stating why it is genuinely v1.1 and not a quick swap. The countdown works today because
+  `Text(timerInterval:)` renders client-side from the alarm's `fireDate` with no updates pushed at
+  all — that is the entire reason the wall-clock design holds and the Live Activity costs nothing. A
+  drawing that changes with time cannot use that trick: SwiftUI's timer text is a special case, and an
+  arbitrary view has to be re-rendered, which means pushed activity updates, which means an update
+  budget and a battery cost. It is buildable — most likely by drawing the tomato in discrete stages
+  and pushing one update per stage rather than continuously — but it is a real design problem with a
+  real cost, not a change of view code.
+
+  It also needs the icon's vector artwork factored out of `Design/icon/make-icon.sh` and into
+  something the widget can draw. **Do not start any of this before a ratified delta.**

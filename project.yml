@@ -54,6 +54,16 @@ targets:
     # require editing this file, or the two would drift.
     sources:
       - path: ZenTomato
+    # The Live Activity lives in its own bundle inside the app. Listing it here
+    # is what makes Xcode build it and embed it in the app's PlugIns folder.
+    # WITHOUT THIS LINE THE EXTENSION COMPILES AND IS NEVER INSTALLED, which
+    # presents as "the Live Activity simply does not appear" with no error
+    # anywhere — no crash, no warning, nothing in the log. It is one of the three
+    # silent ways this feature can look broken; the other two are the
+    # NSSupportsLiveActivities key below and a mismatch between the two
+    # processes' idea of what travels with an alarm.
+    dependencies:
+      - target: ZenTomatoActivity
     # Xcode's own configuration mechanism, and the only one this project uses.
     # App.xcconfig is committed and holds safe defaults; it ends by optionally
     # including the git-ignored Config/Secrets.xcconfig, which is where a real
@@ -101,6 +111,19 @@ targets:
           - UIInterfaceOrientationPortrait
         # Avoids an export-compliance prompt every time a build is installed.
         ITSAppUsesNonExemptEncryption: false
+        # Required by ActivityKit. AlarmKit's countdown alarms present through a
+        # Live Activity, so without this key the alarm is scheduled and nothing
+        # is ever drawn on the Lock Screen. Silent when missing.
+        NSSupportsLiveActivities: true
+        # The sentence iOS shows in the permission prompt the first time somebody
+        # taps Start. A framework that asks for a permission expects the app to
+        # explain why in its own words, and iOS refuses the request outright if
+        # the explanation is missing — which would present as "alarms are always
+        # denied". Confirm the exact wording of the switch this maps to on the
+        # device before shipping; the explainer screen names it in its copy.
+        NSAlarmKitUsageDescription: >-
+          ZenTomato sets an alarm for the end of each focus block and each break,
+          so a block can end while your phone is silent or in a Focus.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.martingleason.ZenTomato
@@ -109,6 +132,83 @@ targets:
         # 1 = iPhone. No iPad layout exists.
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
+  # The Live Activity: the countdown on the Lock Screen and in the Dynamic
+  # Island. It is a separate bundle because iOS requires one — those two surfaces
+  # are drawn by a different process from the app, and that process cannot open
+  # the app's database. Everything the Lock Screen shows therefore travels inside
+  # the alarm's own data; see ZenTomato/Shared/FocusAlarmMetadata.swift.
+  ZenTomatoActivity:
+    type: app-extension
+    platform: iOS
+    sources:
+      # The extension's own views.
+      - path: ZenTomatoActivity
+      # COMPILED INTO BOTH BUNDLES. Two targets may list the same directory, and
+      # that is the right answer here rather than copying the files or inventing
+      # a package:
+      #
+      #   * Copying is how you ship a blank Lock Screen. The data that crosses
+      #     between the two processes has to be written down the same way on both
+      #     sides, and two copies of a description drift.
+      #   * A package would be a new build system inside the build system, and
+      #     the project forbids a new dependency without a spec change.
+      #
+      # Each target compiles its own copy of these few small files into its own
+      # module. The cost is a second compile of about a dozen files. The rule
+      # that comes with it, and the one to police in review: NOTHING that touches
+      # the database, the alarm framework's manager, or the timer engine may be
+      # put in either of these directories. An extension that can see the
+      # database is an extension that will one day try to open it.
+      - path: ZenTomato/Shared
+      - path: ZenTomato/DesignSystem
+      # One file, not the whole Timer directory. The names of the three kinds of
+      # block are drawn on the Lock Screen, and if the widget spelled them itself
+      # the two could disagree — a disagreement only ever visible on a locked
+      # phone, which is the hardest possible place to notice one.
+      - path: ZenTomato/Timer/BlockKind.swift
+    configFiles:
+      Debug: Config/App.xcconfig
+      Release: Config/App.xcconfig
+    info:
+      # Generated, git-ignored, and reviewed here as YAML rather than as XML in a
+      # second file — the same arrangement the app target uses.
+      path: Support/ZenTomatoActivity-Info.plist
+      properties:
+        CFBundleDisplayName: ZenTomato
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # This is the whole of what makes the bundle a widget extension. The
+        # identifier is Apple's, not ours, and it must be exact.
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        # A child of the app's identifier. iOS requires an extension's bundle id
+        # to be prefixed by its container app's, and the existing wildcard
+        # provisioning profile covers it, so no new profile is needed to install
+        # on a phone.
+        PRODUCT_BUNDLE_IDENTIFIER: com.martingleason.ZenTomato.Activity
+        # Kept in step with the app deliberately: two bundles installed together
+        # with different versions is a support question nobody wants.
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        # 1 = iPhone.
+        TARGETED_DEVICE_FAMILY: "1"
+        # An extension is installed by its container app, never on its own.
+        SKIP_INSTALL: "YES"
+        # Marks this build as the widget's copy of the shared sources.
+        #
+        # One file — ZenTomato/Shared/DismissBlockIntent.swift — is compiled into
+        # both bundles, and it has to behave differently in each: the widget
+        # needs the *name* of the Dismiss command so its button can refer to it,
+        # while only the app has a timer for the command to act on. iOS always
+        # runs a Live Activity's command in the app's process, so the widget's
+        # copy is never executed; this flag is how that file says so.
+        #
+        # `$(inherited)` is load-bearing: without it this would replace the DEBUG
+        # flag Xcode sets for debug builds rather than adding to it.
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) WIDGET_EXTENSION
 
   ZenTomatoTests:
     type: bundle.unit-test

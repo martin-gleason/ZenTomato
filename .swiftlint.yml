@@ -11,6 +11,10 @@
 
 included:
   - ZenTomato
+  # The Live Activity is a screen. If the lint rules do not reach it, the rules
+  # do not exist — a widget drawn in system blue with a hard-coded font would
+  # undo the whole point of the design system.
+  - ZenTomatoActivity
   - ZenTomatoTests
 
 excluded:
@@ -138,7 +142,7 @@ custom_rules:
   # and assumes they are covered.
   palette_outside_token_layer:
     name: "Palette outside the token layer"
-    included: "ZenTomato/(App|Views|Models)/.*\\.swift"
+    included: "(ZenTomato/(App|Views|Models|Timer|Alarm|Shared)|ZenTomatoActivity)/.*\\.swift"
     regex: "\\bPalette\\."
     message: "Screens may only name a ColorRole, never a raw Palette step."
     severity: error

@@ -1,0 +1,124 @@
+import Foundation
+
+/// Everything the timer screen draws, as plain values.
+///
+/// WHY THE SCREEN IS SPLIT IN TWO, FOR A READER WHO DOES NOT WRITE SWIFT
+/// `TimerView` is the screen as it appears in the running app: it talks to the
+/// timer engine, presents the settings sheet, and refreshes once a second.
+/// `TimerScreen` is the same picture with nothing behind it — handed a small bag
+/// of finished strings and numbers, which it draws. This type is that bag.
+///
+/// The split buys one thing and it is worth the extra file: **every state of the
+/// timer screen can be looked at without a running timer.** A focus block half
+/// way through, a sprint that has just finished, a database with no settings in
+/// it — each is a few lines in a preview rather than a sequence of taps on a
+/// phone, and none of them has to wait for a real twenty-five minutes to pass.
+struct TimerScreenModel {
+  // MARK: Nested types
+
+  /// Which controls are at the bottom of the screen.
+  enum Controls {
+    /// One filled button.
+    ///
+    /// `spokenLabel` is the longer sentence VoiceOver reads — "Start focus block,
+    /// 25 minutes" — while the drawn glyphs stay at "Start". The split is
+    /// deliberate: repeating the block name inside the button buys nothing on
+    /// screen, where the word above and the number below already say it, and it
+    /// costs width at the largest text sizes. VoiceOver reads elements one at a
+    /// time and so does need the whole sentence.
+    case start(isEnabled: Bool, spokenLabel: String)
+
+    /// Skip and Stop, side by side, neither of them filled.
+    case running
+  }
+
+  /// How many pomodoros of the sprint are finished, out of how many.
+  struct Progress {
+    let completed: Int
+    let total: Int
+  }
+
+  // MARK: Stored properties
+
+  /// What VoiceOver calls the block: "Focus block", "Short break", "Long break".
+  let blockName: String
+
+  /// The small word above the number. Drawn in capitals.
+  let kicker: String
+
+  /// The big number, already formatted — `25:00`, `04:31`, or `--:--`.
+  let numeral: String
+
+  /// Whether the number is a real reading. When it is not, the dashes are drawn
+  /// in the quietest ink, so that "there is nothing to show" reads differently
+  /// from "here is your time" at a glance as well as in words.
+  let numeralIsAReading: Bool
+
+  /// The number said in words: "25 minutes", or "24 minutes 58 seconds
+  /// remaining". Built from the same source as the printed one, so the two
+  /// cannot disagree.
+  let spokenNumeral: String
+
+  /// The sprint rule, or `nil` to leave it out entirely.
+  let progress: Progress?
+
+  /// "Sprint complete — 4 pomodoros done.", shown while the screen sits idle
+  /// after a long break.
+  let completionNote: String?
+
+  /// Shown when the last thing the timer was asked to do did not fully work —
+  /// most importantly, when an alarm could not be set. An alarm that silently
+  /// fails to be set is the worst bug this feature could ship, so it is said out
+  /// loud on the screen rather than written to a log nobody reads.
+  let failureNote: String?
+
+  let controls: Controls
+
+  // MARK: Initialisation
+
+  /// - Parameter numeralIsAReading: `true` for every state except the one below,
+  ///   which is the only one that draws something other than a time.
+  init(
+    blockName: String,
+    kicker: String,
+    numeral: String,
+    numeralIsAReading: Bool = true,
+    spokenNumeral: String,
+    progress: Progress?,
+    completionNote: String? = nil,
+    failureNote: String? = nil,
+    controls: Controls
+  ) {
+    self.blockName = blockName
+    self.kicker = kicker
+    self.numeral = numeral
+    self.numeralIsAReading = numeralIsAReading
+    self.spokenNumeral = spokenNumeral
+    self.progress = progress
+    self.completionNote = completionNote
+    self.failureNote = failureNote
+    self.controls = controls
+  }
+
+  // MARK: The one state that is not a timer
+
+  /// The database opened but holds no settings row.
+  ///
+  /// Everything is unknown here, so nothing is guessed: dashes instead of a time,
+  /// Start switched off because there is no length to start, and **no sprint rule
+  /// at all** — the sprint's size is unknown, and an empty rule of an invented
+  /// length is a guess presented as a fact.
+  ///
+  /// This is the one surviving reason the Start button still needs its
+  /// switched-off appearance now that it is no longer permanently disabled.
+  static func noSettingsRow(numeral: String) -> TimerScreenModel {
+    TimerScreenModel(
+      blockName: "Focus block",
+      kicker: BlockKind.work.displayName,
+      numeral: numeral,
+      numeralIsAReading: false,
+      spokenNumeral: "length not available",
+      progress: nil,
+      controls: .start(isEnabled: false, spokenLabel: "Start focus block"))
+  }
+}
