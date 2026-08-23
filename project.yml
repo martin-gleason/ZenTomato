@@ -35,15 +35,14 @@ settings:
     # engine and audio callbacks exist would be a rewrite.
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
-    # `gen-secrets.sh` writes into the source directory, which Xcode's script
-    # sandbox denies by default.
-    ENABLE_USER_SCRIPT_SANDBOXING: "NO"
     # The lint gate is `swiftlint --strict`, not the compiler. A future SDK
     # deprecation warning must not be able to break the build gate.
     SWIFT_TREAT_WARNINGS_AS_ERRORS: "NO"
     CODE_SIGN_STYLE: Automatic
-    # Supplied by the generated Support/Secrets.xcconfig. May legitimately be
-    # empty: simulator builds are made with code signing disabled entirely.
+    # Supplied by Config/App.xcconfig, overridden by the git-ignored
+    # Config/Secrets.xcconfig. May legitimately be empty: simulator builds are
+    # made with code signing disabled entirely, and only a device install needs
+    # a team.
     DEVELOPMENT_TEAM: $(DEVELOPMENT_TEAM)
 
 targets:
@@ -55,9 +54,13 @@ targets:
     # require editing this file, or the two would drift.
     sources:
       - path: ZenTomato
+    # Xcode's own configuration mechanism, and the only one this project uses.
+    # App.xcconfig is committed and holds safe defaults; it ends by optionally
+    # including the git-ignored Config/Secrets.xcconfig, which is where a real
+    # credential lives. See Config/App.xcconfig for how a value reaches the app.
     configFiles:
-      Debug: Support/Secrets.xcconfig
-      Release: Support/Secrets.xcconfig
+      Debug: Config/App.xcconfig
+      Release: Config/App.xcconfig
     info:
       # Also generated and git-ignored, so the Info.plist keys below are
       # reviewed as YAML here rather than as XML in a second file. It lives in
@@ -77,14 +80,11 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # Without a launch-screen declaration the app letterboxes on a modern
-        # iPhone. The dictionary is empty because the asset catalog holds no
-        # colour set: a launch screen is drawn by the system before any of this
-        # app's code runs, so it cannot read the design-token layer, and the
-        # only other way to colour it is to name a colour set here. The cost of
-        # leaving it empty is that a cold launch shows the system background
-        # rather than the app's warm stone ground for a fraction of a second.
-        # The blank screen iOS shows between the tap on the icon and the app's
-        # first frame. Left empty it is pure white (or pure black), which flashes
+        # iPhone, so this key must be present.
+        #
+        # It names the colour of the blank screen iOS shows between the tap on
+        # the icon and the app's first frame. Left empty that screen is pure
+        # white (or pure black), which flashes
         # against this app's warm stone page on every single launch. Naming a
         # colour here makes the launch screen the same colour as the page, so
         # there is nothing to see.
@@ -109,22 +109,6 @@ targets:
         # 1 = iPhone. No iPad layout exists.
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-    preBuildScripts:
-      # THE GUARD PATH, not the supply path. An .xcconfig is parsed when the
-      # project is LOADED, which is before any build phase runs — so this phase
-      # cannot put values into this build's settings, and pretending otherwise
-      # would be a mechanism that silently does nothing. What it does instead:
-      # verify .env is present and complete, rewrite Secrets.xcconfig, and fail
-      # the build if the file it just wrote differs from the one the project
-      # was loaded with. `make secrets` (run by `make generate`) is what
-      # actually supplies the values.
-      - name: Verify Secrets.xcconfig is current
-        script: '"$SRCROOT/scripts/gen-secrets.sh" --build-phase'
-        basedOnDependencyAnalysis: false
-        # SECURITY, NOT TIDINESS. Xcode exports every build setting into a
-        # script phase's environment and, with showEnvVars on, prints them
-        # verbatim into the build log — including the public CI log.
-        showEnvVars: false
 
   ZenTomatoTests:
     type: bundle.unit-test

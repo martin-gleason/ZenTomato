@@ -33,12 +33,11 @@ brew install swiftlint gitleaks
 git clone <this repository>
 cd ZenTomato
 
-cp .env.example .env      # nothing to fill in yet — see below
 make hooks                # switch on the checks that run before each commit
 make generate             # build the Xcode project file
 ```
 
-You do **not** need to fill anything into `.env` to build and run what exists today. Copying the template unchanged is enough: nothing in the app reads a credential yet, because the Todoist feature has not been built. When it is, the three Todoist keys become required and the build will stop and name whichever one is blank.
+There is **nothing to configure**. No credential is needed to build and run what exists today, because nothing in the app reads one yet — the Todoist feature has not been built.
 
 Then either open `ZenTomato.xcodeproj` in Xcode and press Run, or stay in the terminal:
 
@@ -48,13 +47,37 @@ make test                 # compile it and run the automated checks
 make lint                 # check the code style
 ```
 
-### About `.env`
+### Putting it on a real iPhone
 
-`.env` holds the credentials the app will eventually need to talk to Todoist. **It is never committed**, and a scan runs before every commit to make sure it never accidentally is. `.env.example` *is* committed: it lists which keys exist, with every value left empty, so the repository documents what is needed without ever holding a real one.
+```bash
+make device
+```
+
+This builds a signed copy and installs it on a connected phone. Three things have to be true first, and the command tells you which one is missing rather than failing cryptically:
+
+1. Your Apple Developer Team ID is in `Config/Secrets.xcconfig` (see above).
+2. The phone is plugged in, unlocked, and has trusted this Mac.
+3. Developer Mode is on: **Settings → Privacy & Security → Developer Mode**. The phone restarts when you first switch it on.
+
+The phone must be running iOS 26 or newer.
+
+### Configuration and credentials
+
+Build settings live in `.xcconfig` files, which is Xcode's own mechanism for them.
+
+`Config/App.xcconfig` is committed and holds safe defaults. Its last line is `#include? "Secrets.xcconfig"`, and the question mark is the important character: it means *include that file if it exists, and carry on quietly if it does not*. That is why a fresh clone builds with no setup.
+
+`Config/Secrets.xcconfig` is the one file that ever holds a real credential. **It is never committed**, and a scan runs before every commit to make sure it never accidentally is. When you do need one:
+
+```bash
+cp Config/Secrets.example.xcconfig Config/Secrets.xcconfig
+```
+
+`Config/Secrets.example.xcconfig` *is* committed, with every value left empty, so the repository documents which keys exist without ever holding a real one.
+
+**One thing this does not do.** Keeping a credential out of the repository is not the same as keeping it out of the app. A build setting ends up in the app's `Info.plist`, which is readable by anyone who has a copy of the built app. That is fine for a build only ever installed on its author's own phone, and it is *not* fine for one distributed to other people. The decision that turns on is recorded as D9 in `docs/plans/00-deltas.md`.
 
 None of the keys are required today, and that is deliberate rather than lax. Nothing in this repository reads a Todoist credential — the feature that will does not exist. A skeleton that refuses to compile without a credential it never opens would mean nobody could build it, and the build server could never report green, which is the one thing this piece of work has to prove.
-
-`make secrets` turns `.env` into a settings file Xcode can read. `make generate` and `make build` do this for you, so you rarely need to run it yourself.
 
 ### About `make hooks`
 
@@ -88,6 +111,7 @@ ZenTomato/          the app's source code
   DesignSystem/     the colours, spacing, corner radii and type sizes
   Resources/        the app icon
 ZenTomatoTests/     automated checks
+Config/             build settings; the only place a credential ever lives
 scripts/            the checks that run before a commit and on the build server
 docs/
   specs/            what is being built, and why — the contract

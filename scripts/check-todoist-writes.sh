@@ -278,18 +278,18 @@ while IFS= read -r match; do
 done < <(
   # `*.xcconfig` IS DELIBERATELY NOT SCANNED, AND THE ONLY REASON IS SECRECY.
   #
-  # Support/ is one of the default search roots, and the only .xcconfig that
-  # ever exists in this repository is the generated, chmod-600
-  # Support/Secrets.xcconfig. This script prints the text it matched to stderr,
-  # which on CI goes into the build log, and GitHub masks exact secret values
-  # rather than substrings of them — so a credential that happened to contain a
-  # slash followed by a Todoist noun would be echoed into a public log. That
-  # contradicts the rule the whole secrets design rests on: gen-secrets.sh never
-  # prints a value, not on success, not in an error, not ever.
+  # This script prints the text it matched to stderr, which on CI goes into the
+  # build log of a PUBLIC repository. GitHub masks exact secret values rather
+  # than substrings of them — so a credential that happened to contain a slash
+  # followed by a Todoist noun would be echoed out in full.
+  #
+  # Config/Secrets.xcconfig is the one file in the tree that holds a real
+  # credential, which is why no .xcconfig is scanned at all.
   #
   # Nothing is lost. A Todoist call site cannot exist in a build-settings file;
-  # it can only exist in source, which is scanned. The `--exclude` is a second
-  # lock on the same door in case a future root brings another .xcconfig in.
+  # it can only exist in source, which is scanned. Note also that Config/ is not
+  # among the search roots below, so this is a second lock on the same door —
+  # there in case a future root brings an .xcconfig into range.
   grep -rEnoi --binary-files=without-match \
     -e "$URL_PATTERN" -e "$PATH_PATTERN" -e "$BUILDER_PATTERN" \
     --include='*.swift' --include='*.plist' \

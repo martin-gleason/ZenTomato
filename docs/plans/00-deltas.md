@@ -106,7 +106,7 @@ D1, D4, and D5 are load-bearing for every plan below.
 
 ---
 
-## D6 — Secrets live in `.env`; `Secrets.xcconfig` becomes a generated artifact
+## D6 — ~~Secrets live in `.env`~~ **REJECTED 2026-08-22. Superseded by D6b.**
 
 Not a `SPEC.md` delta — `SPEC.md` only says *"put the client ID and secret where CLAUDE.md says
 secrets go."* This is a **CLAUDE.md** edit, recorded here because it changes a stated non-negotiable.
@@ -136,8 +136,13 @@ Bundle.main           ← client ID and the OAuth callback scheme
 ever holding one. CI has no `.env` — it reads the same keys from GitHub Actions encrypted secrets, and
 the F1 gitleaks hook runs against the tree either way.
 
-**Note on what this does and does not protect.** `.env` keeps the secret out of *git*. It does not keep
-the Todoist client secret out of the *built app* — you ratified that trade in the auth decision, and it
+**REJECTED.** The owner rejected this on 2026-08-22: `.env` was habit carried in from other projects
+rather than a decision, and Xcode has its own configuration mechanism that should have been used from
+the start. See **D6b**. The note below is kept because it is unchanged by that rejection and became
+*more* important, not less.
+
+**Note on what this does and does not protect.** A git-ignored file keeps the secret out of *git*. It
+does not keep the Todoist client secret out of the *built app* — you ratified that trade in the auth decision, and it
 is acceptable only because this build is never distributed. If ZenTomato is ever shipped to anyone
 else, the client secret must move behind a token-exchange service and this note becomes a blocker.
 
@@ -147,7 +152,7 @@ else, the client secret must move behind a token-exchange service and this note 
 
 - **C1** (repo, LICENSE, branch protection) — **done**
 - **C2** (minimum iOS, developer account, App ID with MusicKit) — **done**; answer is iOS 26 / watchOS 26, see D1
-- **C3** (Todoist OAuth app registered, credentials placed) — **done**; credentials in `.env`, see D6
+- **C3** (Todoist OAuth app registered, credentials placed) — **done**; credentials in `Config/Secrets.xcconfig`, see D6b
 - **C4** (install builds on the iPhone) — deferred to beta. **This gates the device checks in F2, F3, F4, and F7.**
 - **C5** (fixed afternoon PR-review slot) — deferred to beta
 
@@ -236,3 +241,76 @@ equal to `ColorRole.surfacePrimary`. `ZenTomatoTests/LaunchBackgroundTests.swift
 one-hex-digit drift and to pass when restored — this is a colour that goes wrong by neglect rather
 than by edit, since the natural place to change the page colour is `Palette.swift`, three directories
 away from the JSON that also has to move.
+
+---
+
+## D6b — Build settings use Xcode's own `.xcconfig` mechanism
+
+**Ratified 2026-08-22, replacing the rejected D6.**
+
+Not a `SPEC.md` delta — `SPEC.md` only says *"put the client ID and secret where CLAUDE.md says
+secrets go."* This is the **CLAUDE.md** text that sentence points at.
+
+```
+Config/App.xcconfig              committed. Safe defaults. Ends with:
+  └── #include? "Secrets.xcconfig"
+Config/Secrets.xcconfig          git-ignored. The only file holding a real value.
+Config/Secrets.example.xcconfig  committed. Same keys, every value empty.
+        │
+        ▼  Xcode reads this when it loads the project
+  build settings ──▶ Info.plist via $(KEY) ──▶ Bundle.main at runtime
+```
+
+**Why this replaces the `.env` pipeline.** `.env` is a convention from other ecosystems, and Xcode has
+no idea what one is — which is why D6 needed a generator script, a build-phase staleness guard, and
+four tests to prove the generator worked. An `.xcconfig` is what Xcode reads natively. Removing the
+translation step removes the script, the guard, the generated artifact, and everything that could
+drift between them. It also let `ENABLE_USER_SCRIPT_SANDBOXING` go back to its secure default, which
+was only ever disabled so the generator could write into the source directory.
+
+**The `?` in `#include?` is the load-bearing character.** It means "include if present". A fresh clone
+with no secrets file builds and tests green — verified — which matters because nothing in the app
+reads a credential yet, and a skeleton that refuses to compile without one is a gate that cannot run.
+
+**What this does *not* fix, and it is now the bigger problem.** See **D9**.
+
+---
+
+## D9 — Shipping invalidates the F3 authentication decision
+
+**Raised 2026-08-22. Needs a decision before F3. Not urgent today; blocking then.**
+
+The owner's reason for moving to Xcode-standard configuration was *"because this will eventually
+ship."* That sentence changes something the earlier F3 auth decision explicitly depended on.
+
+When OAuth-as-specced was ratified, it was ratified with this stated trade: the Todoist **client
+secret is embedded in the built app**, which is *"acceptable only because this build is never
+distributed. If ZenTomato is ever shipped to anyone else, the client secret must move behind a
+token-exchange service and this note becomes a blocker."*
+
+**Moving to `.xcconfig` does not change that.** Neither did `.env`. Both keep the secret out of *git*;
+neither keeps it out of the *app*. A build setting becomes an `Info.plist` entry, and `Info.plist` is
+plain text inside the `.app` bundle — anyone who downloads a shipped build can read it in seconds.
+There is no file format, no obfuscation, and no Apple-provided store that changes this. **A secret
+shipped inside an app is a published secret.**
+
+Todoist's OAuth makes this unavoidable rather than merely awkward: it has no PKCE, so exchanging the
+authorization code for a token *requires* the client secret. A public client has nowhere safe to keep
+it.
+
+Three ways out, and none is free:
+
+| Option | Cost | Spec impact |
+|---|---|---|
+| **Personal API token per user** — each person pastes their own Todoist token, straight to Keychain | No client secret exists anywhere. Worse first-run UX. | Delta against F3's "OAuth sign-in" |
+| **Token-exchange service** — a small server holds the secret; the app never sees it | Hosting, a domain, uptime, and an ongoing cost | Contradicts **"Local only… no server"**, a stated non-negotiable |
+| **Never distribute** — personal build only, installed by Xcode | Nothing changes | None — this is what is ratified today |
+
+Note that the second option, the conventional answer for a shipping app, is ruled out by `CLAUDE.md`'s
+*Local only* rule as currently written. So a shipping ZenTomato most likely means the **personal API
+token**, which is the option offered and declined at the F3 gate — declined on the explicit
+understanding that the app was personal.
+
+**No action needed now.** F1 ships no Todoist code, and F3 is two gates away. This is recorded so the
+decision is made deliberately at that gate rather than discovered during a release. If the answer is
+"personal token", F3's plan gets simpler, not harder.

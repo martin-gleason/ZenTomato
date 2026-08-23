@@ -1,0 +1,53 @@
+// ZenTomato — build configuration.
+//
+// WHAT THIS FILE IS
+// An .xcconfig is Xcode's own mechanism for build settings: a plain text file
+// of KEY = VALUE lines that Xcode reads when it loads the project. It is the
+// standard way an Apple project carries configuration, and it is deliberately
+// the ONLY mechanism this project uses. There is no generator script and no
+// intermediate format to keep in step.
+//
+// HOW A VALUE REACHES THE BUILD
+//
+//     Config/App.xcconfig  (this file, committed — safe defaults)
+//        └── #include? "Secrets.xcconfig"  (git-ignored — your real values)
+//              │
+//              ▼
+//        Xcode build settings
+//
+// A build setting can go further — into Info.plist via $(KEY) substitution in
+// project.yml, and then to `Bundle.main` at runtime. Nothing does that today,
+// because no value here is read by any code yet. The feature that first needs
+// one adds that wiring itself.
+//
+// WHY THE `?` IN `#include?` MATTERS
+// It means "include this file if it exists, and carry on quietly if it does
+// not". That one character is what lets a fresh clone build with no setup at
+// all: there are no secrets to supply yet, so there is nothing to configure.
+// A plain `#include` would fail the build on a missing file and force every
+// newcomer through a setup step before they could compile a skeleton.
+//
+// ORDER MATTERS. In an .xcconfig the last assignment to a key wins, so the
+// include sits at the BOTTOM of this file. Everything above it is a default;
+// anything in Secrets.xcconfig overrides it.
+//
+// WHAT MAY GO IN THIS FILE
+// Only values that are safe to read in a public repository. Every real
+// credential belongs in Secrets.xcconfig, which is git-ignored. See
+// Config/Secrets.example.xcconfig for the keys and what each one is for.
+
+// This file deliberately declares only what the app being built today needs.
+// Keys for features that do not exist yet are NOT declared here — a committed
+// default for an unbuilt feature is preparing for it, which this project's
+// rules forbid. Config/Secrets.example.xcconfig documents what will be needed
+// and when.
+
+// --- Signing -----------------------------------------------------------------
+// Your Apple Developer team, needed only to install on a physical iPhone.
+// Simulator builds are never signed, so this is empty by default and a clone
+// with no Apple developer account still builds and tests.
+DEVELOPMENT_TEAM =
+
+// --- Local overrides ---------------------------------------------------------
+// Must stay last. See the note on ordering above.
+#include? "Secrets.xcconfig"

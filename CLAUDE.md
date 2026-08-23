@@ -9,7 +9,7 @@ iOS Pomodoro timer. Todoist is the task store; Apple Music is the audio; the dis
 - **Scope is `SPEC.md` F1–F6 and nothing else.** Anything not listed there is Phase 2. Do not build it, stub it, or "prepare for it." If it seems necessary, write `Proposed spec delta:` in the plan summary and stop.
 - **Todoist is the only task hierarchy.** No local projects, tags, or task models beyond a cache of Todoist's. The only write to Todoist is *complete task*. Never call create, update, or comment endpoints.
 - **No capture surface.** The app never accepts a new task from the user. This is a standing rule from the owner's productivity system, not a feature gap.
-- **Secrets never enter the tree.** All build-time secrets live in a single git-ignored `.env`. A build phase generates a git-ignored `Secrets.xcconfig` from it; nothing reads `.env` at runtime. The user's Todoist token lives in Keychain, never in `.env`. (Delta D6.)
+- **Secrets never enter the tree.** Build settings use Xcode's own mechanism: `Config/App.xcconfig` is committed and holds safe defaults, ending in `#include? "Secrets.xcconfig"`. `Config/Secrets.xcconfig` is git-ignored and is the only file holding a real value; `Config/Secrets.example.xcconfig` is its committed, empty template. The user's Todoist token lives in Keychain. (Delta D6b; D6 was rejected.)
 - **Local only.** SwiftData on device. No network calls except Todoist and MusicKit. No analytics.
 - **Hard stop September 13, 2026.** Unmerged work is abandoned cleanly, not rushed.
 

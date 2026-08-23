@@ -74,28 +74,56 @@ report() {
   echo "  $*" >&2
 }
 
-# --- Check 0 · .env must actually be git-ignored ---------------------------
+# --- Check 0 · the private xcconfig must actually be git-ignored -----------
 # This runs FIRST and unconditionally, before the file lists below, because it
 # is the one check whose subject may be invisible to git entirely.
 #
 # Checks 1 and 2 only ever look at files git already knows about, so they cannot
-# see this failure: if the `.env` line were removed from .gitignore, the real
-# credential file would sit in the tree as a plain untracked file, unseen by
-# every other check here, until the day somebody typed `git add .`.
+# see this failure: if the `Config/Secrets.xcconfig` line were removed from
+# .gitignore, the real credential file would sit in the tree as a plain
+# untracked file, unseen by every other check here, until the day somebody
+# typed `git add .`.
 #
-# Asking git directly is cheap, and .env is this project's single
+# Asking git directly is cheap, and this is the project's single
 # highest-consequence file — the only one on disk holding a real value.
-if [[ -f .env ]] && ! git check-ignore -q .env; then
-  report ".env exists but is NOT git-ignored. One 'git add .' commits a real" \
-         $'\n         credential. Restore the `.env` line in .gitignore before doing' \
-         $'\n         anything else.'
+if [[ -f Config/Secrets.xcconfig ]] && ! git check-ignore -q Config/Secrets.xcconfig; then
+  report "Config/Secrets.xcconfig exists but is NOT git-ignored. One" \
+         $'\n         \'git add .\' commits a real credential. Restore the' \
+         $'\n         `Config/Secrets.xcconfig` line in .gitignore before doing anything else.'
 fi
 
 # The mirror of the above: the template must NOT be ignored, or the repository
 # silently stops documenting which keys are required.
-if [[ -f .env.example ]] && git check-ignore -q .env.example; then
-  report ".env.example is git-ignored, but it is meant to be committed. The" \
-         $'\n         `!.env.example` negation in .gitignore has stopped working.'
+if [[ -f Config/Secrets.example.xcconfig ]] && git check-ignore -q Config/Secrets.example.xcconfig; then
+  report "Config/Secrets.example.xcconfig is git-ignored, but it is meant to be" \
+         $'\n         committed. The .gitignore pattern has become too broad — it must' \
+         $'\n         match only Config/Secrets.xcconfig.'
+fi
+
+# --- Check 0b · a leftover .env is DEAD WEIGHT, not a supported location -----
+# This project used to keep credentials in .env. It does not any more (delta
+# D6b): Xcode reads Config/Secrets.xcconfig directly.
+#
+# The danger of a leftover .env is specific and easy to miss. It still holds
+# whatever real values it held on the day the pipeline changed, but nothing
+# reads it, nothing validates it, and nobody thinks about it again — so it
+# becomes a live credential quietly ageing in a working tree, outliving every
+# rotation, and surviving into any backup or directory copy that gets made.
+#
+# So the correct posture is NOT "keep it ignored". It is "this file is finished;
+# delete it." The ignore check below stays as a second line of defence for as
+# long as one exists, but the warning is the point.
+if [[ -f .env ]]; then
+  echo "check-secrets.sh: WARNING — a leftover .env is present." >&2
+  echo "                  This project reads Config/Secrets.xcconfig now; nothing" >&2
+  echo "                  reads .env. If it still holds real values they are ageing" >&2
+  echo "                  unwatched. Move anything you still need, then:  rm .env" >&2
+  echo >&2
+  if ! git check-ignore -q .env; then
+    report ".env is present and NOT git-ignored. It is dead weight that may still" \
+           $'\n         hold live credentials, and right now one `git add .` commits them.' \
+           $'\n         Delete the file, or restore the `.env` line in .gitignore.'
+  fi
 fi
 
 # --- Which files are we looking at? ----------------------------------------
@@ -121,19 +149,24 @@ fi
 # --- Check 1 · forbidden files ---------------------------------------------
 for file in "${files[@]-}"; do
   [[ -n "$file" ]] || continue
+  # A file git still tracks but that is gone from disk is being DELETED. It
+  # cannot leak anything, and reporting it would make removing a forbidden file
+  # impossible — the check would block the very commit that gets rid of it.
+  [[ -e "$file" ]] || continue
   base="$(basename -- "$file")"
   case "$base" in
-    .env.example)
+    Secrets.example.xcconfig)
       # The one committed member of the family. Its values are empty by
-      # contract; check 2 below verifies that.
+      # contract; check 1b below verifies that.
       ;;
     .env|.env.*)
-      report "${file} — a .env file must never be committed. It is the only" \
-             $'\n         file on disk that holds a real credential.'
+      report "${file} — a .env file must never be committed. This project reads" \
+             $'\n         Config/Secrets.xcconfig instead, but a stray .env may still hold' \
+             $'\n         real credentials from an earlier setup.'
       ;;
     Secrets.xcconfig)
-      report "${file} — generated from .env by scripts/gen-secrets.sh and" \
-             $'\n         git-ignored. Delete it from the commit; `make secrets` recreates it.'
+      report "${file} — this is the one file on disk that holds a real" \
+             $'\n         credential, and it is git-ignored. Delete it from the commit.'
       ;;
     *.p8|*.p12|*.mobileprovision|*.cer)
       report "${file} — a signing key or provisioning profile. These live in" \
@@ -142,19 +175,56 @@ for file in "${files[@]-}"; do
   esac
 done
 
-# --- Check 1b · .env.example must stay empty -------------------------------
-# The committed template documents which keys are required. The moment one of
-# them has a value, the template has become a leak.
-if [[ -f .env.example ]]; then
+# --- Check 1b · the committed template must stay empty ---------------------
+# The template documents which keys are required. The moment one of them has a
+# value, the template has become a leak.
+#
+# Comments in an .xcconfig start with `//`, not `#`.
+if [[ -f Config/Secrets.example.xcconfig ]]; then
   while IFS= read -r line; do
     line="${line%$'\r'}"
-    [[ "$line" =~ ^[[:space:]]*# ]] && continue
+    [[ "$line" =~ ^[[:space:]]*// ]] && continue
     [[ "$line" =~ ^[[:space:]]*$ ]] && continue
-    if [[ "$line" == *=* && -n "${line#*=}" ]]; then
-      report ".env.example — the key '${line%%=*}' has a value. This file is" \
-             $'\n         committed; every value in it must be empty.'
+    if [[ "$line" == *=* ]]; then
+      value="${line#*=}"
+      # Strip surrounding whitespace before deciding the value is non-empty;
+      # `KEY = ` with a trailing space is empty, not a leak.
+      value="${value#"${value%%[![:space:]]*}"}"
+      value="${value%"${value##*[![:space:]]}"}"
+      if [[ -n "$value" ]]; then
+        report "Config/Secrets.example.xcconfig — the key '${line%%=*}' has a value." \
+               $'\n         This file is committed; every value in it must be empty.'
+      fi
     fi
-  done < .env.example
+  done < Config/Secrets.example.xcconfig
+fi
+
+# --- Check 1c · the committed App.xcconfig must hold no credential ----------
+# Config/App.xcconfig is committed and sits next to the file that holds real
+# values, with keys of the same shape. Pasting a client ID one line too high is
+# an easy mistake and check 2 below would not catch it: its name pattern looks
+# for `secret`/`token`/`password`/`api_key`, and `TODOIST_CLIENT_ID` matches
+# none of those.
+#
+# The rule here is stricter and simpler than check 2's heuristics: this file may
+# declare a key, but the only values it may carry are ones a reviewer would be
+# happy to read in a public repository. Anything that looks like a credential —
+# a long opaque run of hex or base64 — fails.
+if [[ -f Config/App.xcconfig ]]; then
+  while IFS= read -r line; do
+    line="${line%$'\r'}"
+    [[ "$line" =~ ^[[:space:]]*// ]] && continue
+    [[ "$line" == *=* ]] || continue
+    value="${line#*=}"
+    value="${value%%//*}"
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    if [[ "$value" =~ ^[A-Za-z0-9+/=_-]{24,}$ ]]; then
+      report "Config/App.xcconfig — the key '${line%%=*}' holds a long opaque value." \
+             $'\n         This file is COMMITTED. A real credential belongs in' \
+             $'\n         Config/Secrets.xcconfig, which is git-ignored.'
+    fi
+  done < Config/App.xcconfig
 fi
 
 # --- Check 2 · key-shaped literals in tracked source -----------------------
@@ -175,6 +245,25 @@ is_placeholder() {
      || "$text" == *CHANGEME* || "$text" == *PLACEHOLDER* || "$text" == *NOT_A_REAL* ]]
 }
 
+# A variable NAMED for secrets, holding a PATH to the file where secrets live,
+# is not a secret — and `SECRETS="Config/Secrets.xcconfig"` matched the pattern
+# above exactly. That false positive matters more than it looks: this project's
+# entire argument for hooks over prose is that the hooks are worth obeying, and
+# the fastest way to get a check disabled is for it to be wrong about something
+# obvious.
+#
+# The exemption is deliberately narrow — a value that is ONLY path characters
+# and ends in a source-file extension. Real credentials are base64 or hex and do
+# not end in `.xcconfig`. Anything with a space, a quote, or an unusual
+# character still falls through to the report.
+is_file_path() {
+  local value="$1"
+  value="${value#*[:=]}"
+  value="${value#"${value%%[![:space:]\"]*}"}"
+  value="${value%\"}"
+  [[ "$value" =~ ^[A-Za-z0-9._/-]+\.(xcconfig|plist|json|swift|sh|md|yml|yaml|txt|xcodeproj)$ ]]
+}
+
 for file in "${files[@]-}"; do
   [[ -n "$file" ]] || continue
   [[ -f "$file" ]] || continue
@@ -188,11 +277,12 @@ for file in "${files[@]-}"; do
     [[ -z "$hit" ]] && continue
     line_number="${hit%%:*}"
     text="${hit#*:}"
-    if is_placeholder "$text"; then
+    if is_placeholder "$text" || is_file_path "$text"; then
       continue
     fi
     report "${file}:${line_number} — looks like a credential assigned in source." \
-           $'\n         If it is real: remove it, rotate it, and put it in .env.' \
+           $'\n         If it is real: remove it, rotate it, and put it in' \
+           $'\n         Config/Secrets.xcconfig, which is git-ignored.' \
            $'\n         If it is a test fixture: rename the value so it contains' \
            $'\n         EXAMPLE, FAKE, DUMMY or PLACEHOLDER.'
   done < <(grep -nEi --binary-files=without-match "$CREDENTIAL_PATTERN" -- "$file" 2>/dev/null || true)
