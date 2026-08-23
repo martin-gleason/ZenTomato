@@ -276,7 +276,7 @@ reads a credential yet, and a skeleton that refuses to compile without one is a 
 
 ---
 
-## D9 — Shipping invalidates the F3 authentication decision
+## D9 — ~~Shipping invalidates the F3 authentication decision~~ **RESOLVED by D18, 2026-08-23**
 
 **Raised 2026-08-22. Needs a decision before F3. Not urgent today; blocking then.**
 
@@ -610,3 +610,59 @@ invalidated by the world moving.** This is also why the snapshot exists rather t
 **F3**, which already builds the picker and the cache. The picker gains multi-select and an ordered
 list; the attach step takes the plan's current item instead of a single chosen task. No new feature
 gate — but F3's own gate does not pass until this fence is demonstrably held.
+
+---
+
+## D18 — Todoist authenticates with a personal API token. D9 is resolved.
+
+**Ratified 2026-08-23, at the F3 gate.**
+
+**Currently:** `SPEC.md` F3 — *"OAuth sign-in."*
+**Proposed:** *"Sign in with a Todoist personal API token, entered once and stored in Keychain."*
+
+This settles **D9**. Todoist's OAuth has no PKCE, so the code-for-token exchange requires the client
+secret; a public client has nowhere safe to keep it, and neither `.env` nor `.xcconfig` changed that —
+both keep it out of git, neither keeps it out of the `.app` bundle where `Info.plist` is plain text.
+
+Two things said since D9 was raised made the answer forced rather than balanced. The app **will ship**,
+and it will eventually **write** to Todoist (D16). A published secret that can only complete a task is
+one risk; a published secret on a build that can create, edit and delete on the user's behalf is a
+materially different one, and it would have arrived quietly along with the write scope.
+
+**A personal token has no client secret at all.** There is nothing in the binary to extract, because
+the credential is the user's own and never leaves their Keychain.
+
+### What this deletes
+
+| | |
+|---|---|
+| `TODOIST_CLIENT_ID`, `TODOIST_CLIENT_SECRET` | No longer needed. Removed from `Config/Secrets.example.xcconfig`. |
+| The OAuth callback URL scheme | No `CFBundleURLTypes`, no custom scheme to register. |
+| `ASWebAuthenticationSession`, the `state` CSRF guard, the token-exchange request | None of it exists. |
+| **C3** — register an OAuth app in the Todoist developer console | **No longer required.** |
+| The "acceptable only because never distributed" caveat throughout the docs | Gone. The build is shippable as it stands. |
+
+Less code, fewer failure modes, one less credential in the world, and a chore removed.
+
+### The cost, stated honestly
+
+**First run is worse.** Instead of tapping *Sign in with Todoist*, the user opens Todoist's settings,
+finds Integrations, copies a long string, and pastes it in. That is a real regression in polish and it
+lands on the very first screen anybody sees.
+
+Two mitigations, and no pretending it is solved: the screen gives the exact path in Todoist rather than
+saying "get a token", and it is a **once ever** action, not once per launch.
+
+### The one thing to be careful about
+
+The token field is a **text field on the first screen of an app with a standing no-capture rule**. It
+accepts a credential, not a task; it creates nothing and reaches nothing but Keychain. But it is
+exactly the shape the rule forbids, so it must be unmistakably a credential field — its label, its
+placeholder, its keyboard, and its neighbours all saying so. A reviewer should never have to think
+about whether it is a way to enter a task.
+
+### Consequence for the future
+
+This is also the shape bi-directional sync wants. Each user's token is their own, scoped to their own
+account, revocable by them from Todoist's settings without touching the app. There is no shared
+credential to rotate, and no single secret whose exposure affects every install.
