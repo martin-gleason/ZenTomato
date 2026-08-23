@@ -54,6 +54,34 @@ final class TimerState {
   /// the block Start would begin, but `startedAt` and `endsAt` are stale.
   var isRunning: Bool
 
+  // MARK: What this block is attached to
+
+  /// Todoist's identifier for the task this block is being worked on, or `nil`
+  /// when the block is attached to nothing.
+  ///
+  /// WHY THE ATTACHMENT IS WRITTEN DOWN HERE RATHER THAN HELD IN MEMORY
+  /// For the same reason `endsAt` is. A block can end while the app is closed:
+  /// iOS suspends it within seconds of the phone being locked, and the block's
+  /// history row is written on the next return to the foreground, from this row
+  /// and nothing else. An attachment kept in memory would be gone by then, and
+  /// every block ended while the phone was in a pocket — which is most of them —
+  /// would be recorded with no task against it. The bug would be invisible in
+  /// every test that did not close the app.
+  ///
+  /// The four values are a frozen copy taken when the block began, so a task
+  /// renamed in Todoist mid-block cannot change what the finished row says.
+  var taskID: String?
+
+  /// The task's title, frozen when the block began.
+  var taskTitle: String?
+
+  /// Todoist's identifier for the project — of the attached task, or of a
+  /// project planned on its own.
+  var projectID: String?
+
+  /// The project's name, frozen when the block began.
+  var projectTitle: String?
+
   // MARK: The settings this block was started with
 
   /// Length of this block's focus period, in minutes, as it stood at the start.
@@ -112,6 +140,29 @@ final class TimerState {
       pomodorosPerSprint: pomodorosPerSprint,
       soundEnabled: soundEnabled,
       autoStartNextBlock: autoStartNextBlock)
+  }
+
+  // MARK: The attachment, as one value
+
+  /// Writes what this block is attached to, or clears it.
+  ///
+  /// Called once per block, as the block begins, and nowhere else — which is
+  /// what makes the attachment frozen for the block's duration rather than
+  /// merely unlikely to change.
+  ///
+  /// **Passing `nil` clears all four columns, and that is a required behaviour,
+  /// not a convenience.** Every break passes `nil`, so a break can never inherit
+  /// the task from the focus block before it; and a focus block started after a
+  /// plan has been worked through clears the last plan item rather than
+  /// repeating it.
+  ///
+  /// - Parameter attachment: what the block is attached to, or `nil` for
+  ///   nothing — a break, no plan, or a plan already worked through.
+  func attach(_ attachment: SessionAttachment?) {
+    taskID = attachment?.taskID
+    taskTitle = attachment?.taskTitle
+    projectID = attachment?.projectID
+    projectTitle = attachment?.projectTitle
   }
 
   /// Writes a fresh copy of the settings into the row. Called at a block

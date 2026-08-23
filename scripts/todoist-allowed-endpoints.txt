@@ -23,10 +23,15 @@
 #
 #   `{id}` stands for any identifier the code substitutes in.
 #
-# STATUS AT F1: no Todoist code exists yet. This list is seeded so that F3
-# starts against a written contract rather than writing one to fit what it
-# already built. Todoist's REST v2 and Sync v9 were permanently removed on
-# 2026-02-10; API v1 is the only live surface (see docs/plans/00-deltas.md, D5).
+# STATUS AT F3: the Todoist code now exists, and this list is the contract it
+# was written against rather than a description of it. The four lines below are
+# unchanged from F1 — F3 added no endpoint and removed none — and they are
+# mirrored, one for one, by the constants in ZenTomato/Todoist/TodoistAPI.swift.
+# The test `endpointTableMirrorsTheAllowlist` reads THIS FILE and fails if the
+# two ever disagree in either direction, so a fifth address cannot appear in the
+# code without appearing here, and a line deleted here cannot leave a live call
+# behind. Todoist's REST v2 and Sync v9 were permanently removed on 2026-02-10;
+# API v1 is the only live surface (see docs/plans/00-deltas.md, D5).
 
 # --- Reads. The picker shows every project, section and task. -----------------
 GET  /projects
