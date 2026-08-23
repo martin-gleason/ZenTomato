@@ -32,8 +32,18 @@ import SwiftData
 /// effect at the next block" true by construction rather than by anybody
 /// remembering it.
 ///
+/// IT ALSO OWNS THE DISTRACTION LOG, AND THAT IS AN ARCHITECTURAL DECISION.
+/// Writing down a tap needs one answer the engine alone can give safely: *which
+/// block is running at this exact instant?* A separate store type could only
+/// ask the database, and would get either a half-finished answer — the engine's
+/// own in-flight changes, mid-transition — or a stale one, depending on which
+/// handle it was given. Both are silent, and both file a distraction against
+/// the wrong pomodoro, which is the single defect this feature exists to
+/// prevent. So the engine records them. See `recordDistraction(_:)`.
+///
 /// THERE IS NO PAUSE, AND ITS ABSENCE IS DELIBERATE.
-/// `start()`, `skip()` and `stop()` are the whole surface. AlarmKit's own
+/// `start()` and `stop()` are the whole of the timer's surface — D13 removed
+/// skip, and the recording methods below never touch the clock. AlarmKit's own
 /// guidance suggests offering a pause control in a countdown Live Activity, so
 /// the omission will read as an oversight: it is not. The contract's list of
 /// what may be customised does not include pause, a paused pomodoro is not a
@@ -89,6 +99,30 @@ final class TimerEngine {
   /// saved: it acknowledges a moment. The record is the finished-block rows.
   private(set) var lastCompletedSprintSize: Int?
 
+  /// The taps recorded during the block that is running now, oldest first.
+  ///
+  /// **A DERIVED VIEW OF THE DATABASE, NOT A BUFFER.** Every element in here is
+  /// already a committed row; nothing is waiting to be written. Deleting this
+  /// property would change what the screen shows and nothing whatsoever about
+  /// what is stored. That claim is not an assertion: the array is rebuilt from
+  /// the database in `init` and in `synchronize()`, and a test relaunches the
+  /// engine to prove the counts come back.
+  ///
+  /// It resets to empty at every block boundary, so the count drawn beside each
+  /// capture button is about *this* block and never about the day. Reading
+  /// distractions back is F6's job and no part of it is here.
+  private(set) var currentBlockDistractions: [DistractionPrompt] = []
+
+  /// Set once, at the end of a work block the app was awake to see end, when
+  /// that block had at least one tap. The screen takes it and clears it.
+  ///
+  /// It is a *presentation signal* and never a record. Nothing about what is
+  /// stored depends on it: a block whose sheet is never presented, is swiped
+  /// away, or is killed with, keeps exactly the rows its taps made, with no
+  /// sentences on them. It has one writer — `end(...)` — and one reader,
+  /// `consumePendingReflection()`.
+  private(set) var pendingReflection: BlockReflection?
+
   // MARK: Collaborators
 
   /// The database handle. Main-thread only, which is why this whole class is.
@@ -131,6 +165,22 @@ final class TimerEngine {
   /// waiting. The counter answers both questions in one comparison.
   private var boundaryGeneration = 0
 
+  /// Counts the times the engine has been abandoned from outside a transition —
+  /// a confirmed stop, or a Live Activity dismiss.
+  ///
+  /// WHY A COUNTER RATHER THAN A FLAG, AND WHY IT EXISTS AT ALL
+  /// `end()` freezes the ended block's facts and then, on the auto-start path,
+  /// genuinely suspends inside `begin()` while the next block's alarm is
+  /// scheduled. `stop(reason:)` is reached from its own task and can run to
+  /// completion inside that window: it clears `pendingReflection` and goes idle,
+  /// and then `end()` resumes and assigns the ended block's reflection anyway —
+  /// putting a sheet in front of somebody who has just confirmed they want to
+  /// quit, which is the one thing D14 forbids. Freezing this number before the
+  /// suspension and refusing to publish if it has moved makes that impossible
+  /// rather than merely unlikely, which is the standard the rest of this
+  /// feature is held to.
+  private var abandonGeneration = 0
+
   // MARK: Initialisation
 
   /// Builds the engine and adopts whatever the database already says, so the
@@ -154,6 +204,12 @@ final class TimerEngine {
       state = row
       idleSettings = try TimerSettingsSnapshot(clamping: AppSettings.current(in: context))
       adopt(row)
+      // The taps for a block that is still running were written to the database
+      // by whatever process recorded them, which may well have been a previous
+      // launch of this app. Rebuilding them here is what makes the count beside
+      // the capture buttons survive a relaunch — and it is also the proof that
+      // the array is derived from the store rather than being the store.
+      rehydrateDistractions()
     } catch {
       lastFailure = .persistenceFailed
     }
@@ -209,10 +265,20 @@ final class TimerEngine {
   /// caller added later cannot quietly stop a block without one.
   func stop(reason: String) async {
     guard isRunning, let state else { return }
+    abandonGeneration &+= 1
     lastFailure = nil
     cancelAlarm()
     recordSession(state: state, endedAt: clock.now, wasAbandoned: true, abandonReason: reason)
     lastCompletedSprintSize = nil
+    // STOPPING NEVER PRODUCES A REFLECTION SHEET, AND THAT IS A DECISION.
+    // The sheet that asked for the stop reason has already asked for a sentence
+    // about each tap, in the same sheet, at the same moment — that is what D14
+    // merged. A second modal appearing the instant somebody confirms they want
+    // to quit is the exact defect D14 exists to prevent: two sheets back to
+    // back train a person to dismiss both without reading, and the one that
+    // gets dismissed is the one that mattered. The rows themselves are
+    // untouched; only the offer to annotate them is withdrawn.
+    pendingReflection = nil
     goIdle(kind: .work, completedInSprint: 0)
     persist()
   }
@@ -254,13 +320,24 @@ final class TimerEngine {
     guard clock.now >= state.endsAt else {
       adopt(state)
       armBoundary()
+      // Still the same block, possibly after hours away. Its taps are read back
+      // from the database rather than assumed to still be in memory, because
+      // this is also the path a fresh launch takes.
+      rehydrateDistractions()
       return
     }
 
     // Ended while the app was suspended or closed. Recorded as completed rather
     // than abandoned: it finished and the alarm fired; the user was not looking.
     cancelAlarm()
-    await end(state: state, completed: true, at: state.endsAt, mayAutoStart: false)
+    // No reflection sheet on this path, for the same reason there is no
+    // auto-start on it: arriving here means nobody was present when the block
+    // ended. The taps are already recorded and stay recorded; what is refused
+    // is the *prompt*. A sentence written an hour after the fact is not the
+    // self-knowledge data the spec asks for, and a queue of prompts waiting to
+    // be worked through the next time the app opens is a capture surface by
+    // another name.
+    await end(state: state, completed: true, at: state.endsAt, mayAutoStart: false, mayPromptForReflection: false)
     // A sprint that ended while the app was closed is not announced on the next
     // launch. The acknowledgement is for the person who was there.
     lastCompletedSprintSize = nil
@@ -276,10 +353,14 @@ final class TimerEngine {
   /// present for is exactly what auto-start is not for.
   func handleDismiss() async {
     guard isRunning, let state else { return }
+    abandonGeneration &+= 1
     lastFailure = nil
     cancelAlarm()
     let completed = clock.now >= state.endsAt
-    await end(state: state, completed: completed, at: clock.now, mayAutoStart: false)
+    // A dismiss arrives from a locked phone, where there is no screen in front
+    // of anybody to present a sheet on. Rows are kept; the prompt is not
+    // offered. Same reasoning as the reconciliation path above.
+    await end(state: state, completed: completed, at: clock.now, mayAutoStart: false, mayPromptForReflection: false)
   }
 
   /// The block's deadline arrived and the app was awake to see it. This is the
@@ -320,7 +401,15 @@ final class TimerEngine {
     cancelAlarm()
     // Ended at the instant it was due to end, not the instant this ran: the
     // task can wake a moment late and the record must not drift with it.
-    await end(state: state, completed: true, at: state.endsAt, mayAutoStart: true)
+    //
+    // THIS IS THE ONLY PLACE A REFLECTION SHEET IS EVER OFFERED.
+    // Not because sheets are special, but because this is the only path in the
+    // engine that can establish the app was awake and in front of somebody when
+    // the block ended — the two guards above are exactly that test, and they
+    // are F2's, already written and already tested for the auto-start question.
+    // Every other way a block can end goes through `synchronize()` or
+    // `handleDismiss()`, both of which mean nobody was watching.
+    await end(state: state, completed: true, at: state.endsAt, mayAutoStart: true, mayPromptForReflection: true)
   }
 
   // MARK: Running a block
@@ -342,6 +431,12 @@ final class TimerEngine {
     state.endsAt = startedAt.addingTimeInterval(TimeInterval(settings.minutes(for: newKind) * 60))
     state.completedInSprint = count
     state.sessionID = UUID()
+    // A new block starts with nothing recorded against it. This is the only
+    // place the running count is emptied for a block that is *starting*; the
+    // idle paths empty it in `goIdle`. Note where it sits: after the new
+    // identity is minted, so that a tap arriving during the rest of this method
+    // is counted against the block it will genuinely belong to.
+    currentBlockDistractions = []
     state.isRunning = true
     // The settings are frozen here and nowhere else.
     state.apply(settings)
@@ -355,8 +450,42 @@ final class TimerEngine {
 
   /// Ends the running block: records it, works out what follows, and either
   /// starts that or goes idle.
-  private func end(state: TimerState, completed: Bool, at instant: Date, mayAutoStart: Bool) async {
+  ///
+  /// WHY `mayPromptForReflection` IS ITS OWN PARAMETER WHEN IT IS TRUE ON
+  /// EXACTLY THE SAME PATH AS `mayAutoStart`
+  /// Today the two conditions coincide, so reusing `mayAutoStart` would be
+  /// correct and would save a line. It would also be a trap. `mayAutoStart`
+  /// means "the app is permitted to chain one block into the next"; the first
+  /// future caller that passes it `true` for some reason of its own would
+  /// silently begin putting sheets in front of people. A parameter that says
+  /// what it means costs one line and cannot be misread.
+  ///
+  /// - Parameters:
+  ///   - state: the running timer row, about to become the block that ended.
+  ///   - completed: whether it ran to its end rather than being abandoned.
+  ///   - instant: the moment to record it as having ended.
+  ///   - mayAutoStart: whether the next block may begin by itself.
+  ///   - mayPromptForReflection: whether the person is here to be asked about
+  ///     their taps. True only from `boundaryReached()`.
+  private func end(
+    state: TimerState,
+    completed: Bool,
+    at instant: Date,
+    mayAutoStart: Bool,
+    mayPromptForReflection: Bool) async {
     let finished = state.snapshot
+    // FROZEN BEFORE ANYTHING ELSE RUNS, BECAUSE EVERYTHING BELOW OVERWRITES IT.
+    // `state` is the single timer row: the transition rewrites its kind and
+    // mints a new `sessionID` in place. These three locals are the ended
+    // block's facts, and reading any of them afterwards would describe the
+    // block that came next.
+    let endedSessionID = state.sessionID
+    let prompts = currentBlockDistractions
+    // Frozen with the rest, so that a stop confirmed while `begin()` below is
+    // suspended cannot be overtaken by this method resuming. See
+    // `abandonGeneration`.
+    let generation = abandonGeneration
+
     recordSession(state: state, endedAt: instant, wasAbandoned: !completed)
 
     let transition = TimerCycle.next(
@@ -367,11 +496,23 @@ final class TimerEngine {
     // long break ends the timer stops and waits, even with the setting on.
     guard mayAutoStart, finished.autoStartNextBlock, !transition.endsSprint else {
       goIdle(kind: transition.kind, completedInSprint: transition.completedInSprint)
-      return persist()
+      persist()
+      publishReflection(
+        allowed: mayPromptForReflection, sessionID: endedSessionID, prompts: prompts, generation: generation)
+      return
     }
     // A boundary is where new settings are allowed in, so the next block reads
     // them fresh rather than inheriting the ended block's copy.
     await begin(kind: transition.kind, completedInSprint: transition.completedInSprint, settings: readSettings())
+    // THE LAST STATEMENT ON BOTH WAYS OUT OF THIS METHOD, AND THAT IS D4.
+    // By the time the sheet can possibly be presented, the break has already
+    // been written down and its end instant is already fixed — measured from
+    // the boundary, not from whenever somebody finishes typing. Reflection can
+    // therefore never eat into a break, and a sheet left open while its owner
+    // walks away does not silently stretch their day. Moving either of these
+    // two calls above the transition would quietly undo that.
+    publishReflection(
+      allowed: mayPromptForReflection, sessionID: endedSessionID, prompts: prompts, generation: generation)
   }
 
   /// Puts the timer at rest with `kind` queued up as the next block.
@@ -379,6 +520,13 @@ final class TimerEngine {
     boundaryTask?.cancel()
     boundaryTask = nil
     continuousDeadline = nil
+    // Every way of coming to rest passes through here — a block ending with
+    // auto-start off, a stop, and reconciliation finding the timer was already
+    // idle — so the running count is emptied here once rather than at each of
+    // them. It is a count for the block in progress, and there is no block in
+    // progress. Nothing is deleted: the rows stay exactly where they were
+    // written.
+    currentBlockDistractions = []
     guard let state else { return }
     state.kind = idleKind
     state.completedInSprint = count
@@ -511,7 +659,19 @@ final class TimerEngine {
       await boundaryReached()
     }
   }
+}
 
+// MARK: - The clock moving underneath a block
+
+/// Everything the engine does about a phone whose clock jumped: a timezone
+/// change, a network correction, or somebody setting it by hand.
+///
+/// It lives in an extension rather than in the class body for the same reason
+/// the recording code below does — it is one self-contained concern with a long
+/// argument attached, and grouping it keeps the class itself readable. Being an
+/// extension in the same file changes nothing about what it can reach.
+@MainActor
+extension TimerEngine {
   /// Notices that the phone's clock moved underneath a running block, and puts
   /// the block back where it belongs.
   ///
@@ -531,7 +691,19 @@ final class TimerEngine {
     let monotonicRemaining = Self.seconds(clock.continuousNow.duration(to: deadline))
     guard abs(wallRemaining - monotonicRemaining) > Self.clockSkewTolerance else { return }
 
-    state.endsAt = clock.now.addingTimeInterval(max(0, monotonicRemaining))
+    let corrected = clock.now.addingTimeInterval(max(0, monotonicRemaining))
+    // THE START INSTANT MOVES BY THE SAME AMOUNT AS THE END INSTANT.
+    // Both are absolute times in a frame the phone has just redrawn, so
+    // correcting one and not the other leaves the block claiming to have
+    // started after it will finish. Two things break if it does: a finished
+    // block would be written down with `startedAt` later than `endedAt`, and —
+    // the reason this was found — `rehydrateDistractions` bounds its query at
+    // `startedAt`, so after a *backward* correction every tap made afterwards
+    // would carry a timestamp below the bound and silently vanish from the
+    // count under the button and from the end-of-block sheet. The rows would
+    // still be on disk; the receipt would be lying, which is worse than absent.
+    state.startedAt = state.startedAt.addingTimeInterval(corrected.timeIntervalSince(state.endsAt))
+    state.endsAt = corrected
     persist()
     adopt(state)
     armBoundary()
@@ -545,5 +717,262 @@ final class TimerEngine {
   private static func seconds(_ duration: Duration) -> TimeInterval {
     let parts = duration.components
     return TimeInterval(parts.seconds) + TimeInterval(parts.attoseconds) / 1e18
+  }
+}
+
+// MARK: - Recording a distraction
+
+/// The distraction log: writing a tap down, attaching a sentence to one, and
+/// handing the finished block to the screen that asks about it.
+///
+/// WHY THIS IS AN EXTENSION IN THE SAME FILE RATHER THAN A SEPARATE ONE
+/// It has to be *in* this file: the two values it maintains —
+/// `currentBlockDistractions` and `pendingReflection` — are stored properties,
+/// and Swift only allows those in the main body of a type. It is an
+/// *extension* so that the timer proper and the log it keeps read as two
+/// separate subjects, which is what they are. Moving any of this to another
+/// file would force the engine's private state to become visible to the rest
+/// of the app, which is real protection traded away for tidiness.
+///
+/// `@MainActor` is inherited from the class and repeated here for the reader:
+/// every method below touches the database, and the database handle is not
+/// safe to use from more than one thread.
+@MainActor
+extension TimerEngine {
+  /// Writes down that something pulled the person's attention away, right now.
+  ///
+  /// **THE TAP IS THE RECORD.** By the time this returns, either a row is
+  /// committed to the database file or nothing has happened at all. There is no
+  /// in-memory stage, no queue, no batch, and no "save it when the sheet
+  /// closes". Killing the app in the next millisecond cannot lose the tap,
+  /// because the tap is already on disk.
+  ///
+  /// **IT IS SYNCHRONOUS, AND THAT IS THE GUARANTEE RATHER THAN THE STYLE.**
+  /// There is no `await` anywhere in this method. On the main thread that makes
+  /// it one indivisible step: it cannot be interrupted halfway through by a
+  /// block starting, ending, or being stopped, so a tap can never be written
+  /// against a block that changed underneath it. Somebody will one day be
+  /// tempted to make it `async` for symmetry with `start()` and `stop()`. That
+  /// would leave the code looking identical and delete this guarantee.
+  ///
+  /// **THE RULE THAT FOLLOWS, AND IT IS NOW PART OF THIS ENGINE'S CONTRACT:**
+  /// *any new `await` added anywhere in `TimerEngine` must be checked against
+  /// the guard below.* The guard is only meaningful because every existing
+  /// suspension point leaves the timer row describing exactly one block — the
+  /// one a tap at that instant genuinely belongs to.
+  ///
+  /// WHAT THE RETURN VALUE IS FOR
+  /// `true` means a row exists. The screen fires its haptic on `true` and on
+  /// nothing else, so **the buzz in the person's hand is proof that a row is
+  /// committed, not a promise that one is about to be.** On `false` nothing at
+  /// all happens: no buzz, no count, no badge — and the screen draws its own
+  /// amber line about the tap. This method deliberately does not set
+  /// `lastFailure`: that value's wording is about the *block*, and a refused tap
+  /// has not endangered the block.
+  ///
+  /// `@discardableResult` exists so tests may ignore the answer. Screens may
+  /// not.
+  ///
+  /// - Parameter kind: internal or external — the spec's I and E.
+  /// - Returns: `true` if and only if a row is committed to the database.
+  @discardableResult
+  func recordDistraction(_ kind: DistractionKind) -> Bool {
+    // A TAP BELONGS TO THE BLOCK THAT OWNS THE INSTANT IT HAPPENED, OR TO NO
+    // BLOCK AT ALL. It is never held for the next block and never reassigned to
+    // the last one: a distraction filed against the wrong pomodoro is worse
+    // than one that was never filed, because it is wrong rather than missing.
+    //
+    // Work blocks only. A distraction during a break is not a distraction —
+    // that is the whole point of a break. The screen also hides the buttons
+    // during a break, so a person cannot reach this; the check is here as well
+    // because the screen is what somebody sees and this is what makes it true
+    // for every future caller.
+    guard isRunning, let state, state.isRunning, state.kind == .work else { return false }
+    let now = clock.now
+    // THIS SECOND GUARD IS NOT REDUNDANT WITH THE FIRST, AND DELETING IT IS A
+    // DEFECT RATHER THAN A SIMPLIFICATION. A block is still marked as running
+    // in the instant between its end time passing and the app noticing — the
+    // waking task may not have fired yet, or the phone may have been asleep
+    // across the boundary. Without this line, a tap in that gap would be
+    // written against a work block that the wall clock says is already over,
+    // and would then be swept into that block's reflection: a distraction that
+    // happened during a break, presented as if it happened during work.
+    guard now < state.endsAt else { return false }
+
+    // The row is complete here. Nothing about it is filled in later except an
+    // optional sentence, and nothing about it depends on a second write.
+    let row = Distraction(kind: kind, timestamp: now, sessionID: state.sessionID)
+
+    context.insert(row)
+    do {
+      try context.save()
+    } catch {
+      // The row never became real, so it must not be left waiting in the
+      // context: a later successful save — the next block boundary, say — would
+      // commit it silently, minutes after the person got no buzz and saw no
+      // count, and it would be in no sheet and no reflection. Better that a
+      // refused tap stays refused and the screen says so.
+      context.delete(row)
+      // AND `lastFailure` IS DELIBERATELY NOT SET HERE.
+      // `.persistenceFailed` says "this block couldn't be saved and may be lost
+      // if you close the app", which is a sentence about the *pomodoro*. A
+      // refused tap has not endangered the block. Worse, nothing clears
+      // `lastFailure` until the next boundary, so a tap that was refused and
+      // then retried successfully would have replaced the correct amber line
+      // ("That tap wasn't saved. Tap again.") with a block-loss warning — and
+      // the screen announces every change of that line, so a VoiceOver reader
+      // would hear the warning at the exact instant of the tap that worked.
+      // The screen owns this wording; `false` is the whole message from here.
+      return false
+    }
+
+    // ONLY NOW DOES ANYTHING ON SCREEN LEARN THAT THIS HAPPENED. If this line
+    // came before the save, the count beside the button would be counting a row
+    // that does not exist.
+    currentBlockDistractions.append(DistractionPrompt(row))
+    return true
+  }
+
+  /// Attaches the sentences somebody wrote to the taps they were written about.
+  ///
+  /// **This method cannot lose a distraction, and it cannot create one.** Every
+  /// row it touches was already committed at tap time; all it ever does is set
+  /// one optional piece of text on a row that exists. An identifier it does not
+  /// recognise is skipped rather than treated as an error — a sheet outliving
+  /// its rows is a possibility, and it is not worth an alarm.
+  ///
+  /// Synchronous for the same reason `recordDistraction(_:)` is: it must not be
+  /// able to interleave with a block transition.
+  ///
+  /// It answers whether the write succeeded rather than recording a failure of
+  /// its own. The engine's `lastFailure` wordings are all about the *timer*; a
+  /// sentence that did not save is the screen's news to break, not the engine's.
+  ///
+  /// WHAT AN EMPTY FIELD DOES
+  /// Whatever `DistractionNote.normalised(_:)` says, which for a blank or
+  /// whitespace-only field is *nothing*. The row's note is then left as
+  /// nothing, and never stored as empty text. Skipping a sentence is a normal
+  /// outcome in this app and the store has to be able to tell it apart from
+  /// somebody who answered with silence.
+  ///
+  /// - Parameters:
+  ///   - notes: what was typed, by row identity. Fields left untouched may be
+  ///     included or omitted; both mean the same thing.
+  ///   - earliest: the instant of the oldest tap being annotated. It bounds the
+  ///     query and nothing else — see below.
+  /// - Returns: `true` if the sentences were written. `false` means the store
+  ///   refused them, and the caller words that for the person.
+  @discardableResult
+  func attachNotes(_ notes: [UUID: String], notEarlierThan earliest: Date) -> Bool {
+    guard !notes.isEmpty else { return true }
+    do {
+      // BOUNDED BY DATE, MATCHED BY IDENTITY. Two different jobs, done by the
+      // two mechanisms each is actually good at.
+      //
+      // The database is asked only for rows at or after the oldest tap being
+      // annotated, which is a comparison SwiftData's predicates handle
+      // reliably. The identifiers are then matched in ordinary Swift, where the
+      // behaviour is not in doubt — an identifier predicate is the case most
+      // likely to compile and then quietly match nothing, which here would look
+      // exactly like a person's sentence being thrown away.
+      //
+      // The bound is not an optimisation detail. Without it this reads the
+      // whole distraction table, on the main thread, every time either sheet
+      // closes — and that table is the app's entire log, which only ever grows.
+      // `rehydrateDistractions` below bounds its own fetch the same way for the
+      // same reason.
+      let descriptor = FetchDescriptor<Distraction>(
+        predicate: #Predicate<Distraction> { $0.timestamp >= earliest })
+      let rows = try context.fetch(descriptor)
+      for row in rows {
+        guard let typed = notes[row.id] else { continue }
+        row.note = DistractionNote.normalised(typed)
+      }
+      try context.save()
+      return true
+    } catch {
+      // NOT `.persistenceFailed`. That message is about the block being lost,
+      // and what failed here is a handful of sentences on rows that are already
+      // safely on disk. Telling somebody their pomodoro may be gone because a
+      // note did not save is a warning that is false, and a warning that is
+      // sometimes false is one they learn to ignore.
+      return false
+    }
+  }
+
+  /// Hands over the reflection waiting to be presented, and clears it.
+  ///
+  /// WHY IT IS CALLED *CONSUME* AND WHY IT CLEARS IN THE SAME BREATH
+  /// A value that can be read twice can be presented twice. A second sheet
+  /// appearing the moment the first is dismissed, asking the same questions
+  /// about the same block, is precisely the "queue of nagging prompts" this
+  /// feature refuses to build. Taking and clearing in one call makes a second
+  /// presentation impossible rather than unlikely.
+  ///
+  /// - Returns: the block waiting to be reflected on, or `nil` if none is.
+  func consumePendingReflection() -> BlockReflection? {
+    defer { pendingReflection = nil }
+    return pendingReflection
+  }
+
+  /// Rebuilds the running block's tap list from the database.
+  ///
+  /// This is what makes `currentBlockDistractions` a *view* of the store rather
+  /// than the store itself: after a relaunch, or a day spent in somebody's
+  /// pocket, the array is empty and the rows are not, and this puts them back.
+  ///
+  /// WHY THE DATABASE IS ASKED FOR A DATE RANGE AND THE REST IS DONE IN SWIFT
+  /// Every tap in the running block happened after that block began, so the
+  /// start instant bounds the query to a handful of rows without asking
+  /// SwiftData to compare identifiers — the one kind of comparison its
+  /// predicates are least reliable at. The block is then picked out by identity
+  /// in ordinary Swift, where the behaviour is not in doubt. Being wrong here
+  /// would cost a count on a button; being wrong in a way that is hard to see
+  /// would cost trust in the count, which is worse.
+  ///
+  /// A failure to read leaves the list empty and records the failure. **It
+  /// never stops a timer.** The list is what the screen draws; the rows are the
+  /// record, and they are already safe.
+  private func rehydrateDistractions() {
+    guard let state, state.isRunning else {
+      currentBlockDistractions = []
+      return
+    }
+    let blockStartedAt = state.startedAt
+    let blockSessionID = state.sessionID
+    let descriptor = FetchDescriptor<Distraction>(
+      predicate: #Predicate<Distraction> { $0.timestamp >= blockStartedAt },
+      sortBy: [SortDescriptor(\.timestamp)])
+    do {
+      currentBlockDistractions = try context.fetch(descriptor)
+        .filter { $0.sessionID == blockSessionID }
+        .map { DistractionPrompt($0) }
+    } catch {
+      currentBlockDistractions = []
+      lastFailure = .persistenceFailed
+    }
+  }
+
+  /// Offers the ended block's taps to the screen, if there is anybody there to
+  /// be asked and anything to ask about.
+  ///
+  /// All three conditions are here rather than at the two call sites so that
+  /// they cannot drift apart. The tap count is not written as a condition at
+  /// all: `BlockReflection` refuses to exist without at least one tap, so "no
+  /// taps, no sheet" is enforced by the type.
+  ///
+  /// The third condition is the generation check. Between `end()` freezing its
+  /// facts and reaching this line, the auto-start path really suspends, and a
+  /// stop confirmed in that window has already cleared `pendingReflection` and
+  /// gone idle. Publishing anyway would put a reflection sheet over an idle
+  /// screen immediately after somebody confirmed a stop. See
+  /// `abandonGeneration`.
+  private func publishReflection(
+    allowed: Bool,
+    sessionID: UUID,
+    prompts: [DistractionPrompt],
+    generation: Int) {
+    guard allowed, generation == abandonGeneration else { return }
+    pendingReflection = BlockReflection(sessionID: sessionID, prompts: prompts)
   }
 }

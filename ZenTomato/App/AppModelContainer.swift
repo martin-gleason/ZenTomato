@@ -58,8 +58,14 @@ enum AppModelContainer {
   ///
   /// The schema is built here, freshly, on every call. It lists every kind of
   /// object the app saves — the settings row, the one row describing the
-  /// running timer, and one row per finished block. When a future feature adds
-  /// a saved type, it is added to this array and nowhere else.
+  /// running timer, one row per finished block, and one row per recorded
+  /// distraction. When a future feature adds a saved type, it is added to this
+  /// array and nowhere else.
+  ///
+  /// A saved type left out of that array is not a compile error: it is a crash
+  /// the first time a row of it is created, in the app and in every test, with
+  /// a message that names SwiftData rather than the missing line. That is why
+  /// the list is spelled out in the prose above as well as in the code below.
   ///
   /// - Parameter location: where the store should live. Defaults to the real
   ///   app's location.
@@ -68,7 +74,7 @@ enum AppModelContainer {
   ///   file, a full disk, a path that cannot be written. The caller is
   ///   expected to show that to the user rather than crash; see `bootstrap()`.
   nonisolated static func make(_ location: StoreLocation = .appDefault) throws -> ModelContainer {
-    let schema = Schema([AppSettings.self, TimerState.self, PomodoroSession.self])
+    let schema = Schema([AppSettings.self, TimerState.self, PomodoroSession.self, Distraction.self])
 
     let configuration: ModelConfiguration
     switch location {
