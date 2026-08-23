@@ -101,11 +101,20 @@ struct BlockLiveActivity: Widget {
 ///
 /// WHAT GIVES WAY WHEN THE CARD IS TOO NARROW, IN ORDER
 /// Stated here because it varies with the device and the language, and because
-/// the answer is not obvious. The sprint count goes first and is dropped rather
-/// than clipped. The block name goes second — one line, allowed to shrink, then
-/// truncated. The Dismiss button never shrinks, because a control with half a
-/// word in it is worse than no control. **The countdown never gives at all**: a
-/// countdown missing a digit is wrong information, not small information.
+/// the answer is not obvious. The row hands its width to the countdown's column
+/// first, because that column carries the one thing on the card that must be
+/// read exactly. What is left goes to the trailing column, where the sprint
+/// count shrinks — down to seven tenths of its size, and no further. The Dismiss
+/// button never shrinks, because a control with half a word in it is worse than
+/// no control, and the block name above the countdown shrinks before it
+/// truncates. **The countdown itself never gives at all**: a countdown missing a
+/// digit is wrong information, not small information.
+///
+/// The case that tests all of this is a two-hour focus block in a twelve-block
+/// sprint at the largest text size: the countdown reads `1:59:58` rather than
+/// `24:58`, seven glyphs instead of five, beside a sprint count reading
+/// `11 OF 12`. It is a legal pair of settings and it is worth looking at on a
+/// real phone rather than reasoning about.
 private struct LockScreenCard: View {
   let readout: BlockReadout
 
@@ -114,17 +123,25 @@ private struct LockScreenCard: View {
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         BlockKicker(readout: readout)
         CountdownNumeral(readout: readout, font: Typography.title)
-          // The one element on the card that is never allowed to be sacrificed.
-          .layoutPriority(1)
       }
+      // THE PRIORITY BELONGS ON THIS COLUMN, NOT ON THE NUMBER INSIDE IT.
+      // Layout priority is settled between the children of whichever container
+      // is handing out the space, and the container handing out *width* here is
+      // this row. It sees two columns, not the number. A priority written on the
+      // number was therefore competing with the word above it for height —
+      // which was never in short supply — and the row went on dividing its width
+      // evenly, so under pressure the countdown could still lose digits. This is
+      // the element that must never give: a countdown missing a digit is wrong
+      // information, not small information.
+      .layoutPriority(1)
 
       Spacer(minLength: Spacing.sm)
 
       VStack(alignment: .trailing, spacing: Spacing.xs) {
         if let metadata = readout.metadata {
+          // Left at the default priority, so this column is what gives way. Its
+          // fraction shrinks rather than clipping; the button does neither.
           SprintCount(completed: metadata.completedInSprint, total: metadata.pomodorosPerSprint)
-            // The first thing to be dropped when the card runs out of room.
-            .layoutPriority(0)
         }
         DismissButton()
       }
@@ -224,6 +241,10 @@ private struct BlockKicker: View {
       .foregroundStyle(Color(.action))
       .lineLimit(1)
       .minimumScaleFactor(Self.minimumScale)
+      // Spoken as "Focus", not spelled out as F-O-C-U-S. `.textCase` changes
+      // only what is drawn, so the capitals reach VoiceOver unless the sentence
+      // form is handed to it explicitly. The app's own screen does the same.
+      .accessibilityLabel(Text(readout.kicker))
   }
 
   private static let minimumScale: CGFloat = 0.7

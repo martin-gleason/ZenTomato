@@ -46,6 +46,17 @@ final class SpyAlarmScheduler: AlarmScheduling {
   /// When set, cancelling throws it instead of succeeding.
   var cancelError: (any Error)?
 
+  /// Whether the task asking for each alarm had already been cancelled, in
+  /// order.
+  ///
+  /// WHY A STAND-IN RECORDS THIS AT ALL. The real implementation calls into
+  /// iOS, and a system call made from a cancelled task refuses to run: it would
+  /// throw, the engine would record a scheduling failure, and the block would
+  /// end in silence. That is invisible from here — this spy cannot fail — so
+  /// the *context* the call was made in is recorded instead, and a test asserts
+  /// it is always a live one.
+  private(set) var cancelledAtSchedule: [Bool] = []
+
   /// The calls as bare names, for asserting order without restating payloads.
   var callLog: [String] {
     calls.map { call in
@@ -72,6 +83,7 @@ final class SpyAlarmScheduler: AlarmScheduling {
 
   func schedule(_ request: BlockAlarmRequest) async throws {
     calls.append(.schedule(request))
+    cancelledAtSchedule.append(Task.isCancelled)
     if let scheduleError {
       throw scheduleError
     }

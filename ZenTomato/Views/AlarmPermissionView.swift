@@ -164,10 +164,17 @@ struct AlarmPermissionView: View {
   /// attributed string is also the form VoiceOver reads as one continuous
   /// sentence — which is what this instruction needs, since the emphasised word
   /// is the name of a switch the reader has to go and find.
+  ///
+  /// **THE STEPS DESCRIBE THE ROUTE THE BUTTON BELOW ACTUALLY TAKES.** An
+  /// earlier draft read "open Settings, tap ZenTomato, and turn on Alarms",
+  /// which is the route somebody would take starting from the home screen. The
+  /// only control on this screen skips the middle step: it lands on ZenTomato's
+  /// own page. A reader who does the obvious thing and taps the button would
+  /// have arrived somewhere with no ZenTomato row to tap, and an instruction
+  /// whose second step is not there is exactly how a reader stops trusting the
+  /// rest of a screen.
   private var howToFixItText: AttributedString {
-    var sentence = AttributedString(
-      "To switch it back on: open Settings, tap ZenTomato, and turn on "
-    )
+    var sentence = AttributedString("Tap Open Settings below, then turn on ")
     var switchName = AttributedString("Alarms")
     switchName.font = Typography.bodyEmphasis
     sentence.append(switchName)

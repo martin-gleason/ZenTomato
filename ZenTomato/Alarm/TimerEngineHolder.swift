@@ -49,10 +49,20 @@ enum TimerEngineHolder {
   /// legitimately do nothing at all, is explained once here rather than at the
   /// call site.
   ///
-  /// Doing nothing is not a failure. It happens when iOS has already reclaimed
-  /// the app's memory, and the block is then accounted for by the reconciliation
-  /// pass that runs the next time the app comes to the foreground — which reads
-  /// the block's stored end time and needs no help from this button.
+  /// **What happens when this does nothing, stated exactly.** It does nothing
+  /// when iOS has already reclaimed the app's memory, which on a locked phone is
+  /// most of the time. The block is not lost — the next time the app comes to
+  /// the foreground, reconciliation reads the block's stored end time and writes
+  /// it down. But reconciliation has no way of knowing this button was ever
+  /// pressed, so it records the block as **completed**, and a block the person
+  /// deliberately abandoned four minutes in is counted as a finished pomodoro
+  /// that fills a progress segment and earns a step towards the long break.
+  ///
+  /// That loss is accepted rather than hidden. Fixing it would mean the Lock
+  /// Screen leaving a note somewhere the app can find later, and the widget has
+  /// no database, no shared file and no way to reach one. The honest summary is
+  /// that dismissing a running block from a locked phone is reliably recorded
+  /// only while the app is still resident.
   static func dismissRunningBlock() async {
     await engine?.handleDismiss()
   }

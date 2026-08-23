@@ -37,12 +37,28 @@ struct SprintCount: View {
       .font(Typography.kicker)
       .textCase(.uppercase)
       .foregroundStyle(Color(.textMuted))
-      // One line, and it is the first thing allowed to disappear if the card is
-      // too narrow — see `BlockLiveActivity`, where it is given the lowest layout
-      // priority. Dropping it entirely is better than clipping it: half a
-      // fraction is worse than no fraction.
+      // One line, and the first thing to give way if the card is too narrow —
+      // see `BlockLiveActivity`, where the countdown's column is given the
+      // higher layout priority. It shrinks rather than clipping, because half a
+      // fraction is worse than a small one: "11 OF 12" cut in the middle reads
+      // as a different number, which is wrong information rather than small
+      // information.
       .lineLimit(1)
+      .minimumScaleFactor(Self.minimumScale)
+      // Read as a fact rather than as a bare fraction. On its own "2 of 4" says
+      // nothing about what is being counted, and this is the surface a VoiceOver
+      // reader is most likely to meet in the middle of a block. The wording
+      // matches the app's own progress rule exactly, so the two cannot describe
+      // the same thing differently.
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(Text("Sprint progress"))
+      .accessibilityValue(Text("\(completed) of \(total) pomodoros done"))
   }
+
+  // MARK: Private
+
+  /// How far the fraction may shrink before the layout has to give up on it.
+  private static let minimumScale: CGFloat = 0.7
 }
 
 // MARK: - Previews

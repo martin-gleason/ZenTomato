@@ -153,14 +153,14 @@ else, the client secret must move behind a token-exchange service and this note 
 - **C1** (repo, LICENSE, branch protection) — **done**
 - **C2** (minimum iOS, developer account, App ID with MusicKit) — **done**; answer is iOS 26 / watchOS 26, see D1
 - **C3** (Todoist OAuth app registered, credentials placed) — **done**; credentials in `Config/Secrets.xcconfig`, see D6b
-- **C4** (install builds on the iPhone) — deferred to beta. **This gates the device checks in F2, F3, F4, and F7.**
+- **C4** (install builds on the iPhone) — **done 2026-08-22**, moved up. `make device` installs to the iPhone 15 Pro Max on iOS 26.6. This no longer gates anything.
 - **C5** (fixed afternoon PR-review slot) — deferred to beta
 
-C4 being deferred means F2, F3, F4, and F7 can each be built and unit-tested to completion but **cannot
-close their gate**, because every one of their *Done when* clauses is a device check. Those features
-will queue in a `verified-pending-device` state until C4 lands. Front-loading C4 is the single highest-
-leverage thing you can do for the September 13 stop; leaving it to beta means discovering four features'
-worth of device-only bugs in one sitting.
+C4 was front-loaded on 2026-08-22 rather than left to beta, which was the right call: F2 immediately
+proved why. A simulator cannot answer a permission prompt, so **AlarmKit was never once authorised in
+any automated run** — every alarm-dependent behaviour in F2 is verified only against a protocol
+stand-in that cannot fail. Had C4 stayed deferred, four features would have queued up in a
+`verified-pending-device` state and their device-only bugs would all have surfaced in one sitting.
 
 ---
 

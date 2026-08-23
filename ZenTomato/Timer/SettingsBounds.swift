@@ -30,9 +30,14 @@ enum SettingsBounds {
   /// How many focus blocks make up one sprint.
   ///
   /// One is legal and is the interesting edge: with a sprint of one, every
-  /// focus block is followed by the long break and a short break never occurs
-  /// at all. That is correct behaviour rather than an oversight, and it has a
-  /// test of its own.
+  /// *completed* focus block is followed by the long break rather than a short
+  /// one. That is correct behaviour rather than an oversight, and it has a test
+  /// of its own.
+  ///
+  /// A *skipped* focus block still leads to a short break, in a sprint of one
+  /// exactly as in a sprint of four, because a skipped block earns nothing — and
+  /// the long break is something a pomodoro earns. So a short break can occur in
+  /// a sprint of one; it just cannot be reached by finishing anything.
   static let pomodorosPerSprint: ClosedRange<Int> = 1...12
 }
 

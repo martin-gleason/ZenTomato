@@ -19,10 +19,10 @@ import SwiftData
 /// from which rows exist.
 ///
 /// FIVE FIELDS AND NOT ONE MORE
-/// This model gains columns in later features — the task a block was attached
-/// to, the distractions logged during it. It does not gain them now. A field
-/// that is always empty looks finished and is not, which is worse than a field
-/// that is absent.
+/// This model will gain columns later, as more is recorded about a block than
+/// its length. It does not gain them now, and none is added early and left
+/// empty: a field that is always empty looks finished and is not, which is worse
+/// than a field that is absent.
 @Model
 final class PomodoroSession {
   /// The block's identity, carried over from the running timer state so that a

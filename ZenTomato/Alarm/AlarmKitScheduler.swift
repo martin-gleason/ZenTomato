@@ -13,13 +13,24 @@ import SwiftUI
 /// up in the morning. That is the whole argument for using it, and it is why
 /// there is no notification fallback anywhere in this app.
 ///
-/// WHY THIS IS THE ONLY FILE THAT MENTIONS `AlarmKit`
-/// AlarmKit is new — it arrived with iOS 26 — and new frameworks disappoint.
-/// Everything else in the app talks to `AlarmScheduling`, a four-method
-/// description of what the timer needs from an alerting system that names no
-/// Apple type at all. If AlarmKit turns out not to do what it says, this one
-/// file is replaced and nothing else in the app changes. Nothing in the engine,
-/// none of the tests, and none of the screens would need to be touched.
+/// HOW FAR ALARMKIT REACHES INTO THIS APP, MEASURED RATHER THAN CLAIMED
+/// AlarmKit is new — it arrived with iOS 26 — and new frameworks disappoint, so
+/// the plan has always been to keep it swappable. What that is worth is a
+/// question of how many files would have to change, and the honest count is
+/// three, not one:
+///
+///   * this file, which does all the scheduling and cancelling;
+///   * `FocusAlarmMetadata`, because the data that travels with an alarm has to
+///     conform to one of AlarmKit's protocols to be allowed to travel;
+///   * the widget's `BlockLiveActivity`, which is built out of AlarmKit's own
+///     presentation types because the Lock Screen card *is* an AlarmKit
+///     activity.
+///
+/// What genuinely names no Apple alarm type is everything that decides anything:
+/// the engine, every screen, and every test. They talk to `AlarmScheduling`, a
+/// four-method description of what a timer needs from an alerting system. So
+/// replacing the framework would be a rewrite of the alerting layer and of
+/// nothing else — which is a real containment, and a smaller one than "one file".
 ///
 /// WHY IT IS `@MainActor`
 /// Because everything that calls it already is, and keeping the whole alarm path

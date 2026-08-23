@@ -17,20 +17,27 @@ import AlarmKit
 /// for the life of that block.
 ///
 /// THREE FIELDS, AND WHY THERE IS NOT A FOURTH
-/// The plan for the next feature puts the name of the Todoist task on the Lock
-/// Screen in place of the block name. It would be easy to add `taskTitle` now
-/// and leave it empty. That is deliberately not done: a field that is always
-/// empty looks finished, so the next person to read this file would believe the
-/// work was already half done. Three fields today; the fourth arrives with the
-/// feature that fills it in.
+/// A later version of this screen will name what is being worked on rather than
+/// which kind of block is running, and it would be easy to add an empty field
+/// for that now. It is deliberately not done: a field that is always empty looks
+/// finished, so the next person to read this file would believe the work was
+/// already half done. Three fields today; a fourth arrives with the thing that
+/// fills it in.
 ///
 /// THIS FILE IS COMPILED INTO BOTH PROGRAMS
 /// It is listed in the sources of the app *and* of the widget extension, so
 /// there is exactly one definition of the shape of this data. Copying it into
 /// the widget instead would be the single most reliable way to ship a blank
 /// Lock Screen: the two copies would encode slightly differently, the decode
-/// would fail, and nothing anywhere would report an error. `AlarmMetadataTests`
-/// exists to catch that if anyone ever "tidies" the sharing away.
+/// would fail, and nothing anywhere would report an error.
+///
+/// `AlarmMetadataTests` checks that the sharing is still declared, by reading
+/// the project description and looking for this directory in the widget's list
+/// of sources. It is worth being precise about what that does and does not
+/// prove, because a comment claiming a guarantee nobody implemented is worse
+/// than claiming none. It proves the two programs are still told to compile the
+/// same file. It cannot compare the widget's copy of this type against the
+/// app's, because the test target links only the app.
 ///
 /// `AlarmMetadata` is AlarmKit's name for "data that travels with an alarm". It
 /// requires the value to be convertible to and from a stream of bytes

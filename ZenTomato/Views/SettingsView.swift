@@ -12,7 +12,7 @@ import SwiftUI
 /// block lengths, not for anything. The app has a standing rule that it never
 /// accepts typed input — it is not a place you write things down — and the only
 /// writable screen in the app is the obvious place for that rule to be broken by
-/// accident. Every value here is a stepper or a switch.
+/// accident. Every value here is a list you pick from or a switch you flip.
 ///
 /// **There is no Cancel button either, and that is a decision.** Cancel implies a
 /// transaction to roll back and there is not one: six independent values, each
@@ -141,10 +141,13 @@ private struct SettingsForm: View {
 
   private var sprint: some View {
     Section {
-      Stepper(value: $settings.pomodorosPerSprint, in: SettingsBounds.pomodorosPerSprint) {
-        row("Pomodoros per sprint", value: Self.spokenPomodoros(settings.pomodorosPerSprint))
+      Picker("Pomodoros per sprint", selection: $settings.pomodorosPerSprint) {
+        ForEach(Array(SettingsBounds.pomodorosPerSprint), id: \.self) { count in
+          Text(Self.spokenPomodoros(count)).tag(count)
+        }
       }
-      .accessibilityValue(Text(Self.spokenPomodoros(settings.pomodorosPerSprint)))
+      .pickerStyle(.navigationLink)
+      .font(Typography.body)
       .accessibilityHint(Text("How many focus blocks before the long break."))
     } header: {
       header("Sprint")
@@ -186,35 +189,42 @@ private struct SettingsForm: View {
     .listRowBackground(Color(.surfaceRaised))
   }
 
-  /// One duration row.
+  /// One duration row: a label, the current value, and a chevron that opens a
+  /// list of every legal value with the current one ticked.
   ///
-  /// **The bounds are the control, not a check afterwards.** A stepper that stops
-  /// at 1 and at 120 cannot produce a number outside them, so there is no
-  /// validation code on this screen, no error state to design, and no alert copy
+  /// **The bounds are the control, not a check afterwards.** The list holds the
+  /// numbers 1 to 120 and nothing else, so a value outside them cannot be
+  /// offered, cannot be chosen, and does not have to be rejected. There is no
+  /// validation code on this screen, no error state to design and no alert copy
   /// to write. The upper bound exists so a mis-set value cannot schedule an alarm
   /// days away; the lower one is what makes a whole sprint testable by hand in
   /// eight minutes instead of two hours.
+  ///
+  /// WHY A LIST AND NOT A PAIR OF PLUS AND MINUS BUTTONS
+  /// Both keep the bound inside the control, which is the property that matters
+  /// most. The list wins on reach: moving the focus length from 25 to 120, or
+  /// down to the 1 that makes the eight-minute hand test possible, is one tap
+  /// and one scroll either way. With plus and minus it is ninety-five separate
+  /// presses, or a long press with no idea where you have got to — and a
+  /// VoiceOver reader gets no long press at all, so for them it is ninety-five
+  /// separate swipes on the app's only writable screen.
   private func minutesRow(_ title: String, value: Binding<Int>) -> some View {
-    Stepper(value: value, in: SettingsBounds.minutes) {
-      row(title, value: "\(value.wrappedValue) min")
+    Picker(title, selection: value) {
+      ForEach(Array(SettingsBounds.minutes), id: \.self) { minutes in
+        // Drawn short, spoken in full: the eye wants the abbreviation and the
+        // ear wants the word.
+        Text("\(minutes) min")
+          .accessibilityLabel(Text(Self.spokenMinutes(minutes)))
+          .tag(minutes)
+      }
     }
-    // Drawn short, spoken in full: the eye wants the abbreviation and the ear
-    // wants the word.
-    .accessibilityValue(Text(Self.spokenMinutes(value.wrappedValue)))
-  }
-
-  /// A row's label on the left and its current value on the right, which is iOS's
-  /// own convention for a settings row.
-  private func row(_ title: String, value: String) -> some View {
-    HStack {
-      Text(title)
-        .font(Typography.body)
-        .foregroundStyle(Color(.textPrimary))
-      Spacer(minLength: Spacing.sm)
-      Text(value)
-        .font(Typography.body)
-        .foregroundStyle(Color(.textMuted))
-    }
+    .pickerStyle(.navigationLink)
+    // The label is set from the token table like everything else. The trailing
+    // value and the chevron are left to iOS, which draws them in its own
+    // secondary grey — this is one of the few places in the app where matching
+    // the platform is worth more than restating a role, because a settings row
+    // that does not look like a settings row reads as broken.
+    .font(Typography.body)
   }
 
   private func header(_ title: String) -> some View {
@@ -235,9 +245,14 @@ private struct SettingsForm: View {
   }
 
   /// The singular is not cosmetic. A sprint of one pomodoro is a real setting —
-  /// it is the documented edge case where every focus block is followed by a long
-  /// break and no short break ever happens — so "1 pomodoros" would appear on the
-  /// very screen that sets it.
+  /// it is the documented edge case where every *completed* focus block is
+  /// followed by the long break — so "1 pomodoros" would appear on the very
+  /// screen that sets it.
+  ///
+  /// The word "completed" is load-bearing. A focus block that is skipped earns
+  /// nothing, including the long break, so it is followed by a short break even
+  /// in a sprint of one. That is the same rule everywhere else in the app: the
+  /// long break is earned by finished pomodoros, never by attempts.
   private static func spokenPomodoros(_ count: Int) -> String {
     "\(count) \(count == 1 ? "pomodoro" : "pomodoros")"
   }

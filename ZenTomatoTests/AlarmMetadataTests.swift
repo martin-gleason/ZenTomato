@@ -70,4 +70,47 @@ struct AlarmMetadataTests {
     #expect(readBack.completedInSprint == SettingsBounds.pomodorosPerSprint.upperBound - 1)
     #expect(readBack.pomodorosPerSprint == SettingsBounds.pomodorosPerSprint.upperBound)
   }
+
+  /// The two programs are still told to compile the *same* description of this
+  /// data, rather than a copy each.
+  ///
+  /// WHAT THIS CATCHES AND WHAT IT HONESTLY CANNOT
+  /// The round-trip tests above pack a value and unpack it with the same code,
+  /// so they would keep passing unchanged if somebody copied
+  /// `FocusAlarmMetadata` into the widget and let the two versions drift apart —
+  /// which is precisely the failure that produces a blank Lock Screen with no
+  /// crash, no error and no log. This test cannot compare the two copies either:
+  /// the test target links the app and not the widget, so there is only ever one
+  /// copy in the room.
+  ///
+  /// What it *can* do is read the project description off disk and insist the
+  /// shared directory is still listed in the widget's sources. That fails on the
+  /// exact action the comment in `FocusAlarmMetadata` warns about — somebody
+  /// "tidying" the sharing away — which is a mechanism rather than a promise.
+  /// It is the same technique `LaunchBackgroundTests` uses to hold a colour in
+  /// an asset catalog equal to a colour in the token table.
+  @Test("sharedSourcesAreCompiledIntoTheWidget")
+  func sharedSourcesAreCompiledIntoTheWidget() throws {
+    let url = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()   // ZenTomatoTests
+      .deletingLastPathComponent()   // repository root
+      .appending(path: "project.yml")
+    let projectFile = try String(contentsOf: url, encoding: .utf8)
+
+    // Everything from the widget target's name to the start of the next
+    // top-level key. Narrowing to that slice is what stops the app target's own
+    // listing of the same directories from satisfying the check.
+    let widgetSection = try #require(
+      projectFile.range(of: "\n  ZenTomatoActivity:\n").map { start in
+        let rest = projectFile[start.upperBound...]
+        let end = rest.range(of: "\n  ZenTomatoTests:\n")?.lowerBound ?? rest.endIndex
+        return String(rest[..<end])
+      })
+
+    #expect(widgetSection.contains("- path: ZenTomato/Shared"))
+    #expect(widgetSection.contains("- path: ZenTomato/DesignSystem"))
+    #expect(widgetSection.contains("ZenTomato/Timer/BlockKind.swift"))
+    // The database model must NOT be handed to a program that has no database.
+    #expect(widgetSection.contains("AppSettings.swift") == false)
+  }
 }

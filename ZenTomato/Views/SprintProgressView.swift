@@ -19,6 +19,25 @@ import SwiftUI
 /// under a headline. And a full-width rule says "this is the shape of your
 /// sprint" at a glance, which a scattering of dots does not.
 ///
+/// A FINISHED SEGMENT IS TALLER AS WELL AS GREENER, AND THAT IS NOT DECORATION
+/// The two inks this rule is drawn in — the app's sage and its strong grey —
+/// are both chosen to stand out against the *page*, and they do. Measured
+/// against **each other** they are 1.37:1 in light and 1.39:1 in dark: two
+/// colours of almost exactly the same lightness. On a two-point rule that reads
+/// as one unbroken line, so a person who is not looking for the boundary cannot
+/// see it, and a person who does not distinguish those hues never could. The
+/// accessibility standard asks for 3:1 between anything you have to tell apart
+/// and forbids carrying information by colour alone; this failed both.
+///
+/// Repainting one of them was not the answer — every other pairing in the token
+/// table either loses its contrast against the page or spends the app's one
+/// colour somewhere it does not belong. So the distinction is carried by shape
+/// instead: a finished segment is twice as tall as an unfinished one and the
+/// row is aligned along its bottom edge, which gives the rule a visible step at
+/// the boundary in any appearance, at any colour vision, and in a photograph.
+/// The colours stay as the design intended and are now the second signal rather
+/// than the only one.
+///
 /// TWO STATES, NOT THREE
 /// A segment is either finished or it is not. The block that is *running* is
 /// given no third appearance, because it does not need one: the word above the
@@ -39,6 +58,14 @@ struct SprintProgressView: View {
 
   /// How many pomodoros make up the sprint. Between 1 and 12.
   let total: Int
+
+  /// How tall a finished segment is drawn. Twice the height of an unfinished
+  /// one, which is what makes the boundary between them visible without relying
+  /// on the difference between two colours.
+  static let filledHeight = Spacing.xxs
+
+  /// How tall an unfinished segment is drawn: the hairline the design asks for.
+  static let emptyHeight = Spacing.xxxs
 
   var body: some View {
     Group {
@@ -67,13 +94,18 @@ struct SprintProgressView: View {
 
   /// The hairline form, used at ordinary text sizes.
   private var rule: some View {
-    HStack(spacing: Spacing.xxxs) {
+    // Bottom-aligned, so the two heights share a baseline and the extra height
+    // of a finished segment grows upwards as a step rather than as a thicker
+    // line floating in the middle of the row.
+    HStack(alignment: .bottom, spacing: Spacing.xxxs) {
       ForEach(0..<max(total, 1), id: \.self) { index in
+        let isFinished = index < completed
         Rectangle()
-          .fill(index < completed ? Color(.action) : Color(.borderStrong))
-          .frame(height: Spacing.xxxs)
+          .fill(isFinished ? Color(.action) : Color(.borderStrong))
+          .frame(height: isFinished ? Self.filledHeight : Self.emptyHeight)
       }
     }
+    .frame(height: Self.filledHeight, alignment: .bottom)
     // Square corners: the sharpest thing in an app whose corners are already
     // sharper than the platform's.
     .clipShape(RoundedRectangle(cornerRadius: Radius.none))

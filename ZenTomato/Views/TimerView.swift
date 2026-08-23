@@ -224,12 +224,28 @@ struct TimerView: View {
     "\(minutes) \(minutes == 1 ? "minute" : "minutes")"
   }
 
+  /// What VoiceOver says is left of a running block.
+  ///
+  /// **WHOLE MINUTES, NOT MINUTES AND SECONDS, AND THE REASON IS NOT BREVITY.**
+  /// This value is attached to an element that is redrawn once a second. When a
+  /// VoiceOver reader has that element focused, a value that changes is a value
+  /// the system may read out again — so a spoken figure containing seconds could
+  /// mean a full sentence spoken every second for twenty-five minutes, which
+  /// would make the screen unusable for exactly the readers the rest of this
+  /// file is written for. Rounding to whole minutes takes the number of changes
+  /// in a twenty-five minute block from about fifteen hundred to twenty-six.
+  ///
+  /// Rounded **down**, so the spoken minute and the printed one always agree:
+  /// while the screen shows `24:58` this says twenty-four minutes, not
+  /// twenty-five.
+  ///
+  /// The last minute is given as a phrase rather than a count of seconds for the
+  /// same reason. Nothing is lost by it: the alarm is what tells a person the
+  /// block ended, not this label.
   private static func spokenRemaining(seconds: Int) -> String {
     let wholeMinutes = seconds / 60
-    let remainder = seconds % 60
-    let secondsPart = "\(remainder) \(remainder == 1 ? "second" : "seconds")"
-    guard wholeMinutes > 0 else { return "\(secondsPart) remaining" }
-    return "\(spokenMinutes(wholeMinutes)) \(secondsPart) remaining"
+    guard wholeMinutes > 0 else { return "Less than a minute remaining" }
+    return "\(spokenMinutes(wholeMinutes)) remaining"
   }
 }
 

@@ -73,6 +73,19 @@ struct TimerScreen: View {
     // forty-four points of chrome, a background material and a divider across
     // the top of the calmest screen in the app.
     .overlay(alignment: .topTrailing) { settingsButton }
+    // SAID OUT LOUD, NOT JUST DRAWN.
+    // When an alarm cannot be set, a sighted reader sees an amber line appear
+    // in the middle of the screen. A VoiceOver reader's attention is on the
+    // button they just pressed and there is nothing to tell them a new line
+    // exists — they would have to go exploring a screen they have no reason to
+    // explore. Since the whole argument for showing this message at all is that
+    // a block ending in silence must not be a surprise an hour later, the
+    // message is announced when it appears. Only on the change, so a screen that
+    // redraws once a second does not repeat it.
+    .onChange(of: model.failureNote) { _, note in
+      guard let note else { return }
+      AccessibilityNotification.Announcement(note).post()
+    }
   }
 
   // MARK: Private
@@ -130,10 +143,17 @@ struct TimerScreen: View {
     // alone it would read the number as "twenty-four colon fifty-eight",
     // pronouncing the colon out loud.
     //
-    // The spoken value changes every second while a block runs, and that is
-    // deliberately *all* it does: nothing here announces it. An announcement per
-    // second would make the screen unusable. VoiceOver re-reads an element when
-    // the reader moves to it, which is the correct cadence.
+    // The printed number changes every second; the spoken one deliberately does
+    // not. It is rounded to whole minutes while a block runs — see
+    // `TimerView.spokenRemaining` — because a value attached to an element the
+    // reader has focused is a value the system may read out again each time it
+    // changes, and a sentence spoken once a second for twenty-five minutes would
+    // make this screen unusable. Nothing here posts an announcement of its own.
+    //
+    // Whether iOS re-reads a changed value at all is a runtime behaviour rather
+    // than something this file can settle, so the number of opportunities is
+    // kept small instead of the question being assumed away. It is on the list
+    // to watch with VoiceOver running on the phone.
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(Text(model.blockName))
     .accessibilityValue(Text(model.spokenNumeral))
@@ -288,7 +308,7 @@ private extension TimerScreenModel {
     blockName: "Focus block",
     kicker: "Focus",
     numeral: "24:58",
-    spokenNumeral: "24 minutes 58 seconds remaining",
+    spokenNumeral: "24 minutes remaining",
     progress: Progress(completed: 2, total: 4),
     controls: .running)
 
@@ -296,7 +316,7 @@ private extension TimerScreenModel {
     blockName: "Short break",
     kicker: "Short break",
     numeral: "04:31",
-    spokenNumeral: "4 minutes 31 seconds remaining",
+    spokenNumeral: "4 minutes remaining",
     progress: Progress(completed: 3, total: 4),
     controls: .running)
 
@@ -313,7 +333,7 @@ private extension TimerScreenModel {
     blockName: "Focus block",
     kicker: "Focus",
     numeral: "24:58",
-    spokenNumeral: "24 minutes 58 seconds remaining",
+    spokenNumeral: "24 minutes remaining",
     progress: Progress(completed: 2, total: 4),
     failureNote: TimerEngineFailure.alarmSchedulingFailed.message,
     controls: .running)
@@ -322,7 +342,7 @@ private extension TimerScreenModel {
     blockName: "Focus block",
     kicker: "Focus",
     numeral: "24:58",
-    spokenNumeral: "24 minutes 58 seconds remaining",
+    spokenNumeral: "24 minutes remaining",
     progress: Progress(completed: 11, total: 12),
     controls: .running)
 }

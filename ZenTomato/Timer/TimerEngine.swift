@@ -119,6 +119,18 @@ final class TimerEngine {
   /// replaced at every transition; never more than one at a time.
   private var boundaryTask: Task<Void, Never>?
 
+  /// A counter bumped every time a boundary task is armed, so that a task which
+  /// has already woken can tell whether it is still the current one.
+  ///
+  /// WHY A PLAIN COUNTER RATHER THAN COMPARING THE TASKS THEMSELVES. Swift has
+  /// no way to ask "am I the task this handle points at", and the question has
+  /// to be answered for correctness rather than tidiness: a woken task must let
+  /// go of `boundaryTask` before it does any work, or the work it does will
+  /// cancel it — see `armBoundary` — and it must *not* let go if it has already
+  /// been superseded, or it would drop the handle to a newer task that is still
+  /// waiting. The counter answers both questions in one comparison.
+  private var boundaryGeneration = 0
+
   // MARK: Initialisation
 
   /// Builds the engine and adopts whatever the database already says, so the
@@ -274,15 +286,39 @@ final class TimerEngine {
 
   /// The block's deadline arrived and the app was awake to see it. This is the
   /// only path on which auto-start can chain one block into the next, because
-  /// it is the only one that knows the app was here when the block ended. The
-  /// engine stays correct if it never runs: `synchronize()` is the guarantee.
+  /// it is the only one that can establish that the app was here when the block
+  /// ended. The engine stays correct if it never runs: `synchronize()` is the
+  /// guarantee.
   func boundaryReached() async {
     guard isRunning, let state, state.isRunning else { return }
+    // Each block reports its own alarm outcome and nothing else. Without this,
+    // a failure recorded for the block that is ending would stay on the screen
+    // through every block auto-start chains after it — and a warning that is
+    // sometimes stale is a warning a person learns to ignore, which disarms the
+    // one message that matters.
+    lastFailure = nil
+
     guard clock.now >= state.endsAt else {
       // Woken early: the monotonic clock says the block is over and the wall
       // clock disagrees, so the wall clock moved. Reconciling knows what to do.
       return await synchronize()
     }
+
+    // HOW LATE IS TOO LATE, AND WHY THE QUESTION HAS TO BE ASKED HERE.
+    // A sleeping task does not fire while iOS has the app suspended: it fires
+    // the instant the app is resumed, however many hours later that is. So
+    // arriving here is not by itself evidence that anybody was present when the
+    // block ended, and auto-starting a break because the phone was picked up at
+    // breakfast would be exactly the replay this feature refuses to do. More
+    // than a few seconds late means we were not watching, so this is handed to
+    // reconciliation, which records one block and goes idle whatever auto-start
+    // says. It also removes a race: on resume this task and the app's own
+    // foreground reconciliation are both queued, and before this guard the two
+    // produced different screens depending on which ran first.
+    guard clock.now.timeIntervalSince(state.endsAt) <= Self.clockSkewTolerance else {
+      return await synchronize()
+    }
+
     cancelAlarm()
     // Ended at the instant it was due to end, not the instant this ran: the
     // task can wake a moment late and the record must not drift with it.
@@ -442,6 +478,9 @@ final class TimerEngine {
     let deadline = continuousDeadline
       ?? clock.continuousNow.advanced(by: .seconds(max(0, state.endsAt.timeIntervalSince(clock.now))))
 
+    boundaryGeneration &+= 1
+    let generation = boundaryGeneration
+
     boundaryTask = Task { [weak self] in
       guard let self else { return }
       do {
@@ -451,6 +490,22 @@ final class TimerEngine {
         // and a clock that declines to wait. Neither is anything to act on.
         return
       }
+      // LETTING GO OF THE HANDLE BEFORE DOING THE WORK IS NOT TIDINESS.
+      // This task is about to call `boundaryReached()`, which — when auto-start
+      // is on — ends the block and begins the next one, and beginning a block
+      // calls `armBoundary()`, whose first act is to cancel whatever
+      // `boundaryTask` points at. At this instant that is *this* task. Without
+      // these two lines every auto-started block would set its alarm from
+      // inside a task that had just cancelled itself, and a cancellation-aware
+      // system call refuses to run in one: the block would run to its end and
+      // make no sound. That is the single failure this whole feature exists to
+      // prevent, on the path a person meets most often.
+      //
+      // The generation check is the other half. If a newer boundary has already
+      // been armed then this task is stale, `boundaryTask` belongs to the newer
+      // one, and this task must neither clear it nor act.
+      guard boundaryGeneration == generation else { return }
+      boundaryTask = nil
       await boundaryReached()
     }
   }

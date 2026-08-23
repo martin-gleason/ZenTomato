@@ -58,15 +58,39 @@ struct TimerCycleTests {
     #expect(run.last.endsSprint == false)
   }
 
-  /// With a sprint of one, every focus block goes straight to the long break
-  /// and a short break never occurs. This looks wrong at a glance and is
-  /// correct: the tally reaches the sprint size on the very first block.
+  /// With a sprint of one, every *completed* focus block goes straight to the
+  /// long break. This looks wrong at a glance and is correct: the tally reaches
+  /// the sprint size on the very first block.
   @Test("cycleWithSprintOfOne")
   func cycleWithSprintOfOne() {
     let run = walk(sprintOfOne, steps: 6)
 
     #expect(run.blocks == [.work, .longBreak, .work, .longBreak, .work, .longBreak, .work])
     #expect(run.blocks.contains(.shortBreak) == false)
+  }
+
+  /// The other half of a sprint of one, which the walk above cannot see because
+  /// it finishes every block.
+  ///
+  /// A sprint of one is the configuration the project itself nominates for
+  /// hand-testing the cycle, so it is the one a person is most likely to be
+  /// sitting in front of when they press Skip — and the answer they get is a
+  /// short break, in a sprint that "never has short breaks". That is deliberate
+  /// and it follows from the rule that matters more: a skipped block earns
+  /// nothing, and the long break is earned. Stated as a test so the sentence in
+  /// the documentation and the behaviour cannot drift apart again.
+  @Test("skippedWorkInASprintOfOneStillTakesAShortBreak")
+  func skippedWorkInASprintOfOneStillTakesAShortBreak() {
+    let skipped = TimerCycle.next(after: .work, completedInSprint: 0, completed: false, settings: sprintOfOne)
+
+    #expect(skipped.kind == .shortBreak)
+    #expect(skipped.completedInSprint == 0)
+    #expect(skipped.endsSprint == false)
+
+    // Finishing the same block instead earns the long break immediately.
+    let completed = TimerCycle.next(after: .work, completedInSprint: 0, completed: true, settings: sprintOfOne)
+    #expect(completed.kind == .longBreak)
+    #expect(completed.completedInSprint == 1)
   }
 
   /// The end of a long break returns the tally to zero and says so, which is

@@ -49,8 +49,13 @@ enum TimerCycle {
   ///     `endsSprint` is true.
   ///
   /// With the spec's defaults that produces: work, short, work, short, work,
-  /// short, work, **long** — then a stop. With a sprint of one it produces
-  /// work, long, stop, and a short break never occurs at all.
+  /// short, work, **long** — then a stop. With a sprint of one, finishing every
+  /// block produces work, long, stop.
+  ///
+  /// A sprint of one does **not** mean a short break can never happen: skip the
+  /// focus block instead of finishing it and a short break follows, there as
+  /// anywhere else, because a skipped block earns nothing and the long break is
+  /// earned rather than scheduled.
   ///
   /// - Parameters:
   ///   - kind: the block that has just ended.
