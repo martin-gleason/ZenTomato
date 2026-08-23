@@ -1,6 +1,16 @@
 import SwiftData
 import SwiftUI
 
+// swiftlint:disable file_length
+//
+// THE ONLY LINT RULE THIS FILE TURNS OFF, AND WHY.
+// `file_length` counts documentation and previews. This screen is the one place
+// in the app where a rule is stated as a prohibition — there is no text field
+// here and there never may be — so the reasoning sits beside every row, and the
+// new Todoist section carries the sign-out semantics in full because they are
+// the part somebody will check. The same exemption is already taken by
+// `TimerScreen.swift`.
+
 /// The six values the timer runs on, and nothing else.
 ///
 /// WHAT IS DELIBERATELY NOT HERE
@@ -22,6 +32,66 @@ import SwiftUI
 /// "I set the focus block to 90 by mistake" is to set it back.
 struct SettingsView: View {
   // MARK: Internal
+
+  /// Where the Todoist credential lives.
+  let tokens: any TokenStore
+
+  /// The local mirror of Todoist. Emptied by signing out.
+  let cache: TodoistCacheStore
+
+  /// The session plan. Emptied by signing out.
+  let plan: SessionPlanStore
+
+  /// Removes the credential, this app's copy of Todoist, and the session plan.
+  ///
+  /// **Every record of a task this app completed is kept.** Those rows are this
+  /// app's own history rather than a copy of somebody else's data, and throwing
+  /// them away because a connection was ended would destroy the one thing this
+  /// feature produces that Todoist cannot hand back offline.
+  ///
+  /// This is also the **only** thing that empties the mirror and the plan. A
+  /// token that stopped being accepted clears the credential and nothing else:
+  /// that is Todoist's act, not a decision to disconnect, and throwing away a
+  /// half-worked plan because a credential went stale would be a punishment for
+  /// something nobody did.
+  ///
+  /// It is a function on the screen rather than a method on the form so that it
+  /// can be exercised without a screen — signing out touches three separate
+  /// stores, and "which of them did it miss?" is exactly the question a test
+  /// should be able to ask.
+  ///
+  /// **EACH STORE IS ATTEMPTED ON ITS OWN.** They were once in a single `do`,
+  /// which meant a Keychain that refused to delete stopped the mirror being
+  /// emptied — the credential still on the phone, a full copy of somebody's
+  /// Todoist still on the phone, the plan gone anyway, and a row reading
+  /// "Couldn't sign out". Of the three things this removes, the one with a
+  /// security meaning was the one left behind, and the dialog had already
+  /// promised all three. Three independent attempts cannot do that: one refusal
+  /// is one thing left, and it is reported.
+  ///
+  /// - Returns: `true` when all three were emptied.
+  @MainActor
+  @discardableResult
+  static func signOutOfTodoist(
+    tokens: any TokenStore,
+    cache: TodoistCacheStore?,
+    plan: SessionPlanStore?) -> Bool {
+    var everything = true
+    do {
+      try cache?.clear()
+    } catch {
+      everything = false
+    }
+    if plan?.clear() == false { everything = false }
+    // The credential last, so a refusal here is reported against a phone where
+    // everything else has already gone.
+    do {
+      try tokens.clear()
+    } catch {
+      everything = false
+    }
+    return everything
+  }
 
   var body: some View {
     NavigationStack {
@@ -53,7 +123,12 @@ struct SettingsView: View {
   @ViewBuilder
   private var content: some View {
     if let row = settings.first {
-      SettingsForm(settings: row, isBlockRunning: engine?.isRunning == true)
+      SettingsForm(
+        settings: row,
+        isBlockRunning: engine?.isRunning == true,
+        tokens: tokens,
+        cache: cache,
+        plan: plan)
     } else {
       // The same situation the timer screen draws as dashes: the database opened
       // and holds nothing. There is no row to edit, so there is nothing to show
@@ -81,6 +156,13 @@ private struct SettingsForm: View {
   /// the form appears.
   let isBlockRunning: Bool
 
+  /// The Todoist collaborators. **Optional so that this screen can be looked at
+  /// in a preview with nothing behind it**, which is the arrangement the timer
+  /// engine above already uses. In the app all three are always there.
+  var tokens: (any TokenStore)?
+  var cache: TodoistCacheStore?
+  var plan: SessionPlanStore?
+
   var body: some View {
     Form {
       if isBlockRunning {
@@ -89,6 +171,7 @@ private struct SettingsForm: View {
       blockLengths
       sprint
       whenABlockEnds
+      todoist
     }
     // iOS's own grouped-list background is a grey that fights this app's warm
     // page. Dropping it and painting the page underneath is what makes the sheet
@@ -98,6 +181,16 @@ private struct SettingsForm: View {
   }
 
   // MARK: Private
+
+  /// Whether there is a credential. Read rather than watched: the Keychain does
+  /// not publish changes.
+  @State private var hasToken = false
+
+  @State private var isConfirmingSignOut = false
+
+  /// Set when signing out could not be finished, so the row can say so rather
+  /// than quietly claiming a disconnection that did not happen.
+  @State private var signOutFailed = false
 
   /// A statement of fact, pinned above everything else because it has to be read
   /// *before* a number is changed rather than after.
@@ -227,6 +320,75 @@ private struct SettingsForm: View {
     .font(Typography.body)
   }
 
+  /// One row in, and — once connected — one way out.
+  ///
+  /// **The token field is never drawn on this screen.** This file's own doc
+  /// comment says there is no text field here and there never may be; the row
+  /// pushes to the screen that owns the field instead.
+  @ViewBuilder
+  private var todoist: some View {
+    if let tokens {
+      Section {
+        NavigationLink {
+          TodoistSignInRoute(tokens: tokens, cache: cache) { hasToken = true }
+        } label: {
+          LabeledContent("Todoist") {
+            Text(trailingValue)
+              .font(Typography.body)
+              .foregroundStyle(Color(.textMuted))
+          }
+          .font(Typography.body)
+        }
+
+        if hasToken {
+          Button("Sign out of Todoist", role: .destructive) { isConfirmingSignOut = true }
+            .font(Typography.body)
+        }
+      } header: {
+        header("Todoist")
+      } footer: {
+        footer("ZenTomato reads your projects and tasks. The only change it can make is ticking a task off.")
+      }
+      .listRowBackground(Color(.surfaceRaised))
+      .task { readToken(tokens) }
+      .confirmationDialog(
+        "Sign out of Todoist?",
+        isPresented: $isConfirmingSignOut,
+        titleVisibility: .visible) {
+        Button("Sign out", role: .destructive) { signOut(tokens) }
+        Button("Cancel", role: .cancel) { }
+      } message: {
+        Text(signOutWarning)
+      }
+    }
+  }
+
+  /// What the row says on its right-hand side.
+  private var trailingValue: String {
+    if signOutFailed { return "Couldn't sign out" }
+    return hasToken ? "Connected" : "Not connected"
+  }
+
+  /// Spelled out before the tap, because two of the three things it removes are
+  /// not the one somebody has in mind when they choose it.
+  private var signOutWarning: String {
+    "Your token is removed from this iPhone, along with ZenTomato's copy of your "
+      + "projects and tasks and your current plan. Nothing in Todoist changes."
+  }
+
+  private func signOut(_ tokens: any TokenStore) {
+    signOutFailed = SettingsView.signOutOfTodoist(tokens: tokens, cache: cache, plan: plan) == false
+    readToken(tokens)
+  }
+
+  private func readToken(_ tokens: any TokenStore) {
+    do {
+      hasToken = try tokens.read()?.isEmpty == false
+    } catch {
+      hasToken = false
+    }
+  }
+
   private func header(_ title: String) -> some View {
     Text(title)
       .font(Typography.kicker)
@@ -256,6 +418,40 @@ private struct SettingsForm: View {
   private static func spokenPomodoros(_ count: Int) -> String {
     "\(count) \(count == 1 ? "pomodoro" : "pomodoros")"
   }
+}
+
+// MARK: - TodoistSignInRoute
+
+/// The token screen, pushed from the Settings row, with its state owned here.
+///
+/// **WHY THIS TINY VIEW EXISTS.** `TodoistSignInView` holds its state in a
+/// `@Bindable` rather than a `@State`, so whoever pushes it owns the model. A
+/// destination written inline in a `NavigationLink` is rebuilt every time its
+/// parent's body runs — and this parent reads the running timer, so a break
+/// ending flips `isRunning`, the body re-runs, a brand-new empty model replaces
+/// the old one, and a half-pasted credential vanishes with no explanation.
+/// Holding the model in `@State` here builds it once and keeps it for as long as
+/// the screen is on the stack. `PlanBuilderView` already guards the other
+/// entrance to the same screen for exactly this reason.
+private struct TodoistSignInRoute: View {
+  // MARK: Lifecycle
+
+  init(tokens: any TokenStore, cache: TodoistCacheStore?, onConnected: @escaping () -> Void) {
+    self.onConnected = onConnected
+    _model = State(initialValue: SignInScreenModel(tokens: tokens, cache: cache))
+  }
+
+  // MARK: Internal
+
+  var body: some View {
+    TodoistSignInView(model: model, onConnected: onConnected)
+  }
+
+  // MARK: Private
+
+  private let onConnected: () -> Void
+
+  @State private var model: SignInScreenModel
 }
 
 // MARK: - Previews

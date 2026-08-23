@@ -106,31 +106,21 @@ jobs:
         # misleading green.
         run: brew install xcodegen swiftlint gitleaks
 
-      - name: Write Config/Secrets.xcconfig from repository secrets
-        # CI has no Config/Secrets.xcconfig — it is git-ignored and never leaves
-        # a developer's machine. The same keys come from GitHub Actions
-        # encrypted secrets instead, written into the file Xcode reads directly.
+      - name: Write Config/Secrets.xcconfig
+        # CI has no Config/Secrets.xcconfig — it is git-ignored and never leaves a
+        # developer's machine. This writes the only build setting that file now
+        # carries, empty, because CI never signs for a device.
         #
-        # This step is OPTIONAL by design. Config/App.xcconfig includes this
-        # file with `#include?`, so a fork with no secrets configured still
-        # builds and tests green — which is correct, because nothing in the app
-        # reads a Todoist credential yet.
+        # THERE IS NO TODOIST CREDENTIAL HERE, AND THAT IS THE POINT.
+        # Delta D18 replaced OAuth with a personal API token the user pastes into
+        # the app and which lives in their Keychain. There is no client id and no
+        # client secret to configure, so this workflow needs no repository secret
+        # at all — and a fork can run the full gate green with nothing set up.
         #
-        # The values are passed through the environment rather than interpolated
-        # into the shell command, so a value containing shell metacharacters
-        # cannot alter this script. GitHub masks secret values in the log;
-        # nothing here echoes one regardless.
-        env:
-          TODOIST_CLIENT_ID: ${{ secrets.TODOIST_CLIENT_ID }}
-          TODOIST_CLIENT_SECRET: ${{ secrets.TODOIST_CLIENT_SECRET }}
+        # A credential that does not exist cannot leak from a build log.
         run: |
           umask 077
-          {
-            printf '%s\n' "TODOIST_CLIENT_ID = ${TODOIST_CLIENT_ID}"
-            printf '%s\n' "TODOIST_CLIENT_SECRET = ${TODOIST_CLIENT_SECRET}"
-            printf '%s\n' "DEVELOPMENT_TEAM ="
-          } > Config/Secrets.xcconfig
-          echo "Wrote Config/Secrets.xcconfig with $(grep -c '=' Config/Secrets.xcconfig) keys."
+          printf '%s\n' "DEVELOPMENT_TEAM =" > Config/Secrets.xcconfig
 
       - name: Generate the Xcode project
         # Proves project.yml actually builds a project. A committed .xcodeproj

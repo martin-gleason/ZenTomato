@@ -134,6 +134,11 @@ final class TimerEngine {
   /// Where alarms come from. Never AlarmKit directly — see `AlarmScheduling`.
   private let alarms: any AlarmScheduling
 
+  /// Where the next focus block's task comes from, or `nil` when the app has no
+  /// session plan. **This is the whole of what the timer knows about Todoist:**
+  /// one question, asked once per focus block, answered with four strings.
+  private let attachments: (any SessionAttaching)?
+
   // MARK: Private state
 
   /// The saved timer row. `nil` only when the database could not be read, in
@@ -186,10 +191,15 @@ final class TimerEngine {
   /// Builds the engine and adopts whatever the database already says, so the
   /// screen is right immediately. `synchronize()` works out whether it is still
   /// true; the app calls that at launch and on every return to the foreground.
-  init(context: ModelContext, clock: any TimerClock, alarms: any AlarmScheduling) {
+  init(
+    context: ModelContext,
+    clock: any TimerClock,
+    alarms: any AlarmScheduling,
+    attachments: (any SessionAttaching)? = nil) {
     self.context = context
     self.clock = clock
     self.alarms = alarms
+    self.attachments = attachments
 
     let fallback = TimerSettingsSnapshot.fallback
     idleSettings = fallback
@@ -431,6 +441,9 @@ final class TimerEngine {
     state.endsAt = startedAt.addingTimeInterval(TimeInterval(settings.minutes(for: newKind) * 60))
     state.completedInSprint = count
     state.sessionID = UUID()
+    // A pomodoro takes the plan's next item; a break takes nothing, because a
+    // break is not a pomodoro. Asked once, here, and frozen for the block.
+    state.attach(newKind == .work ? attachments?.takeNextAttachment() : nil)
     // A new block starts with nothing recorded against it. This is the only
     // place the running count is emptied for a block that is *starting*; the
     // idle paths empty it in `goIdle`. Note where it sits: after the new
@@ -567,7 +580,9 @@ final class TimerEngine {
     abandonReason: String? = nil) {
     let session = PomodoroSession(
       id: state.sessionID, kind: state.kind, startedAt: state.startedAt,
-      endedAt: endedAt, wasAbandoned: wasAbandoned, abandonReason: abandonReason)
+      endedAt: endedAt, wasAbandoned: wasAbandoned, abandonReason: abandonReason,
+      taskID: state.taskID, taskTitle: state.taskTitle,
+      projectID: state.projectID, projectTitle: state.projectTitle)
     context.insert(session)
   }
 

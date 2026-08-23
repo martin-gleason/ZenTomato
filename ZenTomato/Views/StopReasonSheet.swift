@@ -1,5 +1,14 @@
 import SwiftUI
 
+// swiftlint:disable file_length
+//
+// THE ONLY LINT RULE THIS FILE TURNS OFF, AND WHY.
+// `file_length` counts documentation and previews. This sheet carries two
+// requirement levels and now a third topic, and the reasoning that keeps them
+// apart is written where each is drawn; the previews below are one per state,
+// which is what makes a sheet with this many states reviewable at all. The same
+// exemption, for the same reason, is already taken by `TimerScreen.swift`.
+
 /// Asks why, before a block is allowed to stop — and, in the same sheet, offers
 /// a sentence for each distraction tapped during it.
 ///
@@ -85,11 +94,50 @@ struct StopReasonSheet: View {
   /// Called when they decided to keep going after all. The block is untouched.
   let onCancel: () -> Void
 
+  /// The Todoist task this block was attached to, or `nil` when there is
+  /// nothing here to tick off.
+  ///
+  /// **Why the Complete button appears on the stop sheet at all.** *"I finished
+  /// it early"* is one of the commonest honest reasons to stop a block.
+  /// Refusing to let somebody tick off the thing they just completed, on the one
+  /// sheet where they are explaining that they completed it, would be a gap with
+  /// no argument behind it.
+  ///
+  /// **And it does not become a reward for stopping**: it is never filled and it
+  /// never sits in the footer, so the one filled button on this sheet stays
+  /// "Keep going".
+  var completion: TaskCompletionSection.Subject?
+
+  /// Which of the four states that control is in. Owned by the screen
+  /// presenting this sheet, because the request outlives any redraw of it.
+  var completionControl: TaskCompletionSection.Control = .ready
+
+  /// What went wrong with the last attempt, if anything.
+  var completionFailure: String?
+
+  /// The Complete button was tapped. **It completes nothing else**: it does not
+  /// stop the block, does not close this sheet, and does not fill in the reason.
+  var onComplete: () -> Void = { }
+
   var body: some View {
     VStack(spacing: Spacing.lg) {
       ScrollView {
         VStack(alignment: .leading, spacing: Spacing.lg) {
           gate
+
+          // The gate stays this sheet's first content with no header of its
+          // own, because that is D13's structural statement of what the sheet
+          // is about. The Complete section sits directly under it, above the
+          // skippable sentences, in the same relative position it holds on the
+          // end-of-block sheet — so it is learned once.
+          if let completion {
+            sectionRule
+            TaskCompletionSection(
+              subject: completion,
+              control: completionControl,
+              failure: completionFailure,
+              onComplete: onComplete)
+          }
 
           // Omitted entirely when nothing was tapped — nothing empty is drawn
           // and nothing is collapsed to zero height. See the note at the top
@@ -323,16 +371,64 @@ struct StopReasonSheet: View {
     .dynamicTypeSize(.accessibility5)
 }
 
+/// "I finished it early" — a stop with a task attached and nothing tapped. The
+/// Complete section sits under the gate, outlined; the filled button is still
+/// "Keep going".
+#Preview("Zero taps, task attached") {
+  StopReasonSheetPreviewHost(reason: "", completion: .previewStopTask)
+    .preferredColorScheme(.light)
+}
+
+#Preview("Zero taps, task attached, dark") {
+  StopReasonSheetPreviewHost(reason: "", completion: .previewStopTask)
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Zero taps, completed") {
+  StopReasonSheetPreviewHost(
+    reason: "Finished it early.",
+    completion: .previewStopTask,
+    control: .completed(at: Date(timeIntervalSince1970: 1_787_412_000)))
+    .preferredColorScheme(.light)
+}
+
+#Preview("Zero taps, completion failed") {
+  StopReasonSheetPreviewHost(
+    reason: "",
+    completion: .previewStopTask,
+    failure: TaskCompletionSection.failureMessage(for: .offline))
+    .preferredColorScheme(.light)
+}
+
+/// The hard case: the longest plausible list, a task attached, and the largest
+/// text size. Both footer buttons must still be on screen without scrolling.
+#Preview("Six taps and a task attached, largest text") {
+  StopReasonSheetPreviewHost(reason: "", prompts: .previewSixTaps, completion: .previewStopTask)
+    .preferredColorScheme(.light)
+    .dynamicTypeSize(.accessibility5)
+}
+
 /// Gives the previews somewhere to hold the text, since the sheet binds to
 /// values its presenter owns.
 private struct StopReasonSheetPreviewHost: View {
-  init(reason: String, prompts: [DistractionPrompt] = []) {
+  init(
+    reason: String,
+    prompts: [DistractionPrompt] = [],
+    completion: TaskCompletionSection.Subject? = nil,
+    control: TaskCompletionSection.Control = .ready,
+    failure: String? = nil) {
     self.prompts = prompts
+    self.completion = completion
+    self.control = control
+    self.failure = failure
     _reason = State(initialValue: reason)
     _notes = State(initialValue: [:])
   }
 
   let prompts: [DistractionPrompt]
+  let completion: TaskCompletionSection.Subject?
+  let control: TaskCompletionSection.Control
+  let failure: String?
 
   var body: some View {
     StopReasonSheet(
@@ -340,11 +436,21 @@ private struct StopReasonSheetPreviewHost: View {
       prompts: prompts,
       notes: $notes,
       onConfirm: { },
-      onCancel: { })
+      onCancel: { },
+      completion: completion,
+      completionControl: control,
+      completionFailure: failure)
   }
 
   @State private var reason: String
   @State private var notes: [UUID: String]
+}
+
+/// The fixture task these previews attach to.
+private extension TaskCompletionSection.Subject {
+  static let previewStopTask = TaskCompletionSection.Subject(
+    taskID: "preview-task",
+    title: "Draft the Q3 summary")
 }
 
 /// Fixtures for this file's previews. Never part of what ships; private for the

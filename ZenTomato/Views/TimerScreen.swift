@@ -33,6 +33,10 @@ struct TimerScreen: View {
   var onStop: () -> Void = { }
   var onOpenSettings: () -> Void = { }
 
+  /// The attachment line was tapped. Only reachable while idle or on a break —
+  /// see `TimerScreenModel.Attachment`.
+  var onOpenPlan: () -> Void = { }
+
   /// A distraction from your own head was tapped. Called synchronously, and what
   /// is on the other end of it is synchronous all the way to the disk — see
   /// `DistractionButtons`.
@@ -153,6 +157,16 @@ struct TimerScreen: View {
     VStack(spacing: Spacing.none) {
       Spacer(minLength: Spacing.xl)
 
+      // OUTSIDE `focusBlock`, DELIBERATELY. That view collapses its children
+      // into one element for VoiceOver, which would swallow a control — and
+      // this line is a control in two of its states.
+      if let attachment = model.attachment {
+        attachmentLine(attachment)
+          .padding(.bottom, Spacing.sm)
+          // After the block name and the countdown, before the capture pair.
+          .accessibilitySortPriority(2.75)
+      }
+
       focusBlock
         .accessibilitySortPriority(3)
 
@@ -249,6 +263,63 @@ struct TimerScreen: View {
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
+  }
+
+  /// What this pomodoro is attached to, in one line.
+  ///
+  /// **`textMuted`, never `action`.** The one piece of colour on this screen is
+  /// the word above the number, and a green task title would be a second claim
+  /// on it. The gone state is not amber either: this screen's amber belongs to
+  /// the failure row, and amber marks exactly one thing per screen.
+  ///
+  /// **A chevron, but only on the states that are actually tappable.**
+  ///
+  /// This line carried no affordance at all, to protect the ratified rule that
+  /// the countdown moves exactly once in a whole cycle — an indicator appearing
+  /// at a block boundary would be that movement. The reasoning had a hole in it:
+  /// `isTappable` is only ever true while the timer is IDLE, so a chevron drawn
+  /// on tappable lines can never appear or disappear during a running block. The
+  /// rule was suppressing an affordance in states it did not govern.
+  ///
+  /// The cost of that was total. Every Todoist surface — the picker, the plan,
+  /// completing a task — is reached through this line and nothing else, and on a
+  /// real phone it read as a caption, so none of them were ever found.
+  ///
+  /// The chevron is `textMuted`, not `action`: the one piece of colour on this
+  /// screen is the word above the number, and a sage chevron would be a second
+  /// claim on it. A chevron reads as "there is more here" without needing colour.
+  ///
+  /// The whole line is the target, at the 44-point floor.
+  @ViewBuilder
+  private func attachmentLine(_ attachment: TimerScreenModel.Attachment) -> some View {
+    if attachment.isTappable {
+      Button { onOpenPlan() } label: {
+        HStack(spacing: Spacing.xs) {
+          attachmentText(attachment.line)
+          Image(systemName: "chevron.right")
+            .font(Typography.label)
+            .foregroundStyle(Color(.textMuted))
+            .accessibilityHidden(true)
+        }
+      }
+      .buttonStyle(.plain)
+      .accessibilityHint(Text("Opens your Todoist plan."))
+    } else {
+      attachmentText(attachment.line)
+    }
+  }
+
+  private func attachmentText(_ line: String) -> some View {
+    Text(line)
+      .font(Typography.label)
+      .foregroundStyle(Color(.textMuted))
+      .multilineTextAlignment(.center)
+      .lineLimit(2)
+      // WRAPS, NEVER SHRINKS. A truncated task title is a wrong record on
+      // screen, in the one dataset this app exists to produce.
+      .minimumScaleFactor(1.0)
+      .frame(maxWidth: .infinity, minHeight: Spacing.controlHeight)
+      .contentShape(Rectangle())
   }
 
   /// The word and the number, treated as one thing.
@@ -466,6 +537,41 @@ struct TimerScreen: View {
     .dynamicTypeSize(.accessibility5)
 }
 
+/// A task attached, and the line above the block name saying so. Compare with
+/// "Focus running": the countdown must be in the same place in both, because the
+/// line is present in every signed-in state.
+#Preview("Focus running, task attached") {
+  TimerScreen(model: .previewWithTask)
+    .preferredColorScheme(.light)
+}
+
+/// On a break, with the next item up. The line is a control here and inert
+/// during a focus block.
+#Preview("Break, next item") {
+  TimerScreen(model: .previewBreakWithNextItem)
+    .preferredColorScheme(.light)
+}
+
+/// Connected, with nothing planned. The line stays, so the numeral does not
+/// move as a plan empties.
+#Preview("Idle, nothing planned") {
+  TimerScreen(model: .previewNothingAttached)
+    .preferredColorScheme(.light)
+}
+
+/// The task left Todoist while the block was running. Not amber: the world
+/// moving on is not an error.
+#Preview("Attached task is gone") {
+  TimerScreen(model: .previewAttachedTaskGone)
+    .preferredColorScheme(.light)
+}
+
+#Preview("Focus running, task attached, largest text") {
+  TimerScreen(model: .previewWithTask)
+    .preferredColorScheme(.light)
+    .dynamicTypeSize(.accessibility5)
+}
+
 /// Preview fixtures, never part of what ships.
 private extension TimerScreenModel {
   /// First launch, and after Stop.
@@ -544,4 +650,79 @@ private extension TimerScreenModel {
     progress: Progress(completed: 11, total: 12),
     capture: Capture(internalCount: 3, externalCount: 2),
     controls: .running)
+
+  /// A focus block with a task attached.
+  static let previewWithTask = TimerScreenModel(
+    blockName: "Focus block",
+    kicker: "Focus",
+    numeral: "18:04",
+    spokenNumeral: "18 minutes remaining",
+    progress: Progress(completed: 2, total: 4),
+    capture: Capture(internalCount: 0, externalCount: 0),
+    attachment: Attachment.forTimer(
+      hasToken: true,
+      isFocusRunning: true,
+      runningBlock: .previewDraft,
+      nextItem: .previewReplyItem),
+    controls: .running)
+
+  static let previewBreakWithNextItem = TimerScreenModel(
+    blockName: "Short break",
+    kicker: "Short break",
+    numeral: "04:31",
+    spokenNumeral: "4 minutes remaining",
+    progress: Progress(completed: 3, total: 4),
+    attachment: Attachment.forTimer(
+      hasToken: true,
+      isFocusRunning: false,
+      runningBlock: nil,
+      nextItem: .previewReplyItem),
+    controls: .running)
+
+  static let previewNothingAttached = TimerScreenModel(
+    blockName: "Focus block",
+    kicker: "Focus",
+    numeral: "25:00",
+    spokenNumeral: "25 minutes",
+    progress: Progress(completed: 0, total: 4),
+    attachment: Attachment.forTimer(
+      hasToken: true,
+      isFocusRunning: false,
+      runningBlock: nil,
+      nextItem: nil),
+    controls: .start(isEnabled: true, spokenLabel: "Start focus block, 25 minutes"))
+
+  static let previewAttachedTaskGone = TimerScreenModel(
+    blockName: "Focus block",
+    kicker: "Focus",
+    numeral: "18:04",
+    spokenNumeral: "18 minutes remaining",
+    progress: Progress(completed: 2, total: 4),
+    capture: Capture(internalCount: 0, externalCount: 0),
+    attachment: Attachment.forTimer(
+      hasToken: true,
+      isFocusRunning: true,
+      runningBlock: .previewReply,
+      runningBlockIsGone: true,
+      nextItem: nil),
+    controls: .running)
+}
+
+/// Fixtures for this file's previews. Never part of what ships.
+private extension SessionPlanStore.Item {
+  static let previewReplyItem = SessionPlanStore.Item(
+    todoistID: "preview-reply",
+    titleSnapshot: "Reply to Anna",
+    kind: .task,
+    position: 1)
+}
+
+private extension SessionAttachment {
+  static let previewDraft = SessionAttachment(
+    taskID: "preview-draft",
+    taskTitle: "Draft the Q3 summary")
+
+  static let previewReply = SessionAttachment(
+    taskID: "preview-reply",
+    taskTitle: "Reply to Anna")
 }

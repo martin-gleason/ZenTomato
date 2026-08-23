@@ -82,6 +82,90 @@ struct TimerScreenModel {
     }
   }
 
+  /// The line above the block name saying what this pomodoro is attached to.
+  ///
+  /// **`nil` is a state of its own and it means "there is no Todoist here".**
+  /// With no token stored the line is absent entirely — nothing nags, and the
+  /// timer is exactly the screen F2 shipped. It is present in both signed-in
+  /// states, with a plan and without one, so the countdown does not move as a
+  /// plan empties.
+  struct Attachment: Equatable {
+    /// The whole line, already assembled. **One `Text`, never two elements side
+    /// by side** — a two-element layout has to be re-solved at every text size
+    /// and eventually truncates, and a truncated task title is a wrong record
+    /// on screen. The middle dot is the app's existing idiom.
+    let line: String
+
+    /// Whether the line is a control.
+    ///
+    /// **Tappable when idle or on a break; inert text during a focus block.**
+    /// The attachment was frozen at Start, and any distraction already written
+    /// to this block names the task it started with — so letting it change
+    /// mid-block would put two different task names on one block's records.
+    let isTappable: Bool
+
+    /// What the line says, given where the timer is and what the plan holds.
+    ///
+    /// A pure function of five finished facts, which is what lets every state
+    /// of it be tested with no database, no timer and no screen.
+    ///
+    /// - Parameters:
+    ///   - hasToken: whether Todoist is connected at all.
+    ///   - isFocusRunning: whether a focus block is counting right now.
+    ///   - runningBlock: what the timer recorded this block as attached to.
+    ///     **Read from what the timer wrote, never guessed from the plan's
+    ///     cursor** — the cursor cannot tell the last item having been handed
+    ///     out from the plan having run out.
+    ///   - runningBlockIsGone: whether that task has left Todoist. `false` when
+    ///     it is there, and also when the mirror has never been filled — absent
+    ///     from an empty mirror is not evidence.
+    ///   - nextItem: the item at the front of the queue, for the break and the
+    ///     idle screen.
+    static func forTimer(
+      hasToken: Bool,
+      isFocusRunning: Bool,
+      runningBlock: SessionAttachment?,
+      runningBlockIsGone: Bool = false,
+      nextItem: SessionPlanStore.Item?) -> Attachment? {
+      guard hasToken else { return nil }
+
+      guard isFocusRunning else {
+        guard let nextItem else { return Attachment(line: nothingAttached, isTappable: true) }
+        return Attachment(line: "Next · \(nextItem.titleSnapshot)", isTappable: true)
+      }
+
+      if let taskTitle = runningBlock?.taskTitle {
+        let line = runningBlockIsGone
+          ? "\(taskTitle) · not in Todoist any more"
+          : taskTitle
+        return Attachment(line: line, isTappable: false)
+      }
+
+      if let projectTitle = runningBlock?.projectTitle {
+        return Attachment(line: "Project · \(projectTitle)", isTappable: false)
+      }
+
+      return Attachment(line: nothingWasAttached, isTappable: false)
+    }
+
+    /// Connected, and this block has nothing of its own. A pomodoro with
+    /// nothing attached is a normal pomodoro — the timer shipped and is in use
+    /// without Todoist at all.
+    /// What the line says when Todoist is connected and nothing is planned yet.
+    ///
+    /// **It is an invitation, not a status.** It used to read "No task attached",
+    /// which is a perfectly accurate description of the situation and completely
+    /// useless: it tells you where you are and not that you can leave. On a real
+    /// phone it meant the entire Todoist feature was unreachable — the picker,
+    /// the plan and completing a task all sit behind this one line, and nobody
+    /// taps a caption.
+    private static let nothingAttached = "Choose what to work on"
+
+    /// The same idea for a block that ran with nothing attached. Past tense and
+    /// inert, because that block is over and there is nothing to choose.
+    private static let nothingWasAttached = "No task attached"
+  }
+
   // MARK: Stored properties
 
   /// What VoiceOver calls the block: "Focus block", "Short break", "Long break".
@@ -119,6 +203,9 @@ struct TimerScreenModel {
   /// The capture buttons, or `nil` when there must not be any. See `Capture`.
   let capture: Capture?
 
+  /// What this pomodoro is attached to, or `nil` when there is no Todoist.
+  let attachment: Attachment?
+
   let controls: Controls
 
   /// Whether a block is counting right now.
@@ -146,6 +233,7 @@ struct TimerScreenModel {
     completionNote: String? = nil,
     failureNote: String? = nil,
     capture: Capture? = nil,
+    attachment: Attachment? = nil,
     controls: Controls
   ) {
     self.blockName = blockName
@@ -157,6 +245,7 @@ struct TimerScreenModel {
     self.completionNote = completionNote
     self.failureNote = failureNote
     self.capture = capture
+    self.attachment = attachment
     self.controls = controls
   }
 

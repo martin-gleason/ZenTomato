@@ -57,10 +57,11 @@ enum AppModelContainer {
   /// database.
   ///
   /// The schema is built here, freshly, on every call. It lists every kind of
-  /// object the app saves — the settings row, the one row describing the
-  /// running timer, one row per finished block, and one row per recorded
-  /// distraction. When a future feature adds a saved type, it is added to this
-  /// array and nowhere else.
+  /// object the app saves: the settings row, the one row describing the running
+  /// timer, one row per finished block, one row per recorded distraction, the
+  /// mirrored copy of Todoist's projects, sections and tasks, one row per task
+  /// this app ticked off, and the session plan with its items. When a future
+  /// feature adds a saved type, it is added to this array and nowhere else.
   ///
   /// A saved type left out of that array is not a compile error: it is a crash
   /// the first time a row of it is created, in the app and in every test, with
@@ -74,7 +75,18 @@ enum AppModelContainer {
   ///   file, a full disk, a path that cannot be written. The caller is
   ///   expected to show that to the user rather than crash; see `bootstrap()`.
   nonisolated static func make(_ location: StoreLocation = .appDefault) throws -> ModelContainer {
-    let schema = Schema([AppSettings.self, TimerState.self, PomodoroSession.self, Distraction.self])
+    let schema = Schema([
+      AppSettings.self,
+      TimerState.self,
+      PomodoroSession.self,
+      Distraction.self,
+      CachedProject.self,
+      CachedSection.self,
+      CachedTask.self,
+      CompletedTaskRecord.self,
+      SessionPlan.self,
+      SessionPlanItem.self
+    ])
 
     let configuration: ModelConfiguration
     switch location {

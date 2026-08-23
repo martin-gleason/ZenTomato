@@ -276,7 +276,7 @@ reads a credential yet, and a skeleton that refuses to compile without one is a 
 
 ---
 
-## D9 — Shipping invalidates the F3 authentication decision
+## D9 — ~~Shipping invalidates the F3 authentication decision~~ **RESOLVED by D18, 2026-08-23**
 
 **Raised 2026-08-22. Needs a decision before F3. Not urgent today; blocking then.**
 
@@ -458,6 +458,28 @@ Raised during the F2 device review and parked deliberately, so they are neither 
   settings field before that delta exists.**
 - **~~Dynamic Island presentation.~~ Verified working on device 2026-08-23.** Not a v1.1 item after
   all — it shipped in F2 and it works.
+- **Calendar time-blocking, in v1.5 — and it is EventKit, not Fantastical.** The owner's shape:
+  *"time blocks in Fantastical, projects and to-dos in Todoist, and use pomodoro to work."*
+
+  The thing worth knowing before anyone starts: **Fantastical has no integration surface.** It is a
+  client, not a service — it reads and writes the system calendar, the same one Apple's Calendar app
+  uses. So "connect to Fantastical" is really **EventKit**, and the integration is with the calendar
+  store both apps share. That is good news: it works whatever calendar app is in front of it, it needs
+  no account, no API key and no network, and a block ZenTomato reads was authored in Fantastical
+  without either app knowing about the other.
+
+  Consequences to weigh at that gate: EventKit is a new permission prompt and a new privacy string; it
+  does NOT breach *"Local only… no network calls except Todoist and MusicKit"*, since EventKit is
+  entirely on-device; and the natural first version is **read-only** — see today's blocks, start a
+  pomodoro against one — which needs no write access at all and is a much smaller ask of the user than
+  full calendar access.
+
+- **Gamification, in v1.5.** `SPEC.md`'s out-of-scope list ends with *"streaks, badges, or any
+  gamification layered on top of Todoist's own"*, and the owner has placed that at v1.5 rather than
+  never. Nothing changes for v0.1 — the exclusion stands and F6's review is still pointed at it,
+  because a stats screen is exactly where that pressure appears first. Noted so the eventual delta is
+  a decision rather than a drift.
+
 - **A tomato that builds itself as the block runs (v1.1).** The owner's idea, and a good one: instead
   of a countdown readout, the Live Activity draws a tomato that assembles as the minutes pass, so the
   Lock Screen shows progress as a *picture* rather than a number.
@@ -473,3 +495,209 @@ Raised during the F2 device review and parked deliberately, so they are neither 
 
   It also needs the icon's vector artwork factored out of `Design/icon/make-icon.sh` and into
   something the widget can draw. **Do not start any of this before a ratified delta.**
+
+---
+
+## D16 — Designed so bi-directional sync is *possible* later, without preparing for it now
+
+**Ratified 2026-08-23.** The owner: *"I want, eventually, actions from ZenTomato to write to Todoist
+as well as be updated from Todoist. It should be bi-directional. Stick to the 1.0 spec on this, but
+build the functions in such a way to allow for this to be updated in v1.1 or v1.5."*
+
+This sits directly on a non-negotiable — *"Do not build it, stub it, or 'prepare for it.'"* — so the
+line has to be exact, because both halves are right.
+
+### The distinction
+
+**Good design that happens to be extensible is not preparation.** Preparation is code that exists
+only to serve a feature that does not. The test is simple: *would I write this the same way if
+bi-directional sync were never coming?* If yes, it is design. If no, it is preparation.
+
+### What v0.1 does, all of which passes that test
+
+| | Why it is design, not preparation |
+|---|---|
+| **Every Todoist request in one type.** `TodoistAPI.swift` holds the base URL, the version and every endpoint constant. | Already in F3's plan, written before this delta existed. Scattering HTTP through views is bad regardless. |
+| **The endpoint allowlist stays.** `scripts/todoist-allowed-endpoints.txt`, enforced pre-commit and in CI. | This is the *mechanism* by which a future write is added: a visible, committed, reviewable diff. It does not need loosening later; it needs to keep working. |
+| **The cache is a genuine mirror.** No invented fields, no local ordering, no local hierarchy. | The rule already. It also happens to mean there is no divergent local state to reconcile when sync arrives. |
+| **Title snapshots on records.** | Already required so a two-week-old review reads truthfully. Independently, it means history is not rewritten when Todoist changes. |
+| **Reads and the single write are separate paths.** | Ordinary separation of concerns. |
+
+### What v0.1 must NOT contain
+
+Every one of these fails the test — it would only exist for a feature that does not:
+
+- A `TodoistWriting` protocol, or any method named `create`, `update`, `move` or `comment`, however
+  it is stubbed or documented.
+- A pending-changes queue, an outbox, a dirty flag, a `syncedAt` used for anything but cache freshness.
+- Conflict-resolution machinery, merge policy, or last-writer-wins bookkeeping.
+- Any locally mutable task field. The cache is read-only to the app.
+- Weakening or removing the no-writes hook "so it is easier later".
+
+### The honest part
+
+**Nothing done now makes bi-directional sync easy later.** It is a hard problem in its own right —
+conflict resolution, offline queues, deletion semantics, idempotent retries, and deciding what wins
+when the same task changed in both places. No amount of foresight in v0.1 removes that work.
+
+What v0.1 *can* do is avoid making it **harder**, and the way it does that is by accumulating no local
+state that would later have to be reconciled. A v0.1 that invented its own task ordering, or let you
+rename a cached task, would leave a v1.1 sync facing a divergence it did not create. This one will not.
+
+### A local task model is not forbidden forever — it is forbidden *now*
+
+Clarified by the owner on 2026-08-23: *"local task model will happen eventually as a bidirectional
+work; however, that will happen when we can work on v1.5."*
+
+This is worth stating because it changes what the v0.1 fence *means*. It is not a claim that a local
+model is a bad idea — bi-directional sync will very likely need one, since reconciling two systems
+requires somewhere to hold "what we think Todoist looks like" and "what we have changed since". That
+is a real design and it belongs in v1.5, designed on purpose, with conflict rules written down.
+
+What the fence prevents is a local model arriving **by accident, one reasonable field at a time**,
+before anyone has decided what it is for. A due date added so the plan can sort by urgency. A priority
+after it. A completion flag so finished items grey out. Each defensible; the destination is a second
+task model nobody designed, with no conflict rules, that a v1.5 sync would have to reconcile against
+Todoist without ever having agreed what wins.
+
+So the rule for v0.1 is unchanged and the reasoning is now sharper: **the cache mirrors, the plan
+references, and neither invents.** When v1.5 builds a real local model it starts from a clean
+divergence-free base and gets to choose its own shape — rather than inheriting one that accumulated
+while nobody was looking.
+
+### The no-capture rule is what v1.5 is really deciding
+
+This has now come up three times in different clothes: *"plan my pomodoros with Todoist or the
+ZenTomato"*, *"a local task model will happen eventually"*, and *"put what's needed or unfinished in
+Todoist — or, if the moment is right, ZenTomato."*
+
+It is worth naming that these are all **one decision**, because they will otherwise be re-litigated
+one at a time. Writing a task to Todoist from ZenTomato *is* capture. The no-capture rule and the
+bi-directional sync plan are the same question seen from two sides, and v1.5 is where both are
+answered together or neither is.
+
+**Nothing changes for v0.1.** `CLAUDE.md` calls no-capture *"a standing rule from the owner's
+productivity system, not a feature gap"*, and it is enforced by a hook. That holds until it is
+deliberately replaced — not eroded by a search box that offers to create what you typed, or a plan
+item that quietly grows a title you can edit.
+
+What v1.5 inherits from holding the line now is a clean starting point: an app that has never invented
+a task, so the first one it ever writes is one somebody designed on purpose.
+
+### One consequence to flag now
+
+Expanding writes makes **D9** sharper, not softer. The Todoist client secret is embedded in the app;
+today it can only ever complete a task. A build that can create, edit and delete on the user's behalf
+with a published secret is a materially different risk. **D9 should be decided before write scope
+grows, not after.**
+
+---
+
+## D17 — A session plan: several Todoist items, in the order you will work them
+
+**Ratified 2026-08-23**, from the owner's use case: *"I want to select a project AND some
+non-in-project tasks and break them down."*
+
+**Currently:** `SPEC.md` line 16 — *"A pomodoro is attached to exactly one Todoist task (or, if no
+task is chosen, to a project)."*
+**Proposed:** keep that sentence — it stays true of every individual pomodoro — and add:
+
+> Before a sprint, the user may build a **session plan**: an ordered list of Todoist tasks and
+> projects, drawn from the cache, which the timer works through. Each pomodoro attaches to the plan's
+> current item, so the one-task-per-pomodoro rule is unchanged. A plan creates nothing and writes
+> nothing.
+
+**Why it belongs in v0.1.** Choosing what to work on is a planning act, and doing it eight times an
+afternoon at the start of each block is the wrong moment for it — you are trying to begin, not decide.
+Deciding once, up front, is what makes the timer something you run rather than something you operate.
+"Breaking them down" happens in Todoist, which is where task-shaping belongs.
+
+### The fence, which matters more than the feature
+
+An ordered list of tasks is one bad decision away from being exactly the local task model D16 and
+`CLAUDE.md` forbid. So, precisely:
+
+**A plan item stores two things: a Todoist id, and a title snapshot for display.** Nothing else.
+
+It does **not** store, and must never gain: task content, notes, due dates, priority, labels, parent
+or child links, completion state, or any editable field. It defines no hierarchy — a plan is flat,
+even when it contains a project and tasks from inside it. It is a **queue of references**, in the
+sense a playlist is a queue of references and not a music library.
+
+The plan is replaced when a new one is made. It is not history: what actually happened is already
+recorded on `PomodoroSession`, and a plan that outlived its session would be a second, competing
+account of the day.
+
+**The test from D16 applies here too.** A plan item with a field that is nil today and meaningful
+after sync lands is preparation, and fails.
+
+### Ordering, and what happens when reality diverges
+
+The order is the user's, set when the plan is built. The timer takes the next item at each block.
+
+A planned task may be completed in Todoist, renamed, or deleted between planning and working it. The
+plan does not chase those changes: the id stops resolving, the item shows its snapshot title with a
+note that it is gone, and it can be skipped over. **The plan is a record of intent, and intent is not
+invalidated by the world moving.** This is also why the snapshot exists rather than a live lookup.
+
+### Where it lands
+
+**F3**, which already builds the picker and the cache. The picker gains multi-select and an ordered
+list; the attach step takes the plan's current item instead of a single chosen task. No new feature
+gate — but F3's own gate does not pass until this fence is demonstrably held.
+
+---
+
+## D18 — Todoist authenticates with a personal API token. D9 is resolved.
+
+**Ratified 2026-08-23, at the F3 gate.**
+
+**Currently:** `SPEC.md` F3 — *"OAuth sign-in."*
+**Proposed:** *"Sign in with a Todoist personal API token, entered once and stored in Keychain."*
+
+This settles **D9**. Todoist's OAuth has no PKCE, so the code-for-token exchange requires the client
+secret; a public client has nowhere safe to keep it, and neither `.env` nor `.xcconfig` changed that —
+both keep it out of git, neither keeps it out of the `.app` bundle where `Info.plist` is plain text.
+
+Two things said since D9 was raised made the answer forced rather than balanced. The app **will ship**,
+and it will eventually **write** to Todoist (D16). A published secret that can only complete a task is
+one risk; a published secret on a build that can create, edit and delete on the user's behalf is a
+materially different one, and it would have arrived quietly along with the write scope.
+
+**A personal token has no client secret at all.** There is nothing in the binary to extract, because
+the credential is the user's own and never leaves their Keychain.
+
+### What this deletes
+
+| | |
+|---|---|
+| `TODOIST_CLIENT_ID`, `TODOIST_CLIENT_SECRET` | No longer needed. Removed from `Config/Secrets.example.xcconfig`. |
+| The OAuth callback URL scheme | No `CFBundleURLTypes`, no custom scheme to register. |
+| `ASWebAuthenticationSession`, the `state` CSRF guard, the token-exchange request | None of it exists. |
+| **C3** — register an OAuth app in the Todoist developer console | **No longer required.** |
+| The "acceptable only because never distributed" caveat throughout the docs | Gone. The build is shippable as it stands. |
+
+Less code, fewer failure modes, one less credential in the world, and a chore removed.
+
+### The cost, stated honestly
+
+**First run is worse.** Instead of tapping *Sign in with Todoist*, the user opens Todoist's settings,
+finds Integrations, copies a long string, and pastes it in. That is a real regression in polish and it
+lands on the very first screen anybody sees.
+
+Two mitigations, and no pretending it is solved: the screen gives the exact path in Todoist rather than
+saying "get a token", and it is a **once ever** action, not once per launch.
+
+### The one thing to be careful about
+
+The token field is a **text field on the first screen of an app with a standing no-capture rule**. It
+accepts a credential, not a task; it creates nothing and reaches nothing but Keychain. But it is
+exactly the shape the rule forbids, so it must be unmistakably a credential field — its label, its
+placeholder, its keyboard, and its neighbours all saying so. A reviewer should never have to think
+about whether it is a way to enter a task.
+
+### Consequence for the future
+
+This is also the shape bi-directional sync wants. Each user's token is their own, scoped to their own
+account, revocable by them from Todoist's settings without touching the app. There is no shared
+credential to rotate, and no single secret whose exposure affects every install.
