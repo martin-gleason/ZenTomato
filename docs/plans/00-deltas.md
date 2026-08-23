@@ -528,6 +528,27 @@ What v0.1 *can* do is avoid making it **harder**, and the way it does that is by
 state that would later have to be reconciled. A v0.1 that invented its own task ordering, or let you
 rename a cached task, would leave a v1.1 sync facing a divergence it did not create. This one will not.
 
+### A local task model is not forbidden forever — it is forbidden *now*
+
+Clarified by the owner on 2026-08-23: *"local task model will happen eventually as a bidirectional
+work; however, that will happen when we can work on v1.5."*
+
+This is worth stating because it changes what the v0.1 fence *means*. It is not a claim that a local
+model is a bad idea — bi-directional sync will very likely need one, since reconciling two systems
+requires somewhere to hold "what we think Todoist looks like" and "what we have changed since". That
+is a real design and it belongs in v1.5, designed on purpose, with conflict rules written down.
+
+What the fence prevents is a local model arriving **by accident, one reasonable field at a time**,
+before anyone has decided what it is for. A due date added so the plan can sort by urgency. A priority
+after it. A completion flag so finished items grey out. Each defensible; the destination is a second
+task model nobody designed, with no conflict rules, that a v1.5 sync would have to reconcile against
+Todoist without ever having agreed what wins.
+
+So the rule for v0.1 is unchanged and the reasoning is now sharper: **the cache mirrors, the plan
+references, and neither invents.** When v1.5 builds a real local model it starts from a clean
+divergence-free base and gets to choose its own shape — rather than inheriting one that accumulated
+while nobody was looking.
+
 ### One consequence to flag now
 
 Expanding writes makes **D9** sharper, not softer. The Todoist client secret is embedded in the app;
