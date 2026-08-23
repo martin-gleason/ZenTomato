@@ -314,3 +314,55 @@ understanding that the app was personal.
 **No action needed now.** F1 ships no Todoist code, and F3 is two gates away. This is recorded so the
 decision is made deliberately at that gate rather than discovered during a release. If the answer is
 "personal token", F3's plan gets simpler, not harder.
+
+---
+
+## D10 — F2 gains the settings screen
+
+**Raised and ratified 2026-08-22, during the F2 gate.**
+
+**This is a spec defect, not a scope request.** `SPEC.md` line 30 locks *Timer customization — work
+length, short break, long break, pomodoros-per-sprint, sound on/off, auto-start next block on/off*.
+But F1 builds only the settings *model*, F2 only *reads* it, and no feature in F1–F6 ever builds a
+screen that writes one. As the feature list stands, v0.1 ships permanently locked at 25/5/15/4 and the
+locked decision on line 30 is unreachable.
+
+**Proposed:** amend F2 to read:
+
+> **F2 — Timer engine.** Pomodoro / short / long break cycle per settings, and the screen that sets
+> them — the six values in *Timer customization* and nothing else. Survives backgrounding…
+
+**Why F2 rather than a feature of its own.** F2 already reads all six values, so putting the writer
+beside the reader keeps one feature owning the whole of "the timer behaves the way you configured it".
+
+There is also a practical reason that matters more than the tidiness one: **F2's device check is
+otherwise 25 minutes of waiting.** With the screen in the same feature, the cycle can be exercised at
+one minute per block — so the whole work/short/work/short/work/short/work/long sequence takes eight
+minutes instead of two hours, and the full-length run becomes a final confirmation rather than the only
+way to see the engine work at all.
+
+**Scope fence, unchanged.** Six fields. No seventh. No theme control, no appearance setting, no music
+toggle — the music on/off is session state owned by F4, and `SPEC.md` says "Nothing else."
+
+---
+
+## D11 — Completed tasks are recorded and exported
+
+**Raised and ratified 2026-08-22.**
+
+F3 completes a task in Todoist, and F6 counts *pomodoros* per task, project and day. Neither records
+**which tasks were finished**, so the Rhodia review can say how much time went where but not what came
+out of it.
+
+**Proposed:** add to F3, "…and the completion is recorded locally with its timestamp"; and to F6's
+list, "…plus the tasks completed in the period."
+
+**Why record it rather than read Todoist.** Todoist knows what you completed and is the only place
+tasks live — that rule is not in question. But the export is a document assembled offline for a paper
+review, and reaching across the network to build it would make a two-week retrospective depend on being
+signed in and online. The local row is a *record of something this app did*, which is a different thing
+from a task model: it stores the task's id and a snapshot of its title, exactly as the pomodoro rows
+already do, and it is append-only. It creates no hierarchy, no local task list, and nothing that could
+grow into one.
+
+**Cost:** one small model and one export section. The recording lands in F3, the export in F6.
