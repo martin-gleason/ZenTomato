@@ -273,4 +273,33 @@ struct DeltaIntegrityTests {
     let section = rest.range(of: "\n## ").map { String(rest[..<$0.lowerBound]) } ?? String(rest)
     return deltaIDs(in: section)
   }
+
+  /// `theIndexListsEveryDelta` — the table at the top of the file cannot rot.
+  ///
+  /// The index exists because the file is in the order decisions were *taken*, not in numeric order,
+  /// and renumbering is impossible: these ids are cited by name across production code. An index that
+  /// silently falls behind the file is worse than none, because it is the thing people trust to
+  /// answer "what is the next free number" — and a wrong answer there is how D14's hole opened.
+  @Test("theIndexListsEveryDelta")
+  func theIndexListsEveryDelta() throws {
+    let lines = try Self.deltaFileLines()
+    let defined = try Self.definedDeltas()
+
+    guard let start = lines.firstIndex(where: { $0.hasPrefix("## Index") }) else {
+      Issue.record("00-deltas.md has no '## Index' section.")
+      return
+    }
+    let end = lines[(start + 1)...].firstIndex { $0.hasPrefix("## D") } ?? lines.count
+    let indexed = Self.deltaIDs(in: lines[start..<end].joined(separator: "\n"))
+
+    let missing = defined.subtracting(indexed).sorted()
+    #expect(
+      missing.isEmpty,
+      Comment(rawValue: "Deltas missing from the index: \(missing.joined(separator: ", "))"))
+
+    let phantom = indexed.subtracting(defined).sorted()
+    #expect(
+      phantom.isEmpty,
+      Comment(rawValue: "The index lists deltas that do not exist: \(phantom.joined(separator: ", "))"))
+  }
 }

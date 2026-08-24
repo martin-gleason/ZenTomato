@@ -7,6 +7,48 @@ Each delta states the current spec text, the proposed text, and why.
 
 ---
 
+## Index
+
+Every delta in numeric order, because the file below is in the order decisions were *taken* —
+`D6b` sits after `D8`, `D15` after `D20` — and renumbering is not an option: these ids are cited
+by name across production code. Read the file in any order; find things here.
+
+**Spec text?** `yes` means the delta proposes replacement wording for `SPEC.md` and therefore owes
+an amendment. `docs/specs/AMENDMENT-BASELINE.txt` counts how many of those are still outstanding,
+and `DeltaIntegrityTests` fails if that number grows.
+
+| Delta | Status | Spec text? | Line | |
+|---|---|---|---|---|
+| **D1** | ratified | yes | 52 | Minimum iOS 18.0 → 26.0 |
+| **D2** | ratified | yes | 65 | watchOS companion moves from Phase 2 into v0.1 as F7 |
+| **D3** | ratified | yes | 90 | F2 alerting: AlarmKit primary, Live Activity promoted to requ… |
+| **D4** | ratified | yes | 115 | End-of-pomodoro sequence made explicit |
+| **D5** | ratified | — | 136 | Todoist API version (verification result, recorded for the file) |
+| **D6** | REJECTED | yes | 161 | ~~Secrets live in `.env`~~ **REJECTED 2026-08-22. Superseded … |
+| **D6b** | ratified | — | 299 | Build settings use Xcode's own `.xcconfig` mechanism |
+| **D7** | ratified | — | 247 | Fence exception: the countdown numeral may state a raw point … |
+| **D8** | ratified | — | 276 | A launch-screen colour set is added to the asset catalog |
+| **D9** | RESOLVED | — | 331 | ~~Shipping invalidates the F3 authentication decision~~ **RES… |
+| **D10** | ratified | — | 372 | F2 gains the settings screen |
+| **D11** | ratified | — | 403 | Completed tasks are recorded and exported |
+| **D12** | ratified | — | 429 | The Live Activity has no controls |
+| **D13** | ratified | — | 462 | One exit, and it costs a sentence |
+| **D14** | ratified | yes | 868 | Stopping mid-block shows one sheet, not two |
+| **D15** | ratified | — | 915 | What the Rhodia export contains, and what stays out of the co… |
+| **D16** | ratified | — | 571 | Designed so bi-directional sync is *possible* later, without … |
+| **D17** | ratified | yes | 666 | A session plan: several Todoist items, in the order you will … |
+| **D18** | ratified | yes | 721 | Todoist authenticates with a personal API token. D9 is resolved. |
+| **D19** | ratified | — | 777 | Three decisions taken at the F4 gate |
+| **D20** | ratified | yes | 821 | A Stop control for music, beside skip |
+| **D21** | ratified | yes | 956 | A completion records whether the task was recurring |
+| **D21b** | ratified | — | 992 | A task completed during a sprint does not come back into it |
+| **D22** | ratified | — | 1049 | A block records which project it was for, and the export labe… |
+
+*24 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+asserts every delta appears here.*
+
+---
+
 ## D1 — Minimum iOS 18.0 → 26.0
 
 **Ratified 2026-08-21**, under *Ratified 2026-08-21 — D1–D6 accepted; build authorised starting at F1* below.
