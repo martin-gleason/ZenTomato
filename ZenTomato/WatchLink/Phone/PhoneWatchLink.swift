@@ -44,10 +44,22 @@ final class PhoneWatchLink: NSObject {
     guard WCSession.isSupported() else { return }
     let session = WCSession.default
     guard session.activationState == .activated else { return }
+
+    // ASK BEFORE SPEAKING. Without these two the phone calls
+    // `updateApplicationContext` on every block boundary whether or not there is
+    // anything listening, and each call fails with
+    // `WCErrorCodeWatchAppNotInstalled` — a line in the log for every transition,
+    // on every phone that has no watch.
+    //
+    // That is not merely untidy. This app's device checks are read off the
+    // console, and a recurring error that is expected teaches whoever is reading
+    // to skim past errors. The one that matters then goes past with the rest.
+    guard session.isPaired, session.isWatchAppInstalled else { return }
+
     guard let payload = try? JSONEncoder().encode(state) else { return }
-    // `try?` and not a thrown error: the only documented failures are "not
-    // paired" and "not installed", and neither is a fault in this app. A phone
-    // with no watch is the normal case.
+    // `try?` and not a thrown error even so: the pair can be unpaired between the
+    // check above and this line, and a phone with no watch is the normal case
+    // rather than a fault in this app.
     try? session.updateApplicationContext([WatchLinkKeys.state: payload])
   }
 
