@@ -60,8 +60,10 @@ enum AppModelContainer {
   /// object the app saves: the settings row, the one row describing the running
   /// timer, one row per finished block, one row per recorded distraction, the
   /// mirrored copy of Todoist's projects, sections and tasks, one row per task
-  /// this app ticked off, and the session plan with its items. When a future
-  /// feature adds a saved type, it is added to this array and nowhere else.
+  /// this app ticked off, the session plan with its items, and the one row
+  /// remembering whether music is switched on and what is chosen to play. When a
+  /// future feature adds a saved type, it is added to this array and nowhere
+  /// else.
   ///
   /// A saved type left out of that array is not a compile error: it is a crash
   /// the first time a row of it is created, in the app and in every test, with
@@ -85,7 +87,15 @@ enum AppModelContainer {
       CachedTask.self,
       CompletedTaskRecord.self,
       SessionPlan.self,
-      SessionPlanItem.self
+      SessionPlanItem.self,
+      // The library mirror, so the picker opens at once rather than re-reading
+      // MusicKit every time the sheet appears. A mirror in exactly the sense the
+      // Todoist caches above are mirrors: it invents nothing and is replaced
+      // wholesale on refresh.
+      CachedMusicItem.self,
+      // F4's own row. It is **not** part of `AppSettings`, whose six columns are
+      // closed by the spec's "Nothing else" — see `MusicPreference`.
+      MusicPreference.self
     ])
 
     let configuration: ModelConfiguration

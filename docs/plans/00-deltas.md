@@ -480,6 +480,20 @@ Raised during the F2 device review and parked deliberately, so they are neither 
   because a stats screen is exactly where that pressure appears first. Noted so the eventual delta is
   a decision rather than a drift.
 
+- **A tomato that fills as the block runs — on the TIMER SCREEN as well (v1.1).** The owner extended
+  the Live Activity idea below to the app's own countdown: an outline of a tomato that fills over the
+  focus block, rather than only a number.
+
+  On the timer screen this is much cheaper than in the Live Activity, because the app is in front of
+  you and redrawing is free — no update budget, no battery cost. The artwork already exists as vector
+  paths in `Design/icon/make-icon.sh`; the work is factoring them out of that script into something a
+  view can draw and stroke progressively.
+
+  The one design question to settle at that gate: the ratified rule is that the numeral is the loudest
+  thing on the screen and the countdown moves exactly once per cycle. A filling shape is continuous
+  movement by definition, so it either replaces the numeral or has to be quiet enough not to compete
+  with it. That is a real decision, not a detail.
+
 - **A tomato that builds itself as the block runs (v1.1).** The owner's idea, and a good one: instead
   of a countdown readout, the Live Activity draws a tomato that assembles as the minutes pass, so the
   Lock Screen shows progress as a *picture* rather than a number.
@@ -701,3 +715,228 @@ about whether it is a way to enter a task.
 This is also the shape bi-directional sync wants. Each user's token is their own, scoped to their own
 account, revocable by them from Todoist's settings without touching the app. There is no shared
 credential to rotate, and no single secret whose exposure affects every install.
+
+---
+
+## D19 — Three decisions taken at the F4 gate
+
+**Ratified 2026-08-23.**
+
+### 1. Switching music on means ZenTomato handles the audio
+
+If something else is already playing when a focus block starts with music on, ZenTomato takes over
+with the chosen playlist. When the sprint ends it stops and leaves the system player alone.
+
+**Why not "leave what's playing".** Because then the toggle sometimes does nothing, and whether it
+worked depends on something happening in another app. A control that silently no-ops is one you stop
+trusting — and you would have to remember what else was playing to predict what it does.
+
+### 2. No subscription, or authorization denied → the toggle dims and the timer is untouched
+
+Music is an accessory to this app, not the point. Every music failure degrades to a **silent working
+timer**, never a broken one, with one plain line saying why.
+
+**This is deliberately the opposite of F2's alarm permission**, where denial is blocking. The
+difference is whether the permission *is* the feature: a Pomodoro timer that cannot tell you a block
+ended has no working state to degrade into, whereas one that is merely quiet works fine. Same app,
+opposite handling, and the reason should be legible in both places.
+
+### 3. The skip button appears only while music is actually playing — in reserved space
+
+Skip is visible during work blocks when something is playing, and absent during breaks when it is
+paused and skipping would mean nothing. Nothing on screen offers a control that does nothing.
+
+**This runs straight into a ratified rule and must not break it.** The countdown moves exactly once in
+a whole cycle. A control that appears and disappears at every block boundary is precisely that
+movement — and this is not hypothetical: F3 suppressed an affordance for this same reason and made an
+entire feature unreachable, which took a device session to find.
+
+**The resolution is to reserve the space rather than suppress the control.** The music row occupies a
+fixed height for the whole cycle. The skip button appears and disappears *within* it; nothing above or
+below moves, and the countdown never shifts by a pixel. The rule is honoured by layout rather than by
+removing something the user needs.
+
+That is the general answer to this tension, and it is worth stating once here: **when a rule about
+movement conflicts with an affordance somebody needs, reserve the space.** Suppressing the affordance
+was tried in F3 and the cost was the whole feature.
+
+---
+
+## D20 — A Stop control for music, beside skip
+
+**Ratified 2026-08-23**, from the device session.
+
+**Currently:** `SPEC.md` line 27 — *"Skip-forward is the only control."*
+**Proposed:** *"Skip-forward and stop are the only controls. Stop silences the music for the remainder
+of the current block; the timer is unaffected and the next block starts music again."*
+
+### The gap it fills
+
+The music switch is deliberately locked while a block runs (music is chosen *before* a sprint). The
+consequence, which only became visible on a real phone: **mid-block there was no way to silence music
+at all.** The choices were to endure it, or to Stop the timer — which since D13 costs a written
+sentence and abandons the pomodoro.
+
+So a playlist that turns out to be wrong for the work in front of you could cost you the block. That
+is a worse outcome than the one skip-only was protecting against.
+
+### What Stop does, exactly
+
+Silences the music. **The timer does not notice** — the block runs on, the alarm is untouched, and
+nothing is recorded. The next block starts music again, because the silence is about *this* block and
+not a change of mind about music.
+
+That last part is what keeps it a transport control rather than a setting in disguise. A button that
+looked like transport and quietly flipped a persistent switch would be two different kinds of thing
+wearing one icon.
+
+### The fence, and why it barely moves
+
+**The playback protocol does not change.** It already has `pause()` — used on every break — and this
+is the same verb reached from a different place. Nothing new becomes expressible: still no previous,
+no seek, no scrub, no shuffle, no volume.
+
+What widens is the *UI*, from one button to two. That is the honest cost, and the scope fence updates
+from "skip is the only control" to "skip and stop are the only controls" — still checkable, still
+greppable, and still excluding everything MusicKit offers on the same object.
+
+### Why not simply unlock the toggle mid-sprint
+
+It was the other candidate and it loses on two counts. The toggle lives in the music row rather than
+beside the countdown, so it is a longer reach at the moment somebody is trying not to break
+concentration. And the toggle means *"I use music"* whereas this means *"not this block"* — collapsing
+them would make one control answer two questions.
+
+---
+
+## D15 — What the Rhodia export contains, and what stays out of the counts
+
+**Ratified 2026-08-22 at the F6 gate. Written down 2026-08-23** — it was decided, described in
+conversation, and never recorded, which is how a decision becomes a thing nobody can check.
+
+### The document reads top-down as a review
+
+```
+42 pomodoros · 17h 30m · 23 distractions (14 internal / 9 external)
+
+## Days            when
+## Projects        where the time went
+## Completed       what came out of it          (D11)
+## Distractions    what interrupted me, by task
+## Stopped early   where I bailed, and why      (D13)
+```
+
+Not a data dump in five sections — an order of questions. *How did the fortnight go, when did I work,
+on what, what came of it, what interrupted me, where did I give up.* Each answers the previous one's
+"and then what".
+
+**Stopped-early gets its own section rather than sitting among the distractions.** Stops are rarer and
+heavier: a distraction is a moment, a stop is a decision. Buried in a list of taps they would
+disappear, and you paid a written sentence for each one (D13) specifically so they would be worth
+reading later.
+
+### Abandoned blocks are excluded from every count
+
+`42 pomodoros` keeps meaning **blocks you finished** — unchanged from what F2 ratified — while the
+bail-outs stay fully visible in their own section with their reasons.
+
+The alternative was putting the rate in the header (`42 pomodoros · 3 abandoned`). Rejected: it makes
+the first thing you see every time a measure of how often you gave up, which is a different document
+from the one this is meant to be.
+
+**One rule, one implementation.** `StatsQuery` is the only thing that counts, and both the stats
+screen and the exporter call it. Two counters that can disagree is how a number stops being trusted —
+and this is the number the whole app exists to produce.
+
+---
+
+## D21 — A completion records whether the task was recurring
+
+**Ratified 2026-08-23 at the F6 gate, from evidence F3's device session produced.**
+
+**Currently:** `CompletedTaskRecord` stores a Todoist id, a title snapshot and a timestamp.
+**Proposed:** it also stores whether the task was **recurring** at the moment it was closed.
+
+### Why, and how we know
+
+Closing a recurring Todoist task does not finish it — it advances it to the next occurrence. F3's
+device run showed this precisely: *"Budget with YNAB by 7:30 AM"* appeared in Todoist's activity log
+as completed at 16:48 **and came back as an active task** in the refresh at 16:52.
+
+So without this, F6's Completed section lists the same title on eight of fourteen days and cannot tell
+you why. Finishing a chapter and ticking off a daily habit are not the same achievement, and a reader
+should not have to infer which is which from how often a line repeats.
+
+The alternative was guessing from repetition — anything appearing more than once is "a habit". That is
+a heuristic standing in for a fact Todoist already knows, and it is wrong for a task genuinely done
+twice and for a habit done once in a quiet fortnight.
+
+### Why this does not breach D16
+
+D16 forbids fields that exist **only to serve a feature that does not**. Apply its own test: *would I
+write this the same way if bi-directional sync were never coming?* Yes — this is for the export, and
+F6 is the next feature. Nothing about it anticipates sync, and it would be equally right if v1.5 never
+happened.
+
+The line D16 draws is between design and preparation, not between "now" and "later".
+
+### What it is not
+
+It is **not** a recurrence rule, a schedule, a due date, or anything that could reconstruct one. One
+boolean, captured at the moment of completion, describing what was true then. `CompletedTaskRecord`
+stays append-only and stays a record of something this app did — not a task model.
+
+## D21b — A task completed during a sprint does not come back into it
+
+**Ratified 2026-08-23, alongside D21.** The owner: *"Budgeting with YNAB, picking 1–3 MITs — these
+are recurring habits that I mostly keep. For version 1.0, making sure these do not repeat in a
+pomodoro sprint is fine."*
+
+A different problem from D21, in a different feature, and easy to conflate with it.
+
+**The scenario.** You complete "Budget with YNAB" from the end-of-block sheet. Todoist does not finish
+it — it advances it to tomorrow, and it is active again immediately. The next cache refresh sees it as
+an open task, and nothing stops it being picked, or reappearing, later in the same sprint. You are
+offered work you have already done this afternoon.
+
+**The rule:** a task completed during a sprint is not offered again until that sprint ends. It stays
+out of the picker and out of the plan.
+
+**Deliberately not "if it recurs".** The rule holds for any task, recurring or not, which means it
+needs no recurrence knowledge and cannot be wrong about a task it guessed at. A non-recurring task
+completed mid-sprint would vanish from Todoist's active list anyway, so the rule costs nothing there
+and is simply always true.
+
+**Scope of "the sprint".** From the first block of a sprint to the long break that ends it. Stopping
+clears it, because stopping ends the sprint. Nothing persists across app launches — this is about one
+afternoon, not a history, and `CompletedTaskRecord` already holds the history.
+
+### Where D21 lands
+
+**F6**, which needs it, and which will retrofit F3's completion path to capture it. A retrofit rather
+than a new gate, in the shape F1b and F1c already established.
+
+**D21b lands in F6 too**, though it touches the plan rather than the export — one gate, because the
+two are answers to the same observation and splitting them across features would leave the smaller,
+more useful one waiting behind the larger.
+
+**Verify at build time:** confirm what Todoist API v1 actually returns for recurrence on
+`GET /tasks` — the field is expected to hang off `due`, but F3's plan learned the hard way that the
+live docs beat an assumption, and a boolean read from the wrong key is silently always false.
+
+
+---
+
+## Parked for v1.1 — a Todoist label to mark a habit
+
+The owner's idea, and better than inferring: *"maybe this is a solution of 'tag an item as a habit' in
+Todoist so ZenTomato knows it's a habit and expects a recurring pattern."*
+
+Reading a label breaks no rule — it is a read, and labels come back with the task. It is also more
+honest than either alternative: D21 asks Todoist whether a task *recurs*, which is a good proxy for a
+habit and not the same thing, and repetition-counting is a worse proxy still. A label is the person
+saying which is which.
+
+Parked rather than built because it needs the label maintained in Todoist to be worth anything, and
+because D21 answers the v1.0 question without any setup at all. Worth revisiting once a real fortnight
+has been read: if the recurrence proxy turns out to mislabel things, this is the fix.

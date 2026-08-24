@@ -347,7 +347,34 @@ final class TimerEngine {
     // self-knowledge data the spec asks for, and a queue of prompts waiting to
     // be worked through the next time the app opens is a capture surface by
     // another name.
-    await end(state: state, completed: true, at: state.endsAt, mayAutoStart: false, mayPromptForReflection: false)
+    // WHETHER THE CYCLE CARRIES ON DEPENDS ON HOW LONG AGO IT ENDED.
+    //
+    // This path is taken whenever a block finished while the app was not awake —
+    // which, on a phone, is *every* block, because locking the screen suspends
+    // the app. Refusing to auto-start here meant the setting worked only while
+    // somebody was staring at the screen, and a locked sprint stalled at its
+    // first boundary. That is the opposite of what a Pomodoro timer is for, and
+    // it is why F4's own device check — a playlist through a full sprint with the
+    // screen locked — could not have passed.
+    //
+    // The protection this refusal was providing is real and is kept. A phone left
+    // overnight must not wake mid-focus-block, and its owner must not find a
+    // night of pomodoros in the record. What separates the two cases is the size
+    // of the gap: two seconds is the alarm doing its job; fourteen hours is
+    // nobody being there.
+    //
+    // The threshold is the finished block's own length. Anything inside that is
+    // a wake this app asked for.
+    let gap = clock.now.timeIntervalSince(state.endsAt)
+    let wakeWasPrompt = gap <= state.endsAt.timeIntervalSince(state.startedAt)
+    await end(
+      state: state,
+      completed: true,
+      at: state.endsAt,
+      mayAutoStart: wakeWasPrompt,
+      // Still no reflection prompt, whatever the gap: the taps are recorded and
+      // stay recorded, and what is refused is a sheet nobody was there to fill in.
+      mayPromptForReflection: false)
     // A sprint that ended while the app was closed is not announced on the next
     // launch. The acknowledgement is for the person who was there.
     lastCompletedSprintSize = nil
@@ -596,32 +623,6 @@ final class TimerEngine {
   }
 
   // MARK: The alarm
-
-  /// Asks for an alarm at the block's end instant. Everything the Lock Screen
-  /// will draw travels with it, because the Lock Screen is drawn by a separate
-  /// program that cannot open this database.
-  private func scheduleAlarm(for state: TimerState) async {
-    let request = BlockAlarmRequest(
-      id: state.sessionID, kind: state.kind, endsAt: state.endsAt,
-      soundEnabled: state.soundEnabled, completedInSprint: state.completedInSprint,
-      pomodorosPerSprint: state.pomodorosPerSprint)
-    do {
-      try await alarms.schedule(request)
-    } catch {
-      // The block is running and saved. All that failed is the noise at the end
-      // of it, and the screen says so.
-      lastFailure = .alarmSchedulingFailed
-    }
-  }
-
-  /// Calls off whatever alarm this app has outstanding.
-  private func cancelAlarm() {
-    do {
-      try alarms.cancelOutstanding()
-    } catch {
-      lastFailure = .alarmCancellationFailed
-    }
-  }
 
   // MARK: The clock
 
@@ -989,5 +990,43 @@ extension TimerEngine {
     generation: Int) {
     guard allowed, generation == abandonGeneration else { return }
     pendingReflection = BlockReflection(sessionID: sessionID, prompts: prompts)
+  }
+}
+
+// MARK: - The alarm
+
+/// Setting and calling off the one alarm this app holds.
+///
+/// In an extension because the class reached the linter's body limit, and this is
+/// the seam that costs least: both methods are about the alarm and neither is
+/// about the cycle. The limit is worth keeping — an engine is exactly the kind of
+/// type that accretes, and the honest answer to "four lines too long" is to find
+/// a seam rather than raise the number.
+@MainActor
+extension TimerEngine {
+  /// Asks for an alarm at the block's end instant. Everything the Lock Screen
+  /// will draw travels with it, because the Lock Screen is drawn by a separate
+  /// program that cannot open this database.
+  private func scheduleAlarm(for state: TimerState) async {
+    let request = BlockAlarmRequest(
+      id: state.sessionID, kind: state.kind, endsAt: state.endsAt,
+      soundEnabled: state.soundEnabled, completedInSprint: state.completedInSprint,
+      pomodorosPerSprint: state.pomodorosPerSprint)
+    do {
+      try await alarms.schedule(request)
+    } catch {
+      // The block is running and saved. All that failed is the noise at the end
+      // of it, and the screen says so.
+      lastFailure = .alarmSchedulingFailed
+    }
+  }
+
+  /// Calls off whatever alarm this app has outstanding.
+  private func cancelAlarm() {
+    do {
+      try alarms.cancelOutstanding()
+    } catch {
+      lastFailure = .alarmCancellationFailed
+    }
   }
 }
