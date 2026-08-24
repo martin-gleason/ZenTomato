@@ -19,7 +19,9 @@ name: ZenTomato
 
 options:
   bundleIdPrefix: com.martingleason
-  deploymentTarget: { iOS: "26.0" }
+  # watchOS 26.0 alongside iOS 26.0 — D1 as amended, and D2's F7 entry says
+  # "watchOS 26 companion app".
+  deploymentTarget: { iOS: "26.0", watchOS: "26.0" }
   minimumXcodeGenVersion: "2.46.0"
   createIntermediateGroups: true
   generateEmptyDirectories: false
@@ -64,6 +66,20 @@ targets:
     # processes' idea of what travels with an alarm.
     dependencies:
       - target: ZenTomatoActivity
+      # The watch app is embedded by its container app, exactly as the Live
+      # Activity extension above is. WITHOUT THIS LINE THE WATCH APP COMPILES
+      # AND IS NEVER INSTALLED — the same silent failure the extension comment
+      # describes, and just as hard to diagnose on a wrist.
+      #
+      # `embed` is stated rather than left to a default, and `copy` names the
+      # folder iOS looks in. A watch app is embedded at `Watch/` inside the
+      # container app; anywhere else and the phone installs an app the watch
+      # never learns about.
+      - target: ZenTomatoWatch
+        embed: true
+        copy:
+          destination: wrapper
+          subpath: Watch
     # Xcode's own configuration mechanism, and the only one this project uses.
     # App.xcconfig is committed and holds safe defaults; it ends by optionally
     # including the git-ignored Config/Secrets.xcconfig, which is where a real
@@ -239,6 +255,78 @@ targets:
         # flag Xcode sets for debug builds rather than adding to it.
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) WIDGET_EXTENSION
 
+
+  # F7's watch companion. A REMOTE, NOT A SECOND APP.
+  #
+  # D2, as it now reads in SPEC.md: "The phone is the source of truth and runs the
+  # only timer engine. The watch displays the running block, the block kind, and
+  # the attached task, and puts the I and E distraction buttons on the wrist. The
+  # watch never runs a timer of its own, never controls music, never picks a task,
+  # and never edits a distraction note."
+  #
+  # WHAT IS SHARED, AND WHY IT IS A DIRECTORY GLOB RATHER THAN A PACKAGE.
+  # docs/plans/F7.md, written at F1, proposed "a small local Swift package". The
+  # ZenTomatoActivity target above settled the same question later and the other
+  # way, with the reason stated: a package would be a new build system inside the
+  # build system, and the project forbids a new dependency without a spec change.
+  # That precedent is followed here. Two targets compiling one directory is the
+  # established pattern in this project, it needs no new tooling, and it keeps a
+  # single written-down description of anything that crosses between processes.
+  #
+  # THE RULE THAT COMES WITH IT, and the one to police in review: nothing that
+  # touches the database, the alarm manager, the timer engine or the music may be
+  # compiled into this target. A watch that can see the store is a watch that will
+  # one day write to it, and then two devices disagree about the one number this
+  # app exists to produce. WatchLinkTests reads this target's own sources and
+  # fails if any of them appears.
+  ZenTomatoWatch:
+    type: application
+    platform: watchOS
+    sources:
+      # The watch's own screens.
+      - path: ZenTomatoWatch
+      # The wire types, compiled into both sides. What crosses between two
+      # processes has to be written down once, or the two copies drift and the
+      # drift is only ever visible at the moment a tap is lost.
+      - path: ZenTomato/WatchLink/Payload
+      # The names of the three kinds of block, for the same reason the Live
+      # Activity extension takes this one file: if the watch spelled them itself
+      # the two could disagree, and a disagreement on a wrist is the hardest
+      # possible place to notice one.
+      - path: ZenTomato/Timer/BlockKind.swift
+      # Internal and external, and the sentence that tallies them. Written by
+      # hand by the owner as F5-T0 and never modified since; the watch compiles
+      # the same file rather than restating the two cases.
+      - path: ZenTomato/Distraction/DistractionTally.swift
+    configFiles:
+      Debug: Config/App.xcconfig
+      Release: Config/App.xcconfig
+    info:
+      path: Support/ZenTomatoWatch-Info.plist
+      properties:
+        CFBundleDisplayName: ZenTomato
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # A single-target watch app — the modern shape, with no separate
+        # WatchKit extension bundle. Without this key the app builds and the
+        # watch refuses to launch it.
+        WKApplication: true
+        # Names the phone app this one belongs to. A mismatch here presents as a
+        # watch app that installs but never pairs with its container, and
+        # WCSession never activates.
+        WKCompanionAppBundleIdentifier: com.martingleason.ZenTomato
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.martingleason.ZenTomato.watchkitapp
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        # 4 = Apple Watch.
+        TARGETED_DEVICE_FAMILY: "4"
+        # Installed by its container app, never on its own.
+        SKIP_INSTALL: "YES"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
   ZenTomatoTests:
     type: bundle.unit-test
     platform: iOS
@@ -263,6 +351,11 @@ schemes:
     build:
       targets:
         ZenTomato: all
+        # Named explicitly rather than left to the dependency. A watchOS target
+        # is a different platform, and an iOS-destination build will not reach
+        # for one on its own — which presents as a phone app that installs with
+        # no watch app inside it, silently.
+        ZenTomatoWatch: all
     run:
       config: Debug
     test:

@@ -238,13 +238,12 @@ struct StatsFenceTests {
   }
 
   /// Nothing from Phase 2 crept in, and no Swift hygiene rule was traded away
-  /// for a shortcut.
+  /// for a shortcut. D2 moved the watch terms out; `WatchLinkTests` has the rest.
   @Test("nothingOutOfScopeAndNoForcedShortcuts")
   func nothingOutOfScopeAndNoForcedShortcuts() throws {
     let forbidden = [
-      "WCSession", "watchOS", "WatchConnectivity", "CloudKit", "NSUbiquitous",
-      "NSPersistentCloudKit", "\\bmacOS\\b", "AppIntent", "WidgetKit", "\\bTheme\\b",
-      "try!", "\\bas!", "fatalError", "nonisolated\\(unsafe\\)", "@unchecked Sendable"
+      "CloudKit", "NSUbiquitous", "NSPersistentCloudKit", "\\bmacOS\\b", "AppIntent", "WidgetKit",
+      "\\bTheme\\b", "try!", "\\bas!", "fatalError", "nonisolated\\(unsafe\\)", "@unchecked Sendable"
     ]
 
     for file in try Self.featureFiles {
