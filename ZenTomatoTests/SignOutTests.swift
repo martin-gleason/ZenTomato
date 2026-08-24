@@ -55,11 +55,13 @@ struct SignOutTests {
     context.insert(CompletedTaskRecord(
       taskID: "t0",
       titleSnapshot: "Book the room",
-      completedAt: Date(timeIntervalSince1970: 1_787_400_000)))
+      completedAt: Date(timeIntervalSince1970: 1_787_400_000),
+      wasRecurring: false))
     context.insert(CompletedTaskRecord(
       taskID: "t9",
       titleSnapshot: "Send the invoice",
-      completedAt: Date(timeIntervalSince1970: 1_787_403_600)))
+      completedAt: Date(timeIntervalSince1970: 1_787_403_600),
+      wasRecurring: true))
     try context.save()
 
     plan.replacePlan(with: [

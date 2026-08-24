@@ -33,6 +33,10 @@ struct TimerScreen: View {
   var onStop: () -> Void = { }
   var onOpenSettings: () -> Void = { }
 
+  /// The history control was tapped. Reachable in every state, including while a
+  /// block runs — see `historyButton`.
+  var onOpenHistory: () -> Void = { }
+
   /// The attachment line was tapped. Only reachable while idle or on a break —
   /// see `TimerScreenModel.Attachment`.
   var onOpenPlan: () -> Void = { }
@@ -82,6 +86,12 @@ struct TimerScreen: View {
     // forty-four points of chrome, a background material and a divider across
     // the top of the calmest screen in the app.
     .overlay(alignment: .topTrailing) { settingsButton }
+    // The mirror image of the gear, in the one corner of this screen that is
+    // empty in every state. Same argument as the line above: it costs zero
+    // layout points, so the 96-point numeral does not move by so much as a
+    // point, and the ratified rule that the countdown moves exactly once in a
+    // cycle is untouched.
+    .overlay(alignment: .topLeading) { historyButton }
     // SAID OUT LOUD, NOT JUST DRAWN.
     // When an alarm cannot be set, a sighted reader sees an amber line appear
     // in the middle of the screen. A VoiceOver reader's attention is on the
@@ -494,6 +504,45 @@ struct TimerScreen: View {
     // Read last. The timer is the point of the screen; left alone VoiceOver
     // would announce the gear first, because it is the topmost element.
     .accessibilitySortPriority(0)
+  }
+
+  /// The way to yesterday.
+  ///
+  /// Drawn identically to the gear and in the same muted ink, for the same
+  /// reason: the one piece of colour on this screen is the word above the
+  /// number. Read as a pair, the two top corners say "settings" and "record" —
+  /// one affordance each, which is a smaller load than one corner with a menu
+  /// behind it.
+  ///
+  /// **Present and enabled in every state, including mid-block and with nothing
+  /// recorded at all.** D19: when a rule about movement meets an affordance
+  /// somebody needs, reserve the space. A history button that appeared only once
+  /// there was history would be missing on exactly the day somebody wanted to
+  /// check whether anything had been recorded — and F3 lost a whole feature to an
+  /// affordance suppressed to protect something else.
+  ///
+  /// **No badge, ever.** No count, no dot, no "3 today". A number on a chrome
+  /// glyph is the first step of a scoreboard, and it would make the button change
+  /// size between states.
+  ///
+  /// A list glyph rather than a chart glyph: `chart.bar` promises a chart, and
+  /// chart pressure is this feature's whole risk. `clock.arrow.circlepath` was
+  /// rejected outright — on a *timer* screen a circular arrow round a clock reads
+  /// as "restart", which is the most expensive misread available.
+  private var historyButton: some View {
+    Button { onOpenHistory() } label: {
+      Image(systemName: "list.bullet.rectangle")
+        .font(Typography.label)
+        .foregroundStyle(Color(.textMuted))
+        .frame(width: Spacing.controlHeight, height: Spacing.controlHeight)
+        .contentShape(Rectangle())
+    }
+    .padding(.leading, Spacing.md)
+    .padding(.top, Spacing.xs)
+    .accessibilityLabel(Text("Pomodoro history"))
+    .accessibilityHint(Text("How many pomodoros you've done, and the export."))
+    // After Stop, before the gear. The timer is still the point of the screen.
+    .accessibilitySortPriority(0.5)
   }
 
   /// The one place amber appears on this screen, and only when something has

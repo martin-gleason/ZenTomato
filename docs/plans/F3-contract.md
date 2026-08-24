@@ -470,10 +470,17 @@ a change.
 Named here so a reviewer's grep has a document to land on, and so that adding one is a visible argument
 with this table rather than a small reasonable commit:
 
-`description` · `due` · `deadline` · `duration` · `priority` · `labels` · `parent_id` ·
+`description` · ~~`due`~~ · `deadline` · `duration` · `priority` · `labels` · `parent_id` ·
 `checked` · `is_deleted` · `is_archived` · `is_collapsed` · `is_favorite` · `color` · `view_style` ·
 `is_shared` · `order_key` · `day_order` · `completed_count` · `added_at` · `updated_at` ·
 `user_id` / `creator_uid` / `added_by_uid` / `responsible_uid` · `added_by`.
+
+**`due` left this list under D21, on 2026-08-23, and only in part.** F6 needs to know whether a
+completed task was recurring, and Todoist keeps that as `is_recurring` **inside** the `due` object.
+What crossed is one derived boolean — `CachedTask.isRecurring` — and nothing else: no date, no
+schedule string, no time zone, no language, and nothing from which a recurrence rule could be
+reconstructed. The `due` object itself is still not mirrored. This paragraph is the visible argument
+with this table that the paragraph above demands.
 
 Three of those deserve their reason spelled out:
 

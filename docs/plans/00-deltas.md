@@ -940,3 +940,86 @@ saying which is which.
 Parked rather than built because it needs the label maintained in Todoist to be worth anything, and
 because D21 answers the v1.0 question without any setup at all. Worth revisiting once a real fortnight
 has been read: if the recurrence proxy turns out to mislabel things, this is the fix.
+
+---
+
+## D22 — A block records which project it was for, and the export labels it live
+
+**Proposed 2026-08-24. Ratified by the owner 2026-08-24, to be built as F3b.**
+
+### The defect this starts from
+
+`SessionPlanStore.attachment(for:)` writes `projectID: nil` and `projectTitle: nil` for every planned
+**task**. Only a block attached to a whole *project* records project identity at all. So on real data
+F6's `## Projects` section — the one that answers *"where did the time go"* — collapses into a single
+`No project` heading with every task beneath it.
+
+F6's golden shows a healthy `**Thesis** — 7 pomodoros` only because `StatsPeriodFixture` hand-sets the
+title. The suite already records the truth: `aTaskAttachedBlockAsTheAppActuallyWritesItToday` asserts
+`period.projects.map(\.title) == [nil]`. The defect is in what F3 records, not in what F6 counts, and
+`SPEC.md` F6 requires "counts per task, project, day".
+
+### Two parts, deliberately separable
+
+**Part 1 — the plumbing. No delta needed; this is a defect fix.** `attachment(for:)` resolves the
+task's project from the Todoist mirror already on the device — `CachedTask.projectID` is non-optional,
+`CachedProject` holds the name — and writes **both** `projectID` and `projectTitle` onto the block.
+`PomodoroSession` already has both fields, so **there is no schema change**, `SessionPlanItem` gains
+nothing, and D17's fence stands untouched.
+
+**Part 2 — the labelling rule. This is the delta.** The export groups by `projectID` and labels each
+group from the mirror's *current* name, falling back to the recorded snapshot when the id no longer
+resolves.
+
+This part contradicts a ratified F6 rule, which is why it is written down rather than smuggled in as a
+bug fix. `F6.md` states that task and project names come from the snapshot on the row and are **never
+resolved live** — that is why F2 and F3 store them. D22 narrows that rule to: *task* titles remain
+snapshot-only; *project* labels are resolved live with the snapshot as fallback. Task titles are not
+touched, because a task is a thing you finish and its title at the time is the honest record of what
+you did.
+
+### Why group by id rather than by name
+
+A rename part-way through a fortnight splits one project into two headings whose totals each
+under-report, in a document whose entire purpose is aggregation. Grouping by id merges them. This is
+provable from the code and needs no argument about how often anyone renames anything.
+
+### Why the snapshot is still written, and never rewritten
+
+Verified against Todoist's own OpenAPI document: `DELETE /projects/{project_id}` — *"Deletes a project
+and all of its sections and tasks."* The id then dangles for ever and no endpoint will return a name
+for it again. Without a snapshot, every block in a deleted project degrades permanently to `No
+project` — today's defect arriving later by a different door. Clockify demonstrably has this failure:
+deleted-project entries survive in reports but lose their name.
+
+Archiving is *not* that case: `GET /api/v1/projects/archived` exists, so an archived project stays
+resolvable **provided the mirror refresh reads both endpoints**. Building only against `/projects`
+would silently lose the name the moment somebody tidies up.
+
+### What the evidence does and does not support
+
+Two researchers examined this. What is **verified from primary sources**: the deletion cascade above;
+`GET /tasks` returns `project_id` and no project name, so a join is mandatory for anybody; the
+personal/workspace union type has no discriminator and must be decoded permissively; cursor
+pagination, `limit` max 200; 1000 partial and 100 full syncs per 15 minutes, which makes refreshing
+the mirror effectively free. Among real integrations, mirror-plus-foreign-key (Everhour, TimeCamp,
+Sunsama, Akiflow) is the dominant pattern; Everhour states live-renaming as the goal — *"Everhour
+reports will always show the freshest data."* Toggl and Clockify match by *name* at capture time and
+have a documented history of silently failing to attribute.
+
+What is **not supported**, and was withdrawn: the original argument for snapshotting was that people
+would be upset when old history silently renamed itself. A search found nobody complaining of that.
+Absence of complaint is weak evidence either way for a silent behaviour — so D22 rests on the deletion
+cascade and on rename-splitting, both checkable, and not on any claim about how often people rename.
+
+**Not tested by anyone.** `scripts/check-todoist-facts.sh` settles three claims against a real
+account: whether an archived project resolves by id, whether incremental sync returns `is_deleted`
+tombstones or reports removal by silence, and whether old all-numeric task ids still resolve. If
+tombstones turn out not to be returned, the mirror needs a seen-this-pass sweep rather than a flag.
+None of the three changes Part 1.
+
+### Not in scope
+
+No user-visible setting. No product found anywhere exposes this choice, and a setting is an admission
+the decision was not made. No `(was: Old Name)` annotation in v0.1 — it was considered and is parked;
+it is a second name on the page and wants a real fortnight's reading before it earns the room.

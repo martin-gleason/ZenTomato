@@ -62,9 +62,20 @@ import SwiftData
 final class SessionPlanStore: SessionAttaching {
   // MARK: Lifecycle
 
-  /// - Parameter context: the app's database handle. Held, not copied.
-  init(context: ModelContext) {
+  /// - Parameters:
+  ///   - context: the app's database handle. Held, not copied.
+  ///   - completedThisSprint: the tasks ticked off since this sprint began
+  ///     (D21b). The plan asks it one question — *does it hold this string* —
+  ///     and learns nothing about blocks, sprints, breaks or the timer.
+  ///
+  ///     It has a default so that a plan built for a test or a preview gets an
+  ///     empty set of its own rather than every call site having to invent one.
+  ///     **The app must pass the shared instance**, or a task completed during
+  ///     a sprint would come back into it — which is the whole of what D21b
+  ///     exists to prevent.
+  init(context: ModelContext, completedThisSprint: SprintCompletions = SprintCompletions()) {
     self.context = context
+    self.completedThisSprint = completedThisSprint
     reload()
   }
 
@@ -174,6 +185,14 @@ final class SessionPlanStore: SessionAttaching {
   func replacePlan(with selections: [Selection]) -> Bool {
     deleteEveryRow()
 
+    // D21b, belt and braces. The picker does not offer a task ticked off during
+    // this sprint, so this normally removes nothing — it is one line so that the
+    // rule is a property of the store rather than of a screen, and a second way
+    // into the plan later cannot quietly reintroduce work already done.
+    let selections = selections.filter {
+      $0.kind == .project || completedThisSprint.contains($0.todoistID) == false
+    }
+
     if selections.isEmpty == false {
       let plan = SessionPlan(createdAt: Date(), currentIndex: 0)
       context.insert(plan)
@@ -276,11 +295,40 @@ final class SessionPlanStore: SessionAttaching {
   ///   all.
   func takeNextAttachment() -> SessionAttachment? {
     reload()
-    guard let plan, let item = currentItem else { return nil }
+    guard let plan else { return nil }
+
+    // D21b: step over anything already ticked off in this sprint before taking
+    // one. Completing a recurring task in Todoist does not finish it — it
+    // advances it to the next occurrence, so it is active again immediately and
+    // could otherwise be handed back to the very next block of the same
+    // afternoon.
+    //
+    // **This is the existing step-over, not a new kind of state.** The cursor
+    // moves; the item is not removed, not marked, not reordered, and nothing is
+    // written on it. Projects are never skipped — D21b is about tasks, and only
+    // a task can be ticked off.
+    var index = currentIndex
+    while items.indices.contains(index),
+          items[index].kind == .task,
+          completedThisSprint.contains(items[index].todoistID) {
+      index += 1
+    }
+
+    guard items.indices.contains(index) else {
+      // Everything left had already been done. The cursor still moves past it,
+      // so the plan screen shows those items behind the cursor in the quieter
+      // ink rather than pretending they are still ahead.
+      plan.currentIndex = index
+      _ = persist()
+      reload()
+      return nil
+    }
+
+    let item = items[index]
     plan.currentIndex = item.position + 1
     _ = persist()
     reload()
-    return Self.attachment(for: item)
+    return attachment(for: item)
   }
 
   /// What a planned item looks like to the timer.
@@ -290,21 +338,76 @@ final class SessionPlanStore: SessionAttaching {
   /// one Todoist task (or, if no task is chosen, to a project)."* Todoist's ids
   /// are opaque strings, so a project id and a task id are indistinguishable —
   /// which is the whole reason a planned item records which of the two it is.
-  static func attachment(for item: Item) -> SessionAttachment {
+  /// **D22: A PLANNED TASK CARRIES ITS PROJECT WITH IT.**
+  ///
+  /// This used to hand back `projectID: nil, projectTitle: nil` for every
+  /// planned task, and only a block attached to a whole *project* recorded any
+  /// project identity at all. The consequence did not show up until F6 tried to
+  /// count: the export's `## Projects` section — the one that answers "where did
+  /// the time go" — collapsed into a single `No project` heading with every task
+  /// underneath it. The type's own documentation always said `projectID` is "of
+  /// the attached task, or of the planned project itself", so this is the
+  /// behaviour that was meant all along rather than a new idea.
+  ///
+  /// **Where the project comes from.** The plan does not carry it — a planned
+  /// item holds one identifier and one title and D17 fixes it at four stored
+  /// properties, which is a fence worth keeping. It does not need to carry it:
+  /// the picker only ever offers tasks that are in the local Todoist mirror, and
+  /// `CachedTask.projectID` is non-optional, so the mirror already knows the
+  /// answer. This reads it there, at the moment the block begins.
+  ///
+  /// **Both halves are frozen here, and that is the point.** The id is what the
+  /// export groups by, so a project renamed half way through a fortnight stays
+  /// one heading instead of splitting into two that each under-report. The name
+  /// is the fallback for when the id stops resolving — deleting a project in
+  /// Todoist deletes it and all of its tasks, and the id then dangles for ever
+  /// with no endpoint that will ever name it again. Without the snapshot every
+  /// block in a deleted project would degrade to `No project`, which is exactly
+  /// the defect above arriving later by a different door.
+  ///
+  /// **A missing mirror row is not an error.** If the task is not in the mirror —
+  /// nothing synced yet, or it was finished elsewhere and swept — the attachment
+  /// is made exactly as it was before, with the task's own title and no project.
+  /// A block that records what it can is better than one that refuses to start.
+  func attachment(for item: Item) -> SessionAttachment {
     switch item.kind {
     case .task:
-      SessionAttachment(
+      let project = projectOfTask(id: item.todoistID)
+      return SessionAttachment(
         taskID: item.todoistID,
         taskTitle: item.titleSnapshot,
-        projectID: nil,
-        projectTitle: nil)
+        projectID: project?.id,
+        projectTitle: project?.name)
     case .project:
-      SessionAttachment(
+      return SessionAttachment(
         taskID: nil,
         taskTitle: nil,
         projectID: item.todoistID,
         projectTitle: item.titleSnapshot)
     }
+  }
+
+  /// The project a mirrored task belongs to, or `nil` when either row is absent.
+  ///
+  /// Two reads rather than a relationship, because the mirror stores Todoist's
+  /// shape — a task holds its project's identifier as a plain string — and a
+  /// task whose project has not been mirrored yet must not be unreadable. Each
+  /// predicate binds a local constant first: a database predicate may only
+  /// capture a plain value, never a path through another object.
+  private func projectOfTask(id: String) -> (id: String, name: String?)? {
+    let todoistID = id
+    var taskQuery = FetchDescriptor<CachedTask>(
+      predicate: #Predicate<CachedTask> { $0.id == todoistID })
+    taskQuery.fetchLimit = 1
+    guard let projectID = (try? context.fetch(taskQuery))?.first?.projectID else { return nil }
+
+    let mirroredID = projectID
+    var projectQuery = FetchDescriptor<CachedProject>(
+      predicate: #Predicate<CachedProject> { $0.id == mirroredID })
+    projectQuery.fetchLimit = 1
+    // The id is worth recording even when the name is not mirrored: it is what
+    // the export groups by, and a name can arrive with the next refresh.
+    return (id: projectID, name: (try? context.fetch(projectQuery))?.first?.name)
   }
 
   // MARK: What a block is actually attached to
@@ -433,6 +536,9 @@ final class SessionPlanStore: SessionAttaching {
   // MARK: Private
 
   private let context: ModelContext
+
+  /// The tasks ticked off since this sprint began (D21b). Asked, never told.
+  private let completedThisSprint: SprintCompletions
 
   /// The single plan row, or `nil` when no plan has been made.
   private var plan: SessionPlan?

@@ -157,6 +157,13 @@ struct PlanBuilderView: View {
 
   @Query(sort: [SortDescriptor(\CachedTask.childOrder)]) private var tasks: [CachedTask]
 
+  /// The tasks ticked off since this sprint began (D21b).
+  ///
+  /// Optional so this sheet can be looked at in a preview with nothing behind
+  /// it. `@Observable`, so the picker redraws the instant a task leaves the set
+  /// — no notification, no manual refresh.
+  @Environment(SprintCompletions.self) private var completedThisSprint: SprintCompletions?
+
   @State private var path: [Route] = []
 
   /// The plan being built, in the order it was chosen. Not yet written down.
@@ -200,7 +207,24 @@ struct PlanBuilderView: View {
       sections: sections.map {
         PickerScreenModel.Section(id: $0.id, name: $0.name, projectID: $0.projectID)
       },
-      tasks: tasks.map { task in
+      // D21b: A TASK THIS APP TICKED OFF DURING THIS SPRINT IS NOT OFFERED AGAIN
+      // UNTIL THE SPRINT ENDS.
+      //
+      // Closing a recurring task in Todoist advances it to its next occurrence
+      // rather than finishing it, so the mirror still holds it and the picker
+      // would otherwise offer it back the same afternoon. The rule holds for
+      // every task, not only recurring ones, so it needs no recurrence knowledge
+      // and cannot be wrong about one it guessed at.
+      //
+      // **Nothing is drawn to explain the absence** — no "already done" row, no
+      // strikethrough, no dimmed entry, no badge. `PickerScreenModel` gains no
+      // reference to the set and no new field: it is a pure value built from
+      // whatever rows it is given, and it is simply given fewer.
+      //
+      // This is not a filter on what Todoist holds. `SPEC.md`'s "all projects,
+      // sections and tasks are visible" is about the mirror, and the mirror is
+      // untouched; this is one sprint's worth of work you have already done.
+      tasks: tasks.filter { completedThisSprint?.contains($0.id) != true }.map { task in
         PickerScreenModel.TaskItem(
           id: task.id,
           title: task.content,

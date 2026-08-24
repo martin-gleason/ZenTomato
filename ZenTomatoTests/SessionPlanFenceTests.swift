@@ -60,17 +60,34 @@ struct SessionPlanFenceTests {
     #expect(columns == ["createdAt", "currentIndex"])
   }
 
-  /// The completion record is three columns: what, called what, and when.
+  /// The completion record is four columns: what, called what, when, and what
+  /// kind of achievement it was.
   ///
-  /// No project, no hierarchy, no status. It is a record of something this app
-  /// did, and the moment it gains a fourth column describing the task it starts
-  /// being a task list.
-  @Test("completionRecordIsThreeColumns")
-  func completionRecordIsThreeColumns() throws {
+  /// **This test used to say three, and the sentence it used to carry was that a
+  /// fourth column describing the task would start making it a task list.** That
+  /// was right about the danger and wrong as a rule, and D21 is the argument
+  /// that moved it. The danger is a column that *describes the task* — a
+  /// project, a status, a hierarchy, a due date — because each of those is a
+  /// piece of Todoist copied over, and enough of them is a second copy of
+  /// Todoist with opinions of its own.
+  ///
+  /// `wasRecurring` is not that. It describes **the completion**: whether
+  /// closing this task finished it or advanced it to its next occurrence. It is
+  /// frozen at the moment of the close like the title beside it, nothing reads
+  /// it but the export, and no schedule can be reconstructed from a single
+  /// boolean. Without it the fortnightly review lists one daily habit on eight
+  /// days of fourteen in the same list as *finished Chapter 3*, with nothing to
+  /// explain the difference.
+  ///
+  /// So the fence has not been weakened, it has been restated: **no column here
+  /// may describe the task.** A fifth would need the same argument this one got,
+  /// in a diff the owner reads.
+  @Test("completionRecordIsFourColumns")
+  func completionRecordIsFourColumns() throws {
     let entity = try #require(Schema([CompletedTaskRecord.self]).entities.first)
     let columns = Set(entity.properties.map(\.name))
 
-    #expect(columns == ["taskID", "titleSnapshot", "completedAt"])
+    #expect(columns == ["taskID", "titleSnapshot", "completedAt", "wasRecurring"])
   }
 
   // MARK: The mirrors mirror, and invent nothing
@@ -80,6 +97,12 @@ struct SessionPlanFenceTests {
   ///
   /// Written out here so that adding a column is an argument with a list
   /// somebody can read, rather than a small commit nobody notices.
+  ///
+  /// **`isRecurring` is a field Todoist sent**, which is exactly what this test
+  /// asserts and the only reason it is allowed. Todoist keeps it inside the
+  /// task's `due` object; one derived boolean is mirrored and the object itself
+  /// is not, which is the argument D21 had with `F3-contract.md` §3.2's
+  /// not-mirrored table and which is recorded in that document.
   @Test("theLocalCopyHasNoInventedColumns")
   func theLocalCopyHasNoInventedColumns() throws {
     let projects = try #require(Schema([CachedProject.self]).entities.first)
@@ -92,7 +115,7 @@ struct SessionPlanFenceTests {
 
     let tasks = try #require(Schema([CachedTask.self]).entities.first)
     #expect(Set(tasks.properties.map(\.name)) == [
-      "id", "content", "projectID", "sectionID", "childOrder", "syncedAt"
+      "id", "content", "projectID", "sectionID", "childOrder", "syncedAt", "isRecurring"
     ])
   }
 
@@ -120,7 +143,11 @@ struct SessionPlanFenceTests {
       sectionID: "s1",
       childOrder: 0,
       syncedAt: .now))
-    context.insert(CompletedTaskRecord(taskID: "t0", titleSnapshot: "Finished", completedAt: .now))
+    context.insert(CompletedTaskRecord(
+      taskID: "t0",
+      titleSnapshot: "Finished",
+      completedAt: .now,
+      wasRecurring: false))
     context.insert(SessionPlan(createdAt: .now))
     context.insert(SessionPlanItem(
       todoistID: "t1",

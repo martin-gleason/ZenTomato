@@ -11,10 +11,13 @@ import SwiftData
 /// having a connection. So the fact is written down locally at the moment it
 /// happens.
 ///
-/// **This is a record of something this app did. It is not a task list.** Three
+/// **This is a record of something this app did. It is not a task list.** Four
 /// columns, no hierarchy, no project, no status, nothing that could grow into a
-/// second copy of Todoist. It is the same shape as the finished-block rows the
-/// timer already writes: an identifier, a frozen title, and a time.
+/// second copy of Todoist. It is very nearly the same shape as the
+/// finished-block rows the timer already writes: an identifier, a frozen title,
+/// a time, and — since D21 — whether Todoist called the task recurring when it
+/// was closed. See `wasRecurring` for why that fourth one is not the beginning
+/// of a task model.
 ///
 /// TWO RULES THAT MAKE IT TRUSTWORTHY
 ///
@@ -43,11 +46,49 @@ final class CompletedTaskRecord {
   /// When Todoist confirmed the close.
   var completedAt: Date
 
+  /// Whether Todoist said this task was recurring at the moment it was closed
+  /// (D21).
+  ///
+  /// **Why a fourth column does not make this a task list.** The other three
+  /// say *what was closed, called what, and when*. This one says what kind of
+  /// achievement it was, and it is here because without it the fortnightly
+  /// review cannot tell them apart: closing a recurring task in Todoist does
+  /// not finish it, it advances it to the next occurrence, so one daily habit
+  /// lands on eight days of fourteen in the same list as *finished Chapter 3*
+  /// with nothing to explain the difference. It is one boolean, frozen at the
+  /// moment of the close, describing what was true then. It is **not** a
+  /// recurrence rule, a schedule, a due date, or anything from which one could
+  /// be reconstructed — there is no hierarchy here, no status, and still
+  /// nothing that could grow into a second copy of Todoist.
+  ///
+  /// **It is read from Todoist's own answer, never inferred from repetition.**
+  /// Guessing "anything that appears more than once is a habit" is a heuristic
+  /// standing in for a fact Todoist already knows, and it is wrong for a task
+  /// genuinely done twice and for a habit kept once in a quiet fortnight.
+  ///
+  /// **False is also what "we could not tell" looks like, and that is a
+  /// deliberate, visible loss.** The answer is read from the local copy of the
+  /// task, so a completion recorded while signed out, or after the copy was
+  /// cleared, records `false` and appears among the one-off completions. A
+  /// third state would be a larger and much quieter loss: this project's lint
+  /// rules forbid an optional boolean by name, and D21 says *one boolean*.
+  ///
+  /// The stored default exists so that rows written before this column existed
+  /// read as `false` without a migration plan. **The initialiser below has no
+  /// default**, which is what forces the one call site — and any future one —
+  /// to state the answer rather than inherit it by accident.
+  var wasRecurring: Bool = false
+
   /// Creates the record. Called from exactly one place, after a successful
   /// close, and from nowhere else.
-  init(taskID: String, titleSnapshot: String, completedAt: Date) {
+  ///
+  /// - Parameter wasRecurring: deliberately has no default. A silent `false`
+  ///   here would empty the export's *Repeating* section for good, and it would
+  ///   do it silently — the section would simply look like a quiet fortnight.
+  init(taskID: String, titleSnapshot: String, completedAt: Date, wasRecurring: Bool) {
     self.taskID = taskID
     self.titleSnapshot = titleSnapshot
     self.completedAt = completedAt
+    self.wasRecurring = wasRecurring
   }
 }

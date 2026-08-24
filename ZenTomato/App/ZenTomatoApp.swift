@@ -51,7 +51,15 @@ struct ZenTomatoApp: App {
       // somebody eventually switches off.
       let credentials = KeychainTokenStore()
       let client = TodoistClient(transport: URLSessionTransport(), tokens: credentials)
-      let plan = SessionPlanStore(context: container.mainContext)
+
+      // D21b: THE TASKS TICKED OFF SINCE THIS SPRINT BEGAN.
+      //
+      // In memory, one sprint, never saved — `CompletedTaskRecord` is the
+      // history, and a second store of the same fact is a second thing that can
+      // disagree. Built here so the plan store, the picker and the completion
+      // path are all looking at the same set rather than at three copies.
+      let completedThisSprint = SprintCompletions()
+      let plan = SessionPlanStore(context: container.mainContext, completedThisSprint: completedThisSprint)
 
       // THE MUSIC STACK, BUILT THE SAME WAY AND FOR THE SAME REASON.
       //
@@ -99,7 +107,12 @@ struct ZenTomatoApp: App {
         // The one thing that tells music a block has changed. It subscribes to
         // the engine's own published state — F4 adds no hook to the engine and
         // invents no second notion of "the block changed".
-        blockPhase: BlockPhaseObserver(engine: engine, coordinator: musicCoordinator))
+        blockPhase: BlockPhaseObserver(engine: engine, coordinator: musicCoordinator),
+        completedThisSprint: completedThisSprint,
+        // The one thing that empties that set. It subscribes to the engine's own
+        // published state exactly as the music observer does — F6 adds no hook to
+        // the engine and invents no second notion of "a sprint ended".
+        sprintBoundary: SprintBoundaryObserver(engine: engine, completions: completedThisSprint))
     }
 
     bootstrapResult = result
@@ -158,6 +171,14 @@ struct ZenTomatoApp: App {
     /// coordinator. Held here so it lives exactly as long as the app does, and
     /// so nothing in this codebase starts a piece of work with no owner.
     let blockPhase: BlockPhaseObserver
+
+    /// The tasks ticked off since this sprint began (D21b).
+    let completedThisSprint: SprintCompletions
+
+    /// Empties that set when a sprint ends. Held for the same reason the block
+    /// observer is: it owns a running piece of work, and nothing in this app
+    /// starts one with no owner.
+    let sprintBoundary: SprintBoundaryObserver
   }
 
   /// Either the running app, or the error that prevented it.
@@ -185,6 +206,9 @@ struct ZenTomatoApp: App {
         musicCache: running.musicCache)
         .modelContainer(running.container)
         .environment(running.engine)
+        // Handed down rather than reached for, so the picker, the plan and the
+        // completion path cannot end up looking at three different sets.
+        .environment(running.completedThisSprint)
         // MUSIC BEGINS OBSERVING HERE, AND NOT ONE MOMENT EARLIER.
         //
         // Two subscriptions start: the coordinator's, which notices a permission
@@ -200,6 +224,9 @@ struct ZenTomatoApp: App {
         .task {
           running.music.start()
           running.blockPhase.start()
+          // D21b begins watching here and not one moment earlier. It reads the
+          // engine; it never writes to it, and it plays and asks for nothing.
+          running.sprintBoundary.start()
         }
         // Runs once at launch and again on every change of phase, which is what
         // makes returning to the app the moment the timer catches up: a block

@@ -12,11 +12,18 @@ import Testing
 /// sent. One looks at the code, the other at the traffic, and the project cares
 /// enough about this rule to want both.
 ///
-/// The rest of the file is about the order of three steps, which is the contract
+/// The rest of the file is about the order of the steps, which is the contract
 /// the local record depends on: ask Todoist, wait for confirmation, and only
 /// then write anything down. A row claiming a completion that failed would be
 /// worse than no row, because the value of the log is that its numbers mean what
 /// they say.
+///
+/// **There are four steps now, not three.** D21 added one between the
+/// confirmation and the write: read whether the local copy says the task
+/// recurs, *before* that copy is dropped. It has its own suite,
+/// `RecurrenceCaptureTests`, because it fails in a way none of these tests
+/// would see — silently, as a permanently empty section in a document nobody
+/// reads for a fortnight.
 ///
 /// `@MainActor`: everything that touches the database is.
 @Suite("TaskCompletion")
@@ -139,6 +146,11 @@ struct TaskCompletionTests {
   /// refresh would remove the row anyway, because Todoist's read addresses
   /// return open tasks only. There is no "completed" column anywhere, and a task
   /// that has gone is expressed by absence, exactly as it is in Todoist.
+  ///
+  /// **The row is dropped *after* its recurrence has been read** (D21), which is
+  /// the one ordering constraint this step gained. That half is proved by
+  /// `recurrenceIsReadBeforeTheCachedRowIsDropped`, which was verified to fail
+  /// when the two are swapped; this test proves the drop itself still happens.
   @Test("completedTaskLeavesTheLocalCopy")
   func completedTaskLeavesTheLocalCopy() async throws {
     context.insert(CachedTask(

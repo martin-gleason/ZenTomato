@@ -30,10 +30,18 @@ import SwiftUI
 /// largest text style tops out around 34 points, and the agreed design calls for
 /// the number to be roughly five times the size of everything else rather than
 /// twice it — so no standard style is big enough. `numeralBaseSize` states the
-/// size directly. It does *not* give up Dynamic Type in exchange: its single call
-/// site scales it with `@ScaledMetric(relativeTo: .largeTitle)`, which puts it
-/// back on the same growth curve every other role uses. If a second raw point
+/// size directly. It does *not* give up Dynamic Type in exchange: both of its
+/// call sites scale it with `@ScaledMetric(relativeTo: .largeTitle)`, which puts
+/// it back on the same growth curve every other role uses. If a second raw point
 /// size ever appears in this file, that is the moment to ask what went wrong.
+///
+/// **There are two numerals, and both are derived here.** The countdown on the
+/// timer screen uses ``numeralBaseSize`` itself; the day's count on the history
+/// screen uses ``statNumeralBaseSize``, which is stated below as a fraction of
+/// it rather than as a second raw size. That is the whole reason the fraction
+/// lives in this file: "how loud is the second-largest number in the app" is a
+/// type-scale decision, and a screen that stated it locally would be deciding
+/// the scale from inside a view.
 ///
 /// **Monospaced is for data, never for prose.** Only `kicker`, `data` and
 /// `timerNumeral` use fixed-width digits or a fixed-width face, and none of them
@@ -51,15 +59,33 @@ enum Typography {
   /// largest style Apple offers — `.largeTitle` — is about 34 points, and the
   /// agreed design calls for the numeral to be roughly five times the size of
   /// anything else on screen rather than twice it. There is no standard style
-  /// that large, so the size is stated here and scaled by hand at the one place
-  /// it is used. See `numeralTrackingRatio` for how it stays legible.
+  /// that large, so the size is stated here and scaled by hand at each of the
+  /// two places it is used — the countdown, and ``statNumeralBaseSize`` below.
+  /// See `numeralTrackingRatio` for how it stays legible.
   ///
-  /// Dynamic Type is *not* given up in exchange. The single call site pairs this
+  /// Dynamic Type is *not* given up in exchange. Each call site pairs this
   /// with `@ScaledMetric(relativeTo: .largeTitle)`, which puts the number back on
   /// Apple's own growth curve — the same one `.largeTitle` follows, including the
   /// compression at the largest accessibility sizes. The number still grows when
   /// the reader raises their text size; it simply starts far bigger.
   static let numeralBaseSize: CGFloat = 96
+
+  /// The starting size of the *history* screen's count — the number of pomodoros
+  /// finished on a given day — before the reader's text-size setting is applied.
+  ///
+  /// **Half the countdown, and derived rather than stated.** This is not a second
+  /// raw point size: it is a fraction of ``numeralBaseSize``, so the app still
+  /// has exactly one stated magnitude and the relationship between its two
+  /// loudest numbers is fixed here instead of being re-decided by whichever
+  /// screen happens to need it.
+  ///
+  /// **Why half.** The history screen's number has to be unmistakably the first
+  /// thing read — that is the whole premise of the screen — while not reading as
+  /// a second countdown. At full size it looks like a timer that has stopped;
+  /// at body size it stops being the answer to the question the screen exists to
+  /// answer. Half is the size at which it is clearly a *count* rather than a
+  /// clock.
+  static let statNumeralBaseSize: CGFloat = numeralBaseSize * 0.5
 
   /// The weight of the countdown numeral.
   ///

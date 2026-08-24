@@ -48,19 +48,45 @@ final class CachedTask {
   /// When this row was fetched. Freshness only — see `CachedProject.syncedAt`.
   var syncedAt: Date
 
+  /// Whether Todoist says this task has a recurring due date (D21).
+  ///
+  /// **Mirrored, not invented.** It is Todoist's own `is_recurring`, which
+  /// arrives on the task's `due` object — a field the build contract's
+  /// not-mirrored table (`F3-contract.md` §3.2) lists by name. D21 is the
+  /// visible argument with that table which the table itself demands, and it
+  /// moves exactly one boolean across: no date, no schedule string, no time
+  /// zone, and nothing from which a recurrence rule could be rebuilt.
+  ///
+  /// It exists so that the one place a completion is recorded can ask what was
+  /// true at that moment. Nothing else reads it, and it is thrown away and
+  /// rewritten on every refresh like every other column here.
+  ///
+  /// `false` when the task has no due date at all, which is an ordinary task
+  /// rather than a failure.
+  var isRecurring: Bool = false
+
   /// Creates one mirrored row.
+  ///
+  /// - Parameter isRecurring: defaults to `false` so that the many tests which
+  ///   build a plain task need not state it. That default is safe **here** and
+  ///   not on `CompletedTaskRecord` for one reason: these rows are deleted and
+  ///   rewritten in full on every refresh from Todoist's own answer, so a wrong
+  ///   value corrects itself within one foreground, whereas a completion is
+  ///   written once and never revisited.
   init(
     id: String,
     content: String,
     projectID: String,
     sectionID: String?,
     childOrder: Int,
-    syncedAt: Date) {
+    syncedAt: Date,
+    isRecurring: Bool = false) {
     self.id = id
     self.content = content
     self.projectID = projectID
     self.sectionID = sectionID
     self.childOrder = childOrder
     self.syncedAt = syncedAt
+    self.isRecurring = isRecurring
   }
 }
