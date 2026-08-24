@@ -4,7 +4,7 @@ import Foundation
 
 /// The only file in this app that talks to Apple's music player.
 ///
-/// Everything above it speaks the seven verbs of `MusicPlaying` and knows
+/// Everything above it speaks the eight members of `MusicPlaying` and knows
 /// nothing about Apple Music. That is what makes the whole of this feature's
 /// logic provable against a stand-in on a machine with no music library, no
 /// subscription and no speaker, and it is what confines a framework this app
@@ -73,7 +73,13 @@ final class AppleMusicPlayer: MusicPlaying {
 
   /// Subscribes to the player's own status changes.
   ///
-  /// `receive(on: RunLoop.main)` because the callback ends up touching
+  /// `receive(on:)` IS LOAD-BEARING, and not for the reason it looks like. Combine
+  /// publishes `objectWillChange` BEFORE the value changes, so a callback run
+  /// synchronously would read the OLD `playbackStatus` and stay one event behind
+  /// for ever. Deferring to a later turn is what makes it read the new one.
+  /// Delete the hop and all 294 tests stay green while every reading is stale.
+  ///
+  /// It also happens that the callback touches
   /// `@Observable` state that the screen reads, and everything in this feature
   /// is main-actor bound. Cancelled and replaced rather than accumulated, so
   /// setting the callback twice does not deliver twice.
@@ -85,7 +91,7 @@ final class AppleMusicPlayer: MusicPlaying {
       .sink { onPlaybackStatusChanged() }
   }
 
-  // MARK: The seven verbs
+  // MARK: The verbs
 
   /// Queues the chosen item, sets it to loop for ever, and starts it.
   ///

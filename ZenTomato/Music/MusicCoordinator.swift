@@ -277,6 +277,20 @@ final class MusicCoordinator {
   ///     working it out is the observer's job because it takes three facts from
   ///     the engine rather than one.
   func blockChanged(to kind: BlockKind, isRunning: Bool, sprintIsOver: Bool = false) {
+    // THE SILENCE ENDS WITH THE BLOCK IT WAS ABOUT (D20).
+    //
+    // Compared against the previous values rather than cleared unconditionally,
+    // because this is called on every observation of the engine — including ones
+    // where nothing changed — and clearing on those would un-silence a block the
+    // person is still sitting in.
+    //
+    // This line was missing when D20 shipped. The flag was set and never
+    // cleared, so one tap on Stop silenced music for the rest of the app's life,
+    // and 291 tests stayed green because none of them silenced a block and then
+    // started another.
+    if kind != self.kind || isRunning != isTimerRunning {
+      isSilencedForThisBlock = false
+    }
     self.kind = kind
     isTimerRunning = isRunning
     self.sprintIsOver = sprintIsOver
@@ -376,11 +390,24 @@ final class MusicCoordinator {
     guard isPlaying || isStarting else { return }
     isSilencedForThisBlock = true
     soundTask?.cancel()
-    generation += 1
+    // `&+=` like `apply()`, rather than `+=`. Unreachable in practice, but the
+    // file made a choice about overflow and this should not be the exception.
+    generation &+= 1
+    // Cleared here rather than left to the superseded task, which never reaches
+    // the line that would clear it — it is inside the generation guard it has
+    // just failed. Without this the row claims "starting" for the rest of a
+    // block that has been stopped.
+    isStarting = false
     player.pause()
     refreshIsPlaying()
   }
 
+  /// Moves to the next track.
+  ///
+  /// The only way through a playlist this app offers. It deliberately does not
+  /// bump the generation counter: a skip is not a change of what should be
+  /// playing, so it must not supersede an in-flight load of the very thing it is
+  /// skipping within.
   func skipForward() {
     guard player.isPlaying else { return }
     let mine = generation
@@ -579,53 +606,16 @@ final class MusicCoordinator {
       availability: availability,
       selection: selection)
 
-    guard !wantsSound else { return }
+    // `isSilencedForThisBlock` belongs in this question as much as in `apply()`.
+    // Without it this path is the one hole in the generation guard: a load that
+    // MusicKit had already started cannot be cancelled, so it returns with audio
+    // running, arrives here superseded, finds that the block still "wants sound"
+    // and leaves it playing — a moment after the person asked for silence.
+    guard !wantsSound || isSilencedForThisBlock else { return }
     goQuiet()
   }
 
   // MARK: Reading the world
-
-  /// Re-reads availability and then asks whether the chosen item is still in the
-  /// library.
-  ///
-  /// Both are reads with no side effect on the person's phone. Neither can
-  /// prompt for anything, so this is safe at launch — the permission prompt is
-  /// reached only by switching music on.
-  private func refreshAvailabilityAndSelection() {
-    libraryTask?.cancel()
-    libraryTask = Task { @MainActor [weak self] in
-      guard let self else { return }
-      let answer = await availabilityChecker.refresh()
-      availabilityChanged(to: answer)
-      await checkSelectionIsStillThere()
-    }
-  }
-
-  /// Asks the library whether the chosen item is still there, and takes its
-  /// current name if it has been renamed.
-  private func checkSelectionIsStillThere() async {
-    guard let wanted = selection, availability.permitsPlayback else { return }
-
-    do {
-      guard let found = try await library.resolve(wanted) else {
-        selectionIsMissing = true
-        return
-      }
-      selectionIsMissing = false
-      guard found != wanted, !isTimerRunning else { return }
-      // The item is still there under a new name. Taking it keeps the timer
-      // screen showing what the Music app shows.
-      selection = found
-      preferences.setSelection(found)
-    } catch {
-      // A library that cannot be read is a library nothing can be played from,
-      // so the honest answer is that this app does not know whether it can play
-      // — which is one quiet line on the row and a timer that is unaffected.
-      // The error is turned into that fact rather than discarded.
-      availability = .couldNotBeChecked
-      apply()
-    }
-  }
 
   // MARK: Private
 
@@ -732,5 +722,58 @@ extension MusicCoordinator {
   func interruptionEnded(mayResume: Bool) {
     guard mayResume else { return }
     apply()
+  }
+}
+
+// MARK: - Availability and the chosen item
+
+/// Whether this app may play music at all, and whether the thing the person
+/// chose is still in their library.
+///
+/// In an extension for the same reason the interruption handling is: the body
+/// reached the length the linter allows, and the honest answer to that is to
+/// find a seam rather than raise the number. These two belong together — both
+/// ask the world a question and write down the answer.
+extension MusicCoordinator {
+  /// Re-reads availability and then asks whether the chosen item is still in the
+  /// library.
+  ///
+  /// Both are reads with no side effect on the person's phone. Neither can
+  /// prompt for anything, so this is safe at launch — the permission prompt is
+  /// reached only by switching music on.
+  private func refreshAvailabilityAndSelection() {
+    libraryTask?.cancel()
+    libraryTask = Task { @MainActor [weak self] in
+      guard let self else { return }
+      let answer = await availabilityChecker.refresh()
+      availabilityChanged(to: answer)
+      await checkSelectionIsStillThere()
+    }
+  }
+
+  /// Asks the library whether the chosen item is still there, and takes its
+  /// current name if it has been renamed.
+  private func checkSelectionIsStillThere() async {
+    guard let wanted = selection, availability.permitsPlayback else { return }
+
+    do {
+      guard let found = try await library.resolve(wanted) else {
+        selectionIsMissing = true
+        return
+      }
+      selectionIsMissing = false
+      guard found != wanted, !isTimerRunning else { return }
+      // The item is still there under a new name. Taking it keeps the timer
+      // screen showing what the Music app shows.
+      selection = found
+      preferences.setSelection(found)
+    } catch {
+      // A library that cannot be read is a library nothing can be played from,
+      // so the honest answer is that this app does not know whether it can play
+      // — which is one quiet line on the row and a timer that is unaffected.
+      // The error is turned into that fact rather than discarded.
+      availability = .couldNotBeChecked
+      apply()
+    }
   }
 }

@@ -116,9 +116,10 @@ struct MusicFenceTests {
   /// the row has, the number of *transport* controls is one while a focus block
   /// is playing and zero everywhere else — including on a break, where the row
   /// has no interactive element at all.
-  @Test("theRowOffersOneTransportControlAndOnlyWhileAFocusBlockPlays")
-  func theRowOffersOneTransportControlAndOnlyWhileAFocusBlockPlays() {
+  @Test("theRowOffersSkipAndStopAndOnlyWhileAFocusBlockPlays")
+  func theRowOffersSkipAndStopAndOnlyWhileAFocusBlockPlays() {
     var statesWithSkip = 0
+    var statesWithTooManyControls = 0
     var statesWithAControlDuringABreak = 0
 
     for isRunning in [true, false] {
@@ -134,6 +135,14 @@ struct MusicFenceTests {
               playback: .playing)
 
             if row.canSkip { statesWithSkip += 1 }
+            // THE COUNT, NOT JUST THE FLAGS. Counting `canSkip` alone lets a
+            // third transport control — a volume slider, a shuffle toggle —
+            // appear on a focus block with this test still green. It is the
+            // number that has to be asserted, because a new flag is exactly
+            // what nobody would think to add a check for.
+            if isRunning, kind == .work, row.interactiveControlCount > 2 {
+              statesWithTooManyControls += 1
+            }
             if isRunning, kind != .work, row.interactiveControlCount > 0 {
               statesWithAControlDuringABreak += 1
             }
@@ -145,6 +154,10 @@ struct MusicFenceTests {
     // One combination out of all of them: running, a focus block, music on, and
     // available.
     #expect(statesWithSkip == 1)
+    // Skip and stop, and nothing else (D20). This is the assertion that fails
+    // when the row widens — the one above only watches skip.
+    #expect(statesWithTooManyControls == 0,
+            "a focus block offers skip and stop and no third control")
     #expect(statesWithAControlDuringABreak == 0)
   }
 

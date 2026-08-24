@@ -378,7 +378,7 @@ struct MusicRowModel: Equatable {
   ///
   /// **This is the claim the adversarial reviewer will test**, so it is stated as
   /// a number a test can read rather than as a sentence in a comment. While a
-  /// focus block runs and music is playing it is 1 — the skip button. During a
+  /// focus block runs and music is playing it is 2 — skip and stop. During a
   /// break it is 0. While idle it is 2 — the switch and the line — and neither of
   /// those is a transport control, because nothing is playing.
   var interactiveControlCount: Int {
@@ -487,7 +487,7 @@ struct MusicRowModel: Equatable {
   ///
   /// **While a focus block plays, the line is the chosen item's name rather than
   /// the track's.** The design asked for the track title, and the ratified
-  /// playback protocol has seven members, none of which can answer what is
+  /// playback protocol has eight members, none of which can answer what is
   /// playing — deliberately, because the members that could answer it are the
   /// same ones that would let somebody build a way of moving through a track.
   /// The chosen name is true,

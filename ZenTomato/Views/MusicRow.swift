@@ -236,12 +236,6 @@ struct MusicRow: View {
       .contentShape(Rectangle())
   }
 
-  /// The skip button, or the exact space it would take.
-  ///
-  /// **The same button in both branches**, so the reserved width and height are
-  /// whatever the real button measures at the reader's own text size rather than
-  /// a number somebody guessed. Hidden here means unreachable by eye, by rotor,
-  /// by Full Keyboard Access and by Voice Control — not merely transparent.
   /// The two transport controls, together.
   ///
   /// **They appear and disappear as one.** Both answer the same question — is
@@ -286,6 +280,12 @@ struct MusicRow: View {
     .accessibilityHint(Text(MusicCopy.stopHint))
   }
 
+  /// The skip button, or the exact space it would take.
+  ///
+  /// **The same button in both branches**, so the reserved width and height are
+  /// whatever the real button measures at the reader's own text size rather than
+  /// a number somebody guessed. Hidden here means unreachable by eye, by rotor,
+  /// by Full Keyboard Access and by Voice Control — not merely transparent.
   @ViewBuilder
   private var skipSlot: some View {
     if model.canSkip {
