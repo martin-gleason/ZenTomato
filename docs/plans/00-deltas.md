@@ -886,11 +886,57 @@ It is **not** a recurrence rule, a schedule, a due date, or anything that could 
 boolean, captured at the moment of completion, describing what was true then. `CompletedTaskRecord`
 stays append-only and stays a record of something this app did — not a task model.
 
-### Where it lands
+## D21b — A task completed during a sprint does not come back into it
+
+**Ratified 2026-08-23, alongside D21.** The owner: *"Budgeting with YNAB, picking 1–3 MITs — these
+are recurring habits that I mostly keep. For version 1.0, making sure these do not repeat in a
+pomodoro sprint is fine."*
+
+A different problem from D21, in a different feature, and easy to conflate with it.
+
+**The scenario.** You complete "Budget with YNAB" from the end-of-block sheet. Todoist does not finish
+it — it advances it to tomorrow, and it is active again immediately. The next cache refresh sees it as
+an open task, and nothing stops it being picked, or reappearing, later in the same sprint. You are
+offered work you have already done this afternoon.
+
+**The rule:** a task completed during a sprint is not offered again until that sprint ends. It stays
+out of the picker and out of the plan.
+
+**Deliberately not "if it recurs".** The rule holds for any task, recurring or not, which means it
+needs no recurrence knowledge and cannot be wrong about a task it guessed at. A non-recurring task
+completed mid-sprint would vanish from Todoist's active list anyway, so the rule costs nothing there
+and is simply always true.
+
+**Scope of "the sprint".** From the first block of a sprint to the long break that ends it. Stopping
+clears it, because stopping ends the sprint. Nothing persists across app launches — this is about one
+afternoon, not a history, and `CompletedTaskRecord` already holds the history.
+
+### Where D21 lands
 
 **F6**, which needs it, and which will retrofit F3's completion path to capture it. A retrofit rather
 than a new gate, in the shape F1b and F1c already established.
 
+**D21b lands in F6 too**, though it touches the plan rather than the export — one gate, because the
+two are answers to the same observation and splitting them across features would leave the smaller,
+more useful one waiting behind the larger.
+
 **Verify at build time:** confirm what Todoist API v1 actually returns for recurrence on
 `GET /tasks` — the field is expected to hang off `due`, but F3's plan learned the hard way that the
 live docs beat an assumption, and a boolean read from the wrong key is silently always false.
+
+
+---
+
+## Parked for v1.1 — a Todoist label to mark a habit
+
+The owner's idea, and better than inferring: *"maybe this is a solution of 'tag an item as a habit' in
+Todoist so ZenTomato knows it's a habit and expects a recurring pattern."*
+
+Reading a label breaks no rule — it is a read, and labels come back with the task. It is also more
+honest than either alternative: D21 asks Todoist whether a task *recurs*, which is a good proxy for a
+habit and not the same thing, and repetition-counting is a worse proxy still. A label is the person
+saying which is which.
+
+Parked rather than built because it needs the label maintained in Todoist to be worth anything, and
+because D21 answers the v1.0 question without any setup at all. Worth revisiting once a real fortnight
+has been read: if the recurrence proxy turns out to mislabel things, this is the fix.
