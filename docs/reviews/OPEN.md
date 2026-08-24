@@ -47,6 +47,23 @@ The following should be applied before this is reviewed:
 
 O4 will be scheduled sometime today.
 
+### Device results — 2026-08-24
+
+**Interruptions, from the owner:** *"phone call paused the timer and the music, when
+answered. it seems to be working. headphones and siri activation pause but keep working."*
+
+**The timer did not pause, and could not have.** There is no `pause` function, no
+`isPaused` and no `pausedAt` anywhere in `TimerEngine`; a block's end rests on `endsAt`, an
+absolute instant, and remaining time is `endsAt.timeIntervalSince(instant)`. The music
+interruption handler reaches music only. What paused was the audio, which is correct, while
+the call held the screen. The no-pause rule ratified on 2026-08-21 is intact.
+
+**One thing to confirm during the full sprint, cheaply:** that a block interrupted by a call
+still *ends at the right wall-clock minute*. The design says it must; nobody has watched it.
+
+**Alarm through an active Focus: pass.** The reason D3 chose AlarmKit over a local
+notification, proven on hardware for the first time.
+
 ## Needs the agent
 
 | # | Item | From | Why it is still open |
