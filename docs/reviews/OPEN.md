@@ -47,6 +47,40 @@ The following should be applied before this is reviewed:
 
 O4 will be scheduled sometime today.
 
+### Watch item — stopping a block offered nothing to complete
+
+**Reported 2026-08-24, to be retried.** The owner: *"i stopped the pomodoro and couldn't
+select what was completed."*
+
+**The wiring is there.** `StopReasonSheet` carries the completion control, and the stop path
+populates its subject before presenting — `TimerView.swift:842`, the same call the
+end-of-block path makes. So this is not a missing feature; it is one of four specific
+conditions, and knowing which turns a repeat into a diagnosis.
+
+`currentCompletionSubject()` returns nothing unless **all four** hold:
+
+| Condition | If it fails |
+|---|---|
+| A Todoist token is stored | the section cannot appear at all |
+| The block had an attachment | nothing to complete |
+| That attachment is a **task** | **a block attached to a *project* has no task to tick off** |
+| The task has a title snapshot | nothing to name |
+
+**The third is the likeliest, and it is by design.** `SPEC.md`: *"A pomodoro is attached to
+exactly one Todoist task (or, if no task is chosen, to a project)."* Only a task can be
+completed, so a project-attached block correctly offers nothing.
+
+**There is a second reading, and it is the more interesting one.** "Select what was
+completed" may mean choosing from the session plan rather than ticking off the one attached
+task. That is not what the app does — it offers the block's own task and nothing else — and
+it is close to the owner's stated use case: *"At the end of a pomodoro, but before the break,
+I want to capture what I completed."* If that is what was expected, this is a spec question
+for v1.1 rather than a defect, and it needs a delta.
+
+**What to note on the retry:** what the block was attached to — a task, a project, or nothing
+— and whether the section was absent entirely or present but disabled. Those two answers
+separate all four conditions from the expectation gap.
+
 ### Device results — 2026-08-24
 
 **Interruptions, from the owner:** *"phone call paused the timer and the music, when
