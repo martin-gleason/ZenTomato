@@ -206,9 +206,10 @@ struct DeltaIntegrityTests {
       guard let id = Self.headingID(line) else { continue }
       let end = lines[(index + 1)...].firstIndex { $0.hasPrefix("## D") } ?? lines.count
       let body = lines[index..<end].joined(separator: "\n")
-      guard body.contains("**Currently:**") else { continue }
       guard body.contains("Ratified") else { continue }
       guard body.contains("REJECTED") == false else { continue }
+      // A delta owes an amendment when the text it says the spec CURRENTLY says is still there.
+      guard try Self.quotesLiveSpecText(in: body) else { continue }
       let summary = line.dropFirst(3).prefix(72)
       owed.append((id, String(summary)))
     }
@@ -261,6 +262,77 @@ struct DeltaIntegrityTests {
     let digits = text.split(separator: "\n")
       .first { $0.trimmingCharacters(in: .whitespaces).first?.isNumber == true }
     return Int(digits?.trimmingCharacters(in: .whitespaces) ?? "0") ?? 0
+  }
+
+  /// Whether a delta's `**Currently:**` block quotes text that is *still present* in `SPEC.md`.
+  ///
+  /// **THIS IS THE WHOLE DETECTOR, AND IT SELF-CLOSES.** A delta amends the contract when it says
+  /// "the spec currently says X" and the spec does, in fact, still say X. The moment the owner
+  /// applies the amendment, X is gone from `SPEC.md`, this returns false, and the delta stops being
+  /// counted — with no list to maintain and no baseline to remember to lower.
+  ///
+  /// The first version of this test asked only whether a `**Currently:**` block existed, and
+  /// over-counted: `D14` quotes a conflict between `D13` and `F5`, and `D21` quotes a SwiftData
+  /// model. Neither quotes the contract, and neither owes it anything. A check that names the wrong
+  /// files is one people stop reading.
+  ///
+  /// Fragments are taken from backticked spans, because that is how this file quotes spec lines.
+  /// Only fragments long enough to be distinctive are used — a short one like `F2` appears
+  /// everywhere and would match by accident.
+  private static func quotesLiveSpecText(in body: String) -> Bool {
+    guard let currently = body.range(of: "**Currently:**") else { return false }
+    let tail = body[currently.upperBound...]
+    let block = tail.range(of: "**Proposed").map { String(tail[..<$0.lowerBound]) } ?? String(tail)
+
+    let spec = squashed((try? String(
+      contentsOf: repositoryRoot.appending(path: "docs/specs/SPEC.md"), encoding: .utf8)) ?? "")
+
+    return fragments(of: block).contains { spec.contains($0) }
+  }
+
+  /// Whitespace collapsed to single spaces.
+  ///
+  /// Load-bearing: `00-deltas.md` wraps its quotations across lines, so a quoted spec line contains a
+  /// newline exactly where `SPEC.md` has a space. Comparing raw text finds nothing and the check
+  /// silently reports a clean backlog — the worst failure available to a test whose whole job is to
+  /// count what is outstanding.
+  private static func squashed(_ text: String) -> String {
+    text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+  }
+
+  /// The quoted fragments of a `**Currently:**` block, long enough to be distinctive.
+  ///
+  /// Two quoting styles are in use — backticks for a spec line reproduced literally, and
+  /// *"italics in quotes"* for one being referred to. Both are read, because a detector that
+  /// understands only one style under-reports, and a backlog that looks smaller than it is defeats
+  /// the point.
+  ///
+  /// **Twelve characters is the floor**, and it was reached by trying. At twenty-four, `D18` was
+  /// missed: the whole of the spec text it replaces is *"OAuth sign-in."*, fourteen characters. A
+  /// floor exists at all because a fragment like `F2` occurs everywhere and would match by accident;
+  /// the number is the shortest one that still separates a quotation from a passing mention.
+  private static func fragments(of block: String) -> [String] {
+    var found: [String] = []
+
+    found += block
+      .split(separator: "`", omittingEmptySubsequences: false)
+      .enumerated()
+      .filter { $0.offset % 2 == 1 }
+      .map { squashed(String($0.element)) }
+
+    if let quoted = try? NSRegularExpression(pattern: "[\u{201C}\"]([^\u{201D}\"]{12,})[\u{201D}\"]") {
+      let range = NSRange(block.startIndex..<block.endIndex, in: block)
+      quoted.enumerateMatches(in: block, range: range) { match, _, _ in
+        guard let match, let span = Range(match.range(at: 1), in: block) else { return }
+        found.append(squashed(String(block[span])))
+      }
+    }
+
+    // Trailing ellipses mark an abbreviated quotation; the part before one is still verbatim.
+    return found
+      .map { $0.replacingOccurrences(of: " …", with: "").replacingOccurrences(of: "…", with: "") }
+      .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: " ·")) }
+      .filter { $0.count >= 12 }
   }
 
   /// The ids listed under `## Amendments applied` in `SPEC.md`, or an empty set when the section
