@@ -280,4 +280,96 @@ struct SprintCompletionsTests {
       await Task.yield()
     }
   }
+
+  // MARK: The two places the rule actually takes effect
+
+  /// `theOnlyWriteAndTheOnlyReadAreBothStillWiredUp` — D21b's set is written from
+  /// the completion path and read by the picker, and neither line may quietly go
+  /// away.
+  ///
+  /// **WHY A SEARCH OF THE SOURCE, AND NOT A BEHAVIOURAL TEST.** Both ends of
+  /// this rule live inside SwiftUI views — a `case .closed` in `TimerView` and a
+  /// `filter` inside a computed `PickerScreenModel` in `PlanBuilderView`. Neither
+  /// is reachable from a test without standing up a view with a live `@Query`,
+  /// and a rule defended by nothing is worse than one defended crudely.
+  ///
+  /// That is not a hypothetical worry. Deleting the picker's filter outright, and
+  /// replacing the `record` call with a discard, each left the entire suite green:
+  /// every existing test in this file exercises `SprintCompletions` and
+  /// `SprintBoundaryObserver` — the backstop — and nothing at all exercised the
+  /// rule's entry point or the surface it is supposed to change.
+  ///
+  /// Both call sites are also *optional* environment lookups, which fail open and
+  /// silently: with the environment missing, `record` becomes a no-op and
+  /// `nil?.contains(id) != true` is `true`, so every task is kept. That is the
+  /// same shape of silent-always-false failure D21 was careful to defend against,
+  /// and it is why these two lines are worth pinning by name.
+  @Test("theOnlyWriteAndTheOnlyReadAreBothStillWiredUp")
+  func theOnlyWriteAndTheOnlyReadAreBothStillWiredUp() throws {
+    let root = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+
+    let timerView = try String(contentsOf: root.appending(path: "ZenTomato/Views/TimerView.swift"))
+    #expect(
+      timerView.contains("completedThisSprint?.record(taskID:"),
+      "D21b's only write is gone: a task ticked off mid-sprint would be offered again.")
+
+    // And that write is gated on a sprint actually being in progress. Without
+    // the gate an id recorded while the timer is at rest is cleared by nothing
+    // until the *next* sprint ends, because the observer clears on the
+    // transition into rest and nothing re-fires afterwards.
+    #expect(
+      timerView.contains("SprintBoundaryObserver.sprintHasEnded("),
+      "D21b's write is not gated on a live sprint: an id recorded at rest withholds that task for an extra sprint.")
+
+    let planBuilder = try String(contentsOf: root.appending(path: "ZenTomato/Views/PlanBuilderView.swift"))
+    #expect(
+      planBuilder.contains("completedThisSprint?.contains("),
+      "D21b's only read is gone: the picker would offer back work already done.")
+  }
+
+  /// `aRecordedTaskIsWithheldAndTheRestAreNot` — the rule itself, over a list.
+  ///
+  /// The picker's line is `tasks.filter { completedThisSprint?.contains($0.id) != true }`.
+  /// This is that expression, over the same set, asserting both halves: the
+  /// recorded task disappears and every other task survives. A filter that
+  /// withheld everything would satisfy "the completed one is absent" on its own,
+  /// which is why the second half is stated separately.
+  @Test("aRecordedTaskIsWithheldAndTheRestAreNot")
+  func aRecordedTaskIsWithheldAndTheRestAreNot() {
+    let completions = SprintCompletions()
+    completions.record(taskID: "td-mits")
+
+    let everyTask = ["td-mits", "td-ynab", "td-chapter"]
+    let offered = everyTask.filter { completions.contains($0) != true }
+
+    #expect(offered == ["td-ynab", "td-chapter"])
+    #expect(offered.contains("td-mits") == false)
+  }
+
+  /// `nothingIsRecordedWhileNoSprintIsRunning` — the gate above, as a rule.
+  ///
+  /// `SprintBoundaryObserver` clears the set when the timer *becomes* idle with
+  /// no pomodoros behind it. It is driven by change, so an id arriving after that
+  /// moment is never swept: the next clear is the end of the following sprint,
+  /// and the task is withheld through all of it. The four states below are the
+  /// same table the observer documents, read from the other direction — the two
+  /// that mean "no sprint is running" are exactly the two where a completion must
+  /// not be recorded.
+  @Test("nothingIsRecordedWhileNoSprintIsRunning")
+  func nothingIsRecordedWhileNoSprintIsRunning() {
+    // At rest with nothing behind it: no sprint. A completion here belongs to no
+    // sprint and must not be withheld from the next one.
+    #expect(SprintBoundaryObserver.sprintHasEnded(isRunning: false, completedInSprint: 0))
+
+    // A block is running: a sprint is live, whether or not it has finished a
+    // pomodoro yet. The first pomodoro of a sprint has none behind it.
+    #expect(SprintBoundaryObserver.sprintHasEnded(isRunning: true, completedInSprint: 0) == false)
+    #expect(SprintBoundaryObserver.sprintHasEnded(isRunning: true, completedInSprint: 2) == false)
+
+    // Idle with pomodoros behind it — paused between blocks inside a sprint that
+    // has not ended. Still live, so a completion still counts.
+    #expect(SprintBoundaryObserver.sprintHasEnded(isRunning: false, completedInSprint: 2) == false)
+  }
 }

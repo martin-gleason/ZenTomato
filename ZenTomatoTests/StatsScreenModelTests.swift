@@ -25,6 +25,53 @@ struct StatsScreenModelTests {
   /// The screen's figures are pulled out of its own drawn strings rather than
   /// recomputed here, so this compares *what a person sees* on glass with *what
   /// a person reads* on paper.
+  /// `theExportedPageFollowsTheChosenRangeAndNotToday` — the page is built from
+  /// the *range* the reader picked, not from today.
+  ///
+  /// **WHY THIS TEST EXISTS, AND WHY `statsScreenMatchesExport` BELOW CANNOT
+  /// REPLACE IT.** That test hands the model a source that answers every question
+  /// with the same finished period, which is right for what it checks — that the
+  /// screen and the page agree about a period — but it means the two are compared
+  /// while both are holding the identical value. So it passes even if `document`
+  /// is wired to the wrong period entirely.
+  ///
+  /// That is not hypothetical. Changing `document` to read `todayPeriod` instead
+  /// of `rangePeriod` — which silently turns the Rhodia fortnight into a one-day
+  /// page — left the whole suite green. Exporting the wrong span is the single
+  /// worst thing this feature can do, because the export *is* the deliverable and
+  /// a wrong one is not obviously wrong: it is a plausible document about the
+  /// wrong dates.
+  ///
+  /// The fix is for the seam to answer *differently* depending on what it is
+  /// asked, so that "which period did you use" becomes an observable question.
+  @Test("theExportedPageFollowsTheChosenRangeAndNotToday")
+  func theExportedPageFollowsTheChosenRangeAndNotToday() {
+    // Today is a single day and answers with one pomodoro; any longer range
+    // answers with the nine-pomodoro fortnight. The two are now distinguishable
+    // from the outside, which is the whole point.
+    let model = StatsScreenModel(
+      periods: { $0.isSingleDay ? Self.oneDay : StatsPeriodFixture.fortnight },
+      today: StatsPeriodFixture.friday21)
+    model.load()
+
+    // The number at the top is today's: one.
+    #expect(model.todayNumeral == "1")
+
+    // The page is the fortnight's: nine. If `document` ever reads `todayPeriod`,
+    // this is the line that fails.
+    #expect(model.document.contains("9 pomodoros"))
+    #expect(model.document.contains("1 pomodoro ·") == false)
+
+    // And it follows the range when the range changes, rather than being fixed
+    // at load. A single-day range must produce the one-day page.
+    model.use(range: .day(StatsPeriodFixture.thursday20))
+    #expect(model.document.contains("9 pomodoros") == false)
+
+    // Today's number is unmoved by the range control — the ratified behaviour,
+    // and the reason the two are separate stored periods in the first place.
+    #expect(model.todayNumeral == "1")
+  }
+
   @Test("statsScreenMatchesExport")
   func statsScreenMatchesExport() {
     let model = Self.model(for: StatsPeriodFixture.fortnight)
