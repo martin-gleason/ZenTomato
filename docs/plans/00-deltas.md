@@ -806,3 +806,44 @@ It was the other candidate and it loses on two counts. The toggle lives in the m
 beside the countdown, so it is a longer reach at the moment somebody is trying not to break
 concentration. And the toggle means *"I use music"* whereas this means *"not this block"* — collapsing
 them would make one control answer two questions.
+
+---
+
+## D15 — What the Rhodia export contains, and what stays out of the counts
+
+**Ratified 2026-08-22 at the F6 gate. Written down 2026-08-23** — it was decided, described in
+conversation, and never recorded, which is how a decision becomes a thing nobody can check.
+
+### The document reads top-down as a review
+
+```
+42 pomodoros · 17h 30m · 23 distractions (14 internal / 9 external)
+
+## Days            when
+## Projects        where the time went
+## Completed       what came out of it          (D11)
+## Distractions    what interrupted me, by task
+## Stopped early   where I bailed, and why      (D13)
+```
+
+Not a data dump in five sections — an order of questions. *How did the fortnight go, when did I work,
+on what, what came of it, what interrupted me, where did I give up.* Each answers the previous one's
+"and then what".
+
+**Stopped-early gets its own section rather than sitting among the distractions.** Stops are rarer and
+heavier: a distraction is a moment, a stop is a decision. Buried in a list of taps they would
+disappear, and you paid a written sentence for each one (D13) specifically so they would be worth
+reading later.
+
+### Abandoned blocks are excluded from every count
+
+`42 pomodoros` keeps meaning **blocks you finished** — unchanged from what F2 ratified — while the
+bail-outs stay fully visible in their own section with their reasons.
+
+The alternative was putting the rate in the header (`42 pomodoros · 3 abandoned`). Rejected: it makes
+the first thing you see every time a measure of how often you gave up, which is a different document
+from the one this is meant to be.
+
+**One rule, one implementation.** `StatsQuery` is the only thing that counts, and both the stats
+screen and the exporter call it. Two counters that can disagree is how a number stops being trusted —
+and this is the number the whole app exists to produce.
