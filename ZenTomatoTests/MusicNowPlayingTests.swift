@@ -35,6 +35,40 @@ struct MusicNowPlayingTests {
     #expect(row.line.contains("An Ending") == false)
   }
 
+  /// The track name must come from the player every time it is asked for, not
+  /// from something remembered at the last status change.
+  ///
+  /// The device symptom of getting this wrong was precise and easy to miss:
+  /// "Heroes plays and Heroes is listed. But Heroes remains when the next song
+  /// is By This River. Then when the song advances to Cool It Down, it is listed
+  /// as By This River." Always exactly one behind.
+  @Test("the track name follows the player, one refresh at a time")
+  func trackNameIsNotOneBehind() async {
+    let player = SpyMusicPlayer()
+    let coordinator = MusicCoordinator(
+      player: player,
+      availability: StubMusicAvailability(),
+      library: StubMusicLibrary(),
+      preferences: StubMusicPreferenceStore(isEnabled: true, selection: Self.chosen))
+
+    coordinator.blockChanged(to: .work, isRunning: true)
+    for _ in 0 ..< 8 { await Task.yield() }
+
+    player.nowPlayingTitle = "Heroes"
+    player.announceStatusChange()
+    #expect(coordinator.nowPlayingTitle == "Heroes")
+
+    // The track advances. This is the moment that was silently missed, because
+    // the queue announces it and only the state was being listened to.
+    player.nowPlayingTitle = "By This River"
+    player.announceStatusChange()
+    #expect(coordinator.nowPlayingTitle == "By This River", "not the previous track")
+
+    player.nowPlayingTitle = "Cool It Down"
+    player.announceStatusChange()
+    #expect(coordinator.nowPlayingTitle == "Cool It Down")
+  }
+
   // MARK: Private
 
   private static let chosen = MusicSelection(

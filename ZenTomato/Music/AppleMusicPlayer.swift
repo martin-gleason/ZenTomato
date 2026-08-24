@@ -96,7 +96,21 @@ final class AppleMusicPlayer: MusicPlaying {
   private func observeStatus() {
     statusObservation?.cancel()
     guard let onPlaybackStatusChanged else { return }
-    statusObservation = player.state.objectWillChange
+    // TWO PUBLISHERS, BECAUSE THERE ARE TWO OBJECTS.
+    //
+    // `MusicPlayer.State` and `MusicPlayer.Queue` are separate ObservableObjects
+    // and they announce different things. State says whether sound is coming out;
+    // the QUEUE says which track it is coming from. Observing only the state
+    // meant the track name changed only when something else happened to cause a
+    // refresh — so it sat one song behind, for ever. Reported from the device
+    // exactly that way: "Heroes plays and Heroes is listed… when the song
+    // advances to Cool It Down, it is listed as By This River."
+    //
+    // Merged rather than two sinks, so there is one subscription to cancel and
+    // no way for the two to get out of step with each other.
+    statusObservation = Publishers.Merge(
+      player.state.objectWillChange,
+      player.queue.objectWillChange)
       .receive(on: RunLoop.main)
       .sink { onPlaybackStatusChanged() }
   }
