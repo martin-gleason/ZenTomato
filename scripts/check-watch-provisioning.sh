@@ -102,7 +102,13 @@ fi
 if [ "${failed}" -ne 0 ]; then
   cat <<'NEXT'
 
-WHAT TO DO — it needs the developer account, so it is yours rather than the agent's:
+WHAT TO DO — yours rather than the agent's; see docs/chores/C8.md.
+
+  0. FIRST, AND EVERYTHING ELSE WAITS ON IT: turn on Developer Mode ON THE WATCH.
+       Watch > Settings > Privacy & Security > Developer Mode > on
+     The watch restarts; unlock it and confirm the prompt. A watch without it is
+     not a development device, so Xcode never registers it, so no watchOS profile
+     can ever include it — which is what the failures above are.
 
   1. make generate && open ZenTomato.xcodeproj
   2. Keep the iPhone connected and the Watch on your wrist and unlocked.
