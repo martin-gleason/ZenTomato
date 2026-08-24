@@ -45,11 +45,6 @@ struct StatsScreen: View {
 
   // MARK: Private
 
-  /// Half the loudness of the numeral that runs on the timer screen. Derived
-  /// rather than stated, because `Typography` holds the app's *one* raw point
-  /// size — and a 96-point number here would read as a second timer.
-  private static let todayNumeralRatio: CGFloat = 0.5
-
   /// A day whose sentences are on screen.
   private struct OpenDay: Identifiable {
     let id: String
@@ -57,8 +52,12 @@ struct StatsScreen: View {
     let entries: [StatsDistractionEntry]
   }
 
+  /// The day's count, at the reader's text size. The magnitude is `Typography`'s
+  /// to decide, not this screen's — see ``Typography/statNumeralBaseSize``.
+  /// `relativeTo: .largeTitle` picks the growth curve that flattens off at the
+  /// top accessibility sizes instead of running away.
   @ScaledMetric(relativeTo: .largeTitle) private var todayNumeralSize =
-    Typography.numeralBaseSize * StatsScreen.todayNumeralRatio
+    Typography.statNumeralBaseSize
 
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
