@@ -65,6 +65,7 @@ struct ZenTomatoApp: App {
       // Building the stack is inert; `start()` below is what begins the work,
       // and the permission is asked the first time somebody switches music on.
       let library = AppleMusicLibrary()
+      let musicCache = MusicLibraryCache(context: container.mainContext, library: library)
       let musicCoordinator = MusicCoordinator(
         player: AppleMusicPlayer(),
         availability: AppleMusicAvailability(),
@@ -94,6 +95,7 @@ struct ZenTomatoApp: App {
         completion: TaskCompletion(context: container.mainContext, client: client),
         music: musicCoordinator,
         library: library,
+        musicCache: musicCache,
         // The one thing that tells music a block has changed. It subscribes to
         // the engine's own published state — F4 adds no hook to the engine and
         // invents no second notion of "the block changed".
@@ -150,6 +152,7 @@ struct ZenTomatoApp: App {
 
     /// Somebody's music library, read-only.
     let library: any MusicLibraryReading
+    let musicCache: MusicLibraryCache
 
     /// Turns the engine's own published block changes into calls on the
     /// coordinator. Held here so it lives exactly as long as the app does, and
@@ -178,7 +181,8 @@ struct ZenTomatoApp: App {
         plan: running.plan,
         completion: running.completion,
         music: running.music,
-        library: running.library)
+        library: running.library,
+        musicCache: running.musicCache)
         .modelContainer(running.container)
         .environment(running.engine)
         // MUSIC BEGINS OBSERVING HERE, AND NOT ONE MOMENT EARLIER.

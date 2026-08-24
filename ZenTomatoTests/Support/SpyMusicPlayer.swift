@@ -85,6 +85,9 @@ final class SpyMusicPlayer: MusicPlaying {
   /// Whether sound is coming out, as far as this stand-in is concerned.
   private(set) var isPlaying = false
 
+  /// What a test says is playing. Set it to check the row draws it.
+  var nowPlayingTitle: String?
+
   /// When set, loading throws it instead of succeeding.
   var loadError: (any Error)?
 

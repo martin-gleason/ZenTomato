@@ -530,6 +530,9 @@ struct MusicPickerSheet: View {
   /// The library. Read once when the sheet opens, and never written to.
   let library: any MusicLibraryReading
 
+  /// The remembered library, so this sheet opens at once.
+  let cache: MusicLibraryCache
+
   /// Whether a block is counting. The switch is locked while one is.
   let isBlockRunning: Bool
 
@@ -598,12 +601,33 @@ struct MusicPickerSheet: View {
     // has its own sentence on the sheet or has not asked for permission yet, and
     // a request that is certain to fail is a failure reported for nothing.
     guard music.availability == .ready else { return }
-    state = .reading
+
+    // SHOW WHAT WE HAVE, THEN GO AND CHECK.
+    //
+    // A library request is answered from the phone's own database, so it is not
+    // slow the way a network call is slow — but it pages, and on a real library
+    // that is hundreds of milliseconds of blank sheet every single time. Drawing
+    // the remembered list first means the sheet opens instantly and corrects
+    // itself a moment later if anything has changed.
+    //
+    // `hasEverRead` rather than "is the list empty", because an empty list means
+    // two opposite things — nobody has looked yet, or the library really is
+    // empty — and showing "no music" to somebody who has plenty would be worse
+    // than a brief spinner.
+    if cache.hasEverRead {
+      let remembered = cache.remembered()
+      state = .ready(MusicPickerScreenModel(
+        playlists: remembered.filter { $0.kind == .playlist },
+        songs: remembered.filter { $0.kind == .song }))
+    } else {
+      state = .reading
+    }
 
     do {
-      let playlists = try await library.playlists()
-      let songs = try await library.songs()
-      let model = MusicPickerScreenModel(playlists: playlists, songs: songs)
+      let fresh = try await cache.refresh()
+      let model = MusicPickerScreenModel(
+        playlists: fresh.filter { $0.kind == .playlist },
+        songs: fresh.filter { $0.kind == .song })
       state = .ready(model)
       libraryIsEmpty = model.isEmpty
     } catch is CancellationError {
@@ -611,8 +635,14 @@ struct MusicPickerSheet: View {
       // needs saying: the state stays as it was and the screen has gone.
       return
     } catch {
-      // Reported as a state on the screen rather than discarded. There is no
-      // amber and no retry button: closing and reopening the sheet is the retry.
+      // A refresh that fails while something is already on screen leaves it
+      // there: a remembered library is better than an error page, and it is
+      // almost certainly still correct. Only a first read with nothing to fall
+      // back on becomes a failure state.
+      //
+      // Closing and reopening the sheet is the retry; there is no amber and no
+      // retry button.
+      if case .ready = state { return }
       state = .failed
       libraryIsEmpty = false
     }

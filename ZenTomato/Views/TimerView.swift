@@ -87,6 +87,9 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
   /// else: is the chosen playlist or song still there?
   let library: any MusicLibraryReading
 
+  /// The remembered library, so the music sheet opens at once.
+  let musicCache: MusicLibraryCache
+
   var body: some View {
     screen
       .sheet(isPresented: $showingSettings, onDismiss: settingsSheetClosed) {
@@ -147,6 +150,7 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
         MusicPickerSheet(
           music: music,
           library: library,
+          cache: musicCache,
           isBlockRunning: engine.isRunning,
           libraryIsEmpty: $musicLibraryIsEmpty)
       }
@@ -591,7 +595,8 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       // second.
       selectionIsGone: music.selectionIsMissing,
       libraryIsEmpty: musicLibraryIsEmpty,
-      playback: playback)
+      playback: playback,
+      nowPlayingTitle: music.nowPlayingTitle)
   }
 
   /// What the player is doing, as far as anybody can honestly tell.
@@ -1013,7 +1018,8 @@ private struct TimerViewPreviewHost: View {
         plan: running.plan,
         completion: running.completion,
         music: running.music,
-        library: running.library)
+        library: running.library,
+        musicCache: running.musicCache)
         .modelContainer(running.container)
         .environment(running.engine)
         .preferredColorScheme(appearance)
@@ -1041,6 +1047,7 @@ private struct TimerViewPreviewHost: View {
     /// a permission, plays anything, or makes a single library request.
     let music: MusicCoordinator
     let library: any MusicLibraryReading
+    let musicCache: MusicLibraryCache
   }
 
   @State private var bootstrap: Result<PreviewRun, any Error> = Result {
@@ -1073,7 +1080,8 @@ private struct TimerViewPreviewHost: View {
         availability: AppleMusicAvailability(),
         library: library,
         preferences: MusicPreferenceStore(context: container.mainContext)),
-      library: library)
+      library: library,
+      musicCache: MusicLibraryCache(context: container.mainContext, library: library))
   }
 }
 

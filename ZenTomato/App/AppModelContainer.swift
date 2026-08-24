@@ -88,6 +88,11 @@ enum AppModelContainer {
       CompletedTaskRecord.self,
       SessionPlan.self,
       SessionPlanItem.self,
+      // The library mirror, so the picker opens at once rather than re-reading
+      // MusicKit every time the sheet appears. A mirror in exactly the sense the
+      // Todoist caches above are mirrors: it invents nothing and is replaced
+      // wholesale on refresh.
+      CachedMusicItem.self,
       // F4's own row. It is **not** part of `AppSettings`, whose six columns are
       // closed by the spec's "Nothing else" — see `MusicPreference`.
       MusicPreference.self

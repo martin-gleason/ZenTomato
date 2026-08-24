@@ -82,6 +82,17 @@ protocol MusicPlaying: AnyObject {
   /// can only redraw on a stored value.
   var isPlaying: Bool { get }
 
+  /// What is playing right now, or `nil` when nothing is.
+  ///
+  /// The track, not the playlist — the row already knows the playlist, because
+  /// the person chose it. Knowing which song is on is the thing they cannot get
+  /// from anywhere else without leaving the app.
+  ///
+  /// **A read, not a control.** It commands nothing and returns a string, so it
+  /// does not widen the skip-and-stop fence: nobody can seek, scrub, shuffle or
+  /// go back through a property that only answers a question.
+  var nowPlayingTitle: String? { get }
+
   /// Called when the player's own playback status changes, for any reason.
   ///
   /// **This is a notification, not a control**, and it is the reason the skip

@@ -191,6 +191,10 @@ final class MusicCoordinator {
   /// the app refreshes it, and so does the next block boundary.
   private(set) var isPlaying = false
 
+  /// The track playing right now, or `nil`. Refreshed on exactly the same signal
+  /// as `isPlaying`, so the row can never show a name for silence.
+  private(set) var nowPlayingTitle: String?
+
   /// Whether a block is counting right now. Read by the screen to decide
   /// whether the switch may be touched.
   private(set) var isTimerRunning = false
@@ -591,6 +595,7 @@ final class MusicCoordinator {
   /// the answer is stored rather than asked for on the spot.
   private func refreshIsPlaying() {
     isPlaying = player.isPlaying
+    nowPlayingTitle = player.nowPlayingTitle
   }
 
   /// Re-states silence if silence is what the rule currently wants.

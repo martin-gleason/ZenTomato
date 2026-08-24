@@ -416,7 +416,8 @@ struct MusicRowModel: Equatable {
     selection: MusicSelection?,
     selectionIsGone: Bool = false,
     libraryIsEmpty: Bool = false,
-    playback: Playback = .silent
+    playback: Playback = .silent,
+    nowPlayingTitle: String? = nil
   ) -> MusicRowModel {
     let isAvailable = availability == .ready || availability == .notAsked
     let isOn = isEnabled && isAvailable
@@ -457,11 +458,21 @@ struct MusicRowModel: Equatable {
         isEnabled: isEnabled,
         availability: availability,
         chosenLine: chosenLine,
-        playback: playback),
+        sound: Sound(playback: playback, nowPlayingTitle: nowPlayingTitle)),
       isLineTappable: false,
       toggleHint: availability.explanation ?? MusicCopy.lockedHint,
       canSkip: transportIsLive,
       canStop: transportIsLive)
+  }
+
+  /// What the player is doing, and what it is doing it to.
+  ///
+  /// One value rather than two parameters, because they are never useful apart:
+  /// a track name only means anything alongside "playing", and the linter's
+  /// parameter limit is a fair prompt to notice that.
+  struct Sound {
+    let playback: Playback
+    let nowPlayingTitle: String?
   }
 
   // MARK: Private
@@ -497,7 +508,7 @@ struct MusicRowModel: Equatable {
     isEnabled: Bool,
     availability: MusicAvailability,
     chosenLine: String?,
-    playback: Playback
+    sound: Sound
   ) -> String {
     guard isEnabled else { return MusicCopy.musicOff }
 
@@ -506,8 +517,16 @@ struct MusicRowModel: Equatable {
     guard kind == .work else { return MusicCopy.pausedForTheBreak }
     guard let chosenLine else { return MusicCopy.nothingChosenSoQuiet }
 
-    switch playback {
-    case .playing, .silent: return chosenLine
+    switch sound.playback {
+    case .playing:
+      // THE TRACK, NOT THE PLAYLIST — when we know it.
+      //
+      // The person chose the playlist, so its name tells them nothing they did
+      // not already know. Which song is on is the one thing they cannot get
+      // without leaving the app, which is the opposite of what a focus screen is
+      // for. Falls back to the playlist name when the player has not said yet.
+      return sound.nowPlayingTitle ?? chosenLine
+    case .silent: return chosenLine
     case .starting: return MusicCopy.starting
     case .didNotStart: return MusicCopy.playbackDidNotStart
     }

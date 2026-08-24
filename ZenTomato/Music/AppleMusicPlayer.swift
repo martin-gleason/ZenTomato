@@ -55,6 +55,16 @@ final class AppleMusicPlayer: MusicPlaying {
     player.state.playbackStatus == .playing
   }
 
+  /// The track the player is on, asked of the player rather than remembered.
+  ///
+  /// `nil` while nothing is playing, which includes a break: the row says
+  /// "paused" in its own words then, and a track name beside it would be the
+  /// name of something that is not making a sound.
+  var nowPlayingTitle: String? {
+    guard isPlaying else { return nil }
+    return player.queue.currentEntry?.title
+  }
+
   /// Told when the player's status changes, so the screen can catch up.
   ///
   /// **Setting this starts listening.** `MusicPlayer.State` is a Combine
