@@ -102,10 +102,26 @@ printf 'install-device.sh: building…\n'
 build_log="$(mktemp -t zt-build)"
 trap 'rm -f "$devices_json" "$build_log"' EXIT
 
+# A FRESH BUILD NUMBER ON EVERY DEVICE INSTALL, AND WHY IT IS NOT OPTIONAL.
+#
+# devicectl replaces the phone app whatever its version says. The WATCH app does
+# not arrive that way: iOS carries it across from the phone itself, and it
+# compares versions first. Every build until now was 0.1.0 (1), so after the very
+# first install iOS concluded there was nothing new and left the old watch app in
+# place — which is why an icon fix, correctly built and correctly embedded, never
+# reached the wrist. Nothing reported it; there is nothing to report.
+#
+# The timestamp is passed as a build setting rather than written into
+# project.yml, so the repository keeps one honest version and does not collect a
+# commit per install. Release builds are unaffected.
+build_number="$(date +%Y%m%d%H%M)"
+printf 'install-device.sh: build %s\n' "$build_number"
+
 if ! xcodebuild build \
   -project "$PROJECT" -scheme "$SCHEME" \
   -destination "id=${udid}" \
   -derivedDataPath "$DERIVED_DATA" \
+  CURRENT_PROJECT_VERSION="$build_number" \
   -allowProvisioningUpdates >"$build_log" 2>&1
 then
   # The two failures worth naming, because neither says what to do about it.
