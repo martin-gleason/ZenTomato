@@ -62,6 +62,7 @@ O4 will be scheduled sometime today.
 | A11 | **The no-writes fence test omits `update` and `comment`** | F6 | Two of the four words `CLAUDE.md`'s hook names. The real gate — the allowlist — is untouched, so the test's comment overstates it. |
 | A12 | **A task finished on another device is still offered until the next refresh** | F3 | `.alreadyGone` enters neither the D21b set nor a cache deletion. Pre-existing; widening D21b's trigger would change its meaning from *completed* to *believed gone*. |
 | A13 | **`docs/reviews/F6.md` does not follow the F1–F5 template** | C6 | Six logs, two shapes. |
+| A15 | **`MusicSubscription.current` is deprecated in process** | F4 | The device log carries: *"it has recently become deprecated to request the music subscription status in process; the new supported code path fetches it in itunescloudd, but you need to add `com.apple.security.exception.mach-lookup.global-name com.apple.itunescloud.music-subscription-status-service` to your sandbox"*. Works today. Worth doing before it stops. |
 | A14 | **The rewind that could not be reproduced** | F4 | Reported once, never seen again, most likely an artefact of the track name being one behind at the time. `docs/reviews/F4.md` carries the diagnostic order and four ranked fixes; **B** is recommended if it recurs. |
 
 ## Closed
