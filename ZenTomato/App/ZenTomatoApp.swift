@@ -94,6 +94,12 @@ struct ZenTomatoApp: App {
         // The timer never sees a request, a token or a cached row.
         attachments: plan)
 
+      // F7. Made after the engine because it holds a weak reference to it: a tap
+      // arriving during its own block is offered to the engine so the
+      // end-of-block sheet can ask about it. The row itself is written whether
+      // or not the engine is there to hear.
+      let watchLink = PhoneWatchLink(context: container.mainContext, engine: engine)
+
       return RunningApp(
         container: container,
         engine: engine,
@@ -112,7 +118,15 @@ struct ZenTomatoApp: App {
         // The one thing that empties that set. It subscribes to the engine's own
         // published state exactly as the music observer does — F6 adds no hook to
         // the engine and invents no second notion of "a sprint ended".
-        sprintBoundary: SprintBoundaryObserver(engine: engine, completions: completedThisSprint))
+        sprintBoundary: SprintBoundaryObserver(engine: engine, completions: completedThisSprint),
+        // F7. The phone's end of the wrist connection, and the thing that keeps
+        // the wrist told what is running. Both are no-ops on a phone with no
+        // watch paired: F7 is strictly additive, and an unpaired watch, one left
+        // on a charger, or one that was never bought must not change how this
+        // app behaves in any respect.
+        watchLink: watchLink,
+        watchState: WatchStatePublisher(
+          engine: engine, link: watchLink, plan: plan, context: container.mainContext))
     }
 
     bootstrapResult = result
@@ -179,6 +193,15 @@ struct ZenTomatoApp: App {
     /// observer is: it owns a running piece of work, and nothing in this app
     /// starts one with no owner.
     let sprintBoundary: SprintBoundaryObserver
+
+    /// The phone's end of the connection to the wrist (F7). Receives taps and
+    /// writes them; sends nothing on its own.
+    let watchLink: PhoneWatchLink
+
+    /// Tells the wrist what is running, on change rather than on a schedule.
+    /// Held for the same reason as the two observers above: it owns a running
+    /// piece of work.
+    let watchState: WatchStatePublisher
   }
 
   /// Either the running app, or the error that prevented it.
@@ -227,6 +250,10 @@ struct ZenTomatoApp: App {
           // D21b begins watching here and not one moment earlier. It reads the
           // engine; it never writes to it, and it plays and asks for nothing.
           running.sprintBoundary.start()
+          // F7. Sends the current block immediately rather than waiting for the
+          // next boundary, so a watch opened mid-block is told what is running
+          // instead of showing nothing until the block after this one.
+          running.watchState.start()
         }
         // Runs once at launch and again on every change of phase, which is what
         // makes returning to the app the moment the timer catches up: a block
