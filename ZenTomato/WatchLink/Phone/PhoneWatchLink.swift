@@ -20,8 +20,9 @@ final class PhoneWatchLink: NSObject {
   /// nothing on any screen depends on it.
   private(set) var receivedTaps = 0
 
-  init(context: ModelContext) {
+  init(context: ModelContext, engine: TimerEngine? = nil) {
     inbox = WatchTapInbox(context: context)
+    self.engine = engine
     super.init()
     guard WCSession.isSupported() else { return }
     let session = WCSession.default
@@ -53,6 +54,12 @@ final class PhoneWatchLink: NSObject {
   // MARK: Private
 
   private let inbox: WatchTapInbox
+
+  /// The running timer, so a tap that arrives during its own block can still be
+  /// asked about in the end-of-block sheet. Optional because the link is useful
+  /// without it — the row is written either way — and because a test should be
+  /// able to exercise ingest with no engine at all.
+  private weak var engine: TimerEngine?
 }
 
 // MARK: - WCSessionDelegate
@@ -83,7 +90,13 @@ extension PhoneWatchLink: WCSessionDelegate {
       let tap = try? JSONDecoder().decode(WatchTap.self, from: payload)
     else { return }
     Task { @MainActor in
-      if self.inbox.receive(tap) == .recorded { self.receivedTaps += 1 }
+      guard self.inbox.receive(tap) == .recorded else { return }
+      self.receivedTaps += 1
+      // The row is already safe. This only decides whether the end-of-block
+      // sheet asks for a sentence about it, and it is refused when the tap
+      // belongs to a block that has already ended.
+      self.engine?.adoptWristTap(
+        id: tap.id, kind: tap.kind, at: tap.tappedAt, sessionID: tap.sessionID)
     }
   }
 }
