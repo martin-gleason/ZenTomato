@@ -847,3 +847,50 @@ from the one this is meant to be.
 **One rule, one implementation.** `StatsQuery` is the only thing that counts, and both the stats
 screen and the exporter call it. Two counters that can disagree is how a number stops being trusted —
 and this is the number the whole app exists to produce.
+
+---
+
+## D21 — A completion records whether the task was recurring
+
+**Ratified 2026-08-23 at the F6 gate, from evidence F3's device session produced.**
+
+**Currently:** `CompletedTaskRecord` stores a Todoist id, a title snapshot and a timestamp.
+**Proposed:** it also stores whether the task was **recurring** at the moment it was closed.
+
+### Why, and how we know
+
+Closing a recurring Todoist task does not finish it — it advances it to the next occurrence. F3's
+device run showed this precisely: *"Budget with YNAB by 7:30 AM"* appeared in Todoist's activity log
+as completed at 16:48 **and came back as an active task** in the refresh at 16:52.
+
+So without this, F6's Completed section lists the same title on eight of fourteen days and cannot tell
+you why. Finishing a chapter and ticking off a daily habit are not the same achievement, and a reader
+should not have to infer which is which from how often a line repeats.
+
+The alternative was guessing from repetition — anything appearing more than once is "a habit". That is
+a heuristic standing in for a fact Todoist already knows, and it is wrong for a task genuinely done
+twice and for a habit done once in a quiet fortnight.
+
+### Why this does not breach D16
+
+D16 forbids fields that exist **only to serve a feature that does not**. Apply its own test: *would I
+write this the same way if bi-directional sync were never coming?* Yes — this is for the export, and
+F6 is the next feature. Nothing about it anticipates sync, and it would be equally right if v1.5 never
+happened.
+
+The line D16 draws is between design and preparation, not between "now" and "later".
+
+### What it is not
+
+It is **not** a recurrence rule, a schedule, a due date, or anything that could reconstruct one. One
+boolean, captured at the moment of completion, describing what was true then. `CompletedTaskRecord`
+stays append-only and stays a record of something this app did — not a task model.
+
+### Where it lands
+
+**F6**, which needs it, and which will retrofit F3's completion path to capture it. A retrofit rather
+than a new gate, in the shape F1b and F1c already established.
+
+**Verify at build time:** confirm what Todoist API v1 actually returns for recurrence on
+`GET /tasks` — the field is expected to hang off `due`, but F3's plan learned the hard way that the
+live docs beat an assumption, and a boolean read from the wrong key is silently always false.
