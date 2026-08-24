@@ -63,19 +63,11 @@ final class WatchLink: NSObject {
 
     // transferUserInfo, NOT sendMessage. See the note at the top of this file:
     // this call is what makes a tap survive the phone being in another room.
-    WCSession.default.transferUserInfo([WatchLink.tapKey: payload])
+    WCSession.default.transferUserInfo([WatchLinkKeys.tap: payload])
     pendingTaps += 1
     return true
   }
 
-  /// The key the tap travels under. One constant, referred to by both sides.
-  ///
-  /// `nonisolated` because the session delegate reads them from a background
-  /// thread. They are immutable strings, so there is nothing to race on.
-  nonisolated static let tapKey = "tap"
-
-  /// The key the block state travels under.
-  nonisolated static let stateKey = "state"
 }
 
 // MARK: - WCSessionDelegate
@@ -104,7 +96,7 @@ extension WatchLink: WCSessionDelegate {
     _ session: WCSession,
     didReceiveApplicationContext applicationContext: [String: Any]) {
     guard
-      let payload = applicationContext[WatchLink.stateKey] as? Data,
+      let payload = applicationContext[WatchLinkKeys.state] as? Data,
       let decoded = try? JSONDecoder().decode(WatchBlockState.self, from: payload)
     else { return }
     Task { @MainActor in self.state = decoded }
