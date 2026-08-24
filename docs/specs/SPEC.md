@@ -3,7 +3,7 @@
 **Status:** DRAFT for ratification. Marty ratifies; then it's the contract. The agent never edits this file — it proposes deltas in a plan summary and Marty merges them.
 **License:** GPL-3.0-or-later (copyleft, open source). Public GitHub repo.
 **Hard stop:** the day work resumes or **September 13, 2026**, whichever is first. Unmerged work returns to backlog, no forensics.
-**Platform:** iOS only. Watch, Mac, CloudKit sync, playlist creation, and task *creation* are Phase 2 — see Out of Scope.
+**Platform:** iOS, with a watchOS companion (F7). Mac, CloudKit sync, playlist creation, and task *creation* are Phase 2 — see Out of Scope.
 
 ## Why
 
@@ -41,6 +41,7 @@ Each feature is a gate. Crossing it needs Marty's verbal yes on the plan.
 - **F4 — Apple Music.** MusicKit authorization; library playlist/song picker; play, loop, skip; on/off toggle; pause on breaks. *Verify at build time:* background audio entitlement and MusicKit behavior with the timer in background. *Done when:* a playlist plays through a full sprint on a device with the screen locked.
 - **F5 — Distraction log.** I/E buttons on the running-timer screen; tap → record; end-of-pomodoro sentence prompt; persisted. *Done when:* a pomodoro with three taps yields three records with the right task and timestamps.
 - **F6 — Stats and export.** Counts per task, project, day; I/E per task, day; Markdown export. *Done when:* the export of one real study day is readable in the Rhodia without translation.
+- **F7 — Watch companion.** watchOS 26 companion app. The phone is the source of truth and runs the only timer engine. The watch displays the running block, the block kind, and the attached task, and puts the I and E distraction buttons on the wrist. The watch never runs a timer of its own, never controls music, never picks a task, and never edits a distraction note. *Done when:* three wrist taps during a pomodoro, with the phone in another room, yield three records on the phone with the right task and timestamps.
 
 Suggested build order: F1 → F2 → F5 → F3 → F4 → F6. The timer and the log are usable by Marty after F5, before either integration lands.
 
@@ -54,7 +55,7 @@ Suggested build order: F1 → F2 → F5 → F3 → F4 → F6. The timer and the 
 
 ## Out of scope for v0.1 (Phase 2, post-exam)
 
-watchOS (remote and standalone) · macOS · CloudKit sync · creating a default "focus playlist" · creating, editing, or commenting on Todoist tasks · any capture surface of any kind · widgets beyond the Lock Screen Live Activity · themes · streaks, badges, or any gamification layered on top of Todoist's own.
+standalone watchOS · macOS · CloudKit sync · creating a default "focus playlist" · creating, editing, or commenting on Todoist tasks · any capture surface of any kind · widgets beyond the Lock Screen Live Activity · themes · streaks, badges, or any gamification layered on top of Todoist's own.
 
 A feature request that isn't on the list above gets one question — *is this v0.1 or Phase 2?* — and the answer is written here before anything is built.
 
@@ -71,3 +72,11 @@ The plan defines these; listing them here states what the spec wants protected.
 August 21, 2026
 
 #AI/Claude
+
+## Amendments applied
+
+D2
+
+Ratified deltas whose text has been written into this file. `DeltaIntegrityTests` reads this list;
+`docs/specs/AMENDMENT-BASELINE.txt` counts what is still outstanding, and the exact replacement text
+for each is in `docs/specs/AMENDMENTS-TO-APPLY.md`.

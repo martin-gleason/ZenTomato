@@ -1,4 +1,4 @@
-6
+5
 
 The number of ratified deltas whose replacement text has never been applied to SPEC.md, as counted
 by DeltaIntegrityTests.everyRatifiedSpecAmendmentIsApplied.
@@ -12,9 +12,8 @@ The test fails if the real number EXCEEDS this one, so the backlog may shrink or
 ratifying a new amendment without applying it fails the build immediately. Lower this number as you
 work through them. Never raise it — raising it is the act this file exists to make visible.
 
-OUTSTANDING, DETECTED, as of 2026-08-24:
+OUTSTANDING, DETECTED, as of 2026-08-24 (D2 applied to SPEC.md the same day, unblocking F7):
   D1   Minimum iOS 18.0 -> 26.0, and watchOS 26.0
-  D2   watchOS companion out of Phase 2, into v0.1 as F7    <- blocks F7 from starting at all
   D3   AlarmKit primary; the Live Activity is required, not optional
   D4   The end-of-pomodoro sheet, and that break time starts behind it
   D17  A session plan: several Todoist items, in the order you will work them
