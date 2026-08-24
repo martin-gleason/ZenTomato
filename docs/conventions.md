@@ -4,10 +4,31 @@ Standalone copy. This repo is its own source of truth; nothing is imported from 
 
 ## Structure (the only axis with IDs)
 
-- **Feature** `F<N>` — a deliverable unit of user value. Decomposes into Tasks.
-- **Task** `F<N>-T<M>` — an implementation step inside a feature.
-- **Chore** `C<N>` — an operational task the human performs. The parallel track.
-- **Retrofit** `F<N>b`, `F<N>c` — a second pass on an already-shipped feature.
+- **Feature** `F<N>` — a deliverable unit of **user value**. Decomposes into Tasks.
+- **Task** `F<N>-T<M>` / `C<N>-T<M>` — an implementation step inside a feature or a chore.
+- **Chore** `C<N>` — an operational task that produces **no user-visible change**: repo setup,
+  credentials, documentation, process, tooling, corrections. Each chore names its **owner** —
+  the human, the agent, or both. Chores are the parallel track.
+- **Retrofit** `F<N>b`, `F<N>c` — a second pass on an **already-shipped** feature.
+
+### Feature or chore? Ask what it delivers, never who does it
+
+**The test is one question: would a user of the app notice?** If yes it is a feature; if no it is a
+chore. Ownership is a *property* of the unit, not the thing that classifies it.
+
+This is written down because it was got wrong. `C6` was first opened as `F7a` — an agent-authored
+documentation and tooling correction, filed as a feature because the agent does it and because
+chores were then defined as *"an operational task the human performs."* That definition left agent
+work that is not a feature with nowhere to go, so it went somewhere wrong. Chores now cover it, and
+the owner is stated on the unit.
+
+Two corollaries worth stating, because both were live at the time:
+
+- **A retrofit is a second pass on something already shipped.** `F7a` was not: `F7` had not been
+  built. A correction to an unbuilt feature's *plan* is a chore, not a retrofit.
+- **A correction spanning several features belongs to none of them.** `C6` fixes documentation
+  across `F1`–`F6`. Numbering it after any one of them would have implied an ownership it does not
+  have.
 
 ## Lifecycle (metadata, not a container)
 
@@ -44,8 +65,20 @@ Spec authority stays with the owner. The agent proposes deltas; the owner ratifi
 
 - `SPEC.md` — intention, the contract.
 - `docs/plans/F<N>.md` — the build, per feature; hooks get defined here.
+- `docs/chores/C<N>.md` — the plan for a chore, when it needs one. `C1`–`C5` were single lines in
+  `SPEC.md` and needed no file; anything with tasks and a verification step gets one.
 - `docs/reviews/F<N>.md` — adversarial review log, per feature.
+- `docs/reviews/OPEN.md` — every outstanding item from every review, in one table. A *Still open*
+  section inside one review is invisible from the next one.
+- `docs/plans/00-deltas.md` — every proposed and ratified change to the contract.
 - `CLAUDE.md` — how the agent moves between them. Lean; prune anything the agent wouldn't get wrong without it.
+
+### Read the plan before you write it
+
+A plan for every feature `F1`–`F7` was written at `F1` and committed in `cb2ba1b`. **A file existing
+at the path you are about to write is the normal case, not the exception.** `docs/plans/F7.md` was
+destroyed by a shell redirect onto a path nobody had opened; it is restored, and `H3` in `C6` closes
+the hole. Read the target first — the answer may already be in it, ratified, months ago.
 
 -----
 August 21, 2026

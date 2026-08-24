@@ -1,0 +1,32 @@
+6
+
+The number of ratified deltas whose replacement text has never been applied to SPEC.md, as counted
+by DeltaIntegrityTests.everyRatifiedSpecAmendmentIsApplied.
+
+HOW THE COUNT WORKS, AND WHY IT NEEDS NO MAINTENANCE
+A delta owes an amendment when the text it says the spec CURRENTLY says is still present in SPEC.md.
+Apply the amendment and that text is gone, so the delta stops being counted on the next run. There is
+no list to keep in step.
+
+The test fails if the real number EXCEEDS this one, so the backlog may shrink or hold but never grow:
+ratifying a new amendment without applying it fails the build immediately. Lower this number as you
+work through them. Never raise it — raising it is the act this file exists to make visible.
+
+OUTSTANDING, DETECTED, as of 2026-08-24:
+  D1   Minimum iOS 18.0 -> 26.0, and watchOS 26.0
+  D2   watchOS companion out of Phase 2, into v0.1 as F7    <- blocks F7 from starting at all
+  D3   AlarmKit primary; the Live Activity is required, not optional
+  D4   The end-of-pomodoro sheet, and that break time starts behind it
+  D17  A session plan: several Todoist items, in the order you will work them
+  D20  Stop as a music control, beside skip
+
+OUTSTANDING, NOT DETECTED — one, and the reason is worth knowing:
+  D18  Todoist authenticates with a personal API token, not OAuth.
+
+  The detector matches quotations verbatim. D18 quotes the spec as "OAuth sign-in." while SPEC.md
+  actually reads "OAuth sign-in;" — a full stop against a semicolon. Loosening the match to catch it
+  would mean fuzzy comparison, which buys one true positive at the cost of false ones, and a check
+  that cries wolf is a check people stop reading. So it is recorded here by hand instead.
+
+  The real backlog is therefore SEVEN. When D18 is applied, lower the number above by one anyway:
+  the detector never counted it, so the count will not move on its own.

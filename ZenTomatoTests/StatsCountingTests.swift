@@ -202,14 +202,22 @@ struct StatsCountingTests {
 
   // MARK: Names
 
-  /// The names in the answer are the ones written down when the block ran, even
-  /// when the local copy of Todoist now says something else.
+  /// A **task's** name in the answer is the one written down when the block ran,
+  /// even when the local copy of Todoist now says something else.
   ///
   /// **The test would pass on an app that resolved names live, were it not for
   /// the cached row.** That row is here on purpose: it says *Chapter three,
   /// final* under the same identifier, so anything that looked the name up
   /// instead of reading it off the block would report the new one and fail.
   /// A fortnight-old review has to show what was true then.
+  ///
+  /// **THIS COVERS TASKS ONLY, AND SAYING SO IS THE POINT.** `F6.md` first stated
+  /// one rule for task *and* project names, and D22 later narrowed it: project
+  /// labels resolve live, with the recorded name as the fallback. This test's
+  /// name and its old wording implied it defended both halves; it never touched a
+  /// project rename in either direction. The project half is covered by
+  /// `StatsProjectGroupingTests`, and the split is deliberate — a task is a thing
+  /// you finished, a project is a container you are still working in.
   @Test("snapshotNamesUsed")
   func snapshotNamesUsed() throws {
     context.insert(StatsStoreFixture.block(
