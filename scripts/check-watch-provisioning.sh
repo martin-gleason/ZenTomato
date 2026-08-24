@@ -60,6 +60,7 @@ echo "  name      : ${name}"
 echo "  platforms : ${platforms}"
 
 failed=0
+dev_mode_ok=0
 
 if printf '%s' "${platforms}" | grep -qi "watchOS"; then
   echo "  OK — it is a watchOS profile."
@@ -70,11 +71,33 @@ else
   failed=1
 fi
 
-say "Is the paired watch in its device list?"
-# devicectl will not write JSON to a pipe; it needs a real file.
+# Asked once, before anything needs it. devicectl will not write JSON to a pipe,
+# so it gets a real file.
 devices_json="$(mktemp -t zt-devices)"
 trap 'rm -f "${decoded}" "${devices_json}"' EXIT
 xcrun devicectl list devices -j "${devices_json}" >/dev/null 2>&1
+
+say "Developer Mode, as the devices actually report it"
+dev_mode="$(python3 -c "
+import json,sys
+try: d=json.load(open('${devices_json}'))
+except Exception: sys.exit()
+for x in d.get('result',{}).get('devices',[]):
+    hw=x.get('hardwareProperties',{}); dp=x.get('deviceProperties',{})
+    n=hw.get('marketingName','?')
+    if 'Watch' in n or 'iPhone' in n:
+        print(f\"  {n:<24} developer mode: {dp.get('developerModeStatus','unknown')}\")
+" 2>/dev/null)"
+if [ -n "${dev_mode}" ]; then
+  printf '%s\n' "${dev_mode}"
+  if printf '%s' "${dev_mode}" | grep -q "developer mode: enabled"; then
+    dev_mode_ok=1
+  fi
+else
+  echo "  (no devices reachable — connect the iPhone)"
+fi
+
+say "Is the paired watch in its device list?"
 watch_udid="$(python3 -c "
 import json,sys
 try: d=json.load(open('${devices_json}'))
@@ -100,25 +123,56 @@ else
 fi
 
 if [ "${failed}" -ne 0 ]; then
-  cat <<'NEXT'
+  if [ "${dev_mode_ok}" -eq 0 ]; then
+    cat <<'NEXT'
 
-WHAT TO DO — yours rather than the agent's; see docs/chores/C8.md.
+FIRST: turn on Developer Mode ON THE WATCH — everything else waits on it.
+    Watch > Settings > Privacy & Security > Developer Mode > on
+  The watch restarts; unlock it and confirm the prompt.
 
-  0. FIRST, AND EVERYTHING ELSE WAITS ON IT: turn on Developer Mode ON THE WATCH.
-       Watch > Settings > Privacy & Security > Developer Mode > on
-     The watch restarts; unlock it and confirm the prompt. A watch without it is
-     not a development device, so Xcode never registers it, so no watchOS profile
-     can ever include it — which is what the failures above are.
+NEXT
+  else
+    cat <<'NEXT'
 
-  1. make generate && open ZenTomato.xcodeproj
-  2. Keep the iPhone connected and the Watch on your wrist and unlocked.
-  3. Xcode > Window > Devices and Simulators — the watch should appear under the
-     iPhone. If it does not, unlock both and wait; the watch is only reachable
-     through its paired phone.
-  4. Select the ZenTomatoWatch target > Signing & Capabilities, and confirm the
-     Team. Xcode registers the watch and creates a watchOS profile at that point.
-  5. make device
-  6. scripts/check-watch-provisioning.sh   (this script, again)
+Developer Mode is already on, so that is not what is stopping this.
+
+NEXT
+  fi
+
+  cat <<NEXT
+WHAT IS LEFT — it needs the developer account, so it is yours; see docs/chores/C8.md.
+
+  THE WATCH IS NOT REGISTERED AS A DEVELOPMENT DEVICE. Developer Mode makes a
+  watch WILLING to run development builds; registering it is what makes a profile
+  able to name it, and they are separate things. xcodebuild cannot do the second
+  from here, because a watch is never a build destination — it is reachable only
+  through the iPhone it is paired to.
+
+  The most reliable route, which does not depend on Xcode noticing the watch:
+
+    1. developer.apple.com > Certificates, Identifiers & Profiles > Devices > +
+       Platform : watchOS
+       Device ID: ${watch_udid}
+       Name     : anything
+
+    2. While you are there (this is O14, the other half of the same fault):
+       Identifiers > + > App IDs, explicit, for
+         com.martingleason.ZenTomato               with MusicKit enabled
+         com.martingleason.ZenTomato.watchkitapp
+       The app is currently signed with the team wildcard KH6NBQRZBY.*, which
+       cannot carry a capability — which is why every launch logs
+       ICError -7013 "Client is not entitled to access account store".
+
+    3. make generate && open ZenTomato.xcodeproj, iPhone CONNECTED BY CABLE.
+       Xcode > Settings > Accounts > Download Manual Profiles.
+       Both targets > Signing & Capabilities: confirm the Team and let Xcode
+       regenerate. It should now choose the explicit App IDs.
+
+    4. make device
+    5. scripts/check-watch-provisioning.sh
+
+  If the watch app still does not appear after a successful check:
+    iPhone > Watch app > scroll to Available Apps > ZenTomato > Install.
 
 NEXT
   exit 1
