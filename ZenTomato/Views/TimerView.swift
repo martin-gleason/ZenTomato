@@ -145,7 +145,7 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       // The pomodoro history sheet: today's count, the three lists, and the
       // export. Reached from the one corner of the timer screen that is empty in
       // every state. It reads; it writes nothing and it starts nothing.
-      .sheet(isPresented: $showingHistory) {
+      .sheet(isPresented: $showingHistory, onDismiss: presentReflectionIfPossible) {
         StatsView()
       }
       // The Music sheet: the switch, what is chosen, and the library to choose
@@ -166,46 +166,19 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       // it was awake to see end. Consuming it hands it over and clears it in the
       // same call, so it cannot be read twice and therefore cannot be presented
       // twice — which is the defect D14 exists to prevent, arriving by a
-      // different door. Nothing re-offers it later: a block whose sheet was
-      // never seen keeps its rows and their notes stay empty.
+      // different door.
       //
-      // NOT WHILE ANOTHER SHEET IS UP, AND FOR THE STOP SHEET THAT IS D14.
-      // A block can reach its natural end while somebody is still writing their
-      // reason for stopping. The stop sheet in front of them already carries a
-      // field for every one of those taps, so there is nothing left to ask —
-      // and presenting a second modal on top of it, at the moment somebody has
-      // decided to quit, is the precise thing D14 exists to prevent. The offer
-      // is left unconsumed and is harmlessly replaced the next time a block
-      // ends.
-      //
-      // The settings sheet is in the guard for a duller reason and it is not
-      // optional: SwiftUI will not present a second sheet from the same view
-      // while one is up, so without this clause the offer would be consumed,
-      // cleared, and never drawn — no error, no amber row, just a prompt that
-      // silently did not happen. Left unconsumed it stays on the engine, and is
-      // harmlessly replaced the next time a block ends, exactly as the stop-sheet
-      // case already behaves.
+      // The arrival of an offer is only *one* of the moments it can be drawn.
+      // The other is when a sheet covering the screen closes, which is why the
+      // real work lives in `presentReflectionIfPossible()` and both this and the
+      // sheets' `onDismiss` call it. Watching only the arrival was a defect: a
+      // block ending behind the history or settings sheet had its offer skipped
+      // and then overwritten by the next block, so its taps kept their rows and
+      // their notes stayed empty for ever. See that function for the whole
+      // argument, including why the stop sheet is deliberately excluded.
       .onChange(of: engine.pendingReflection) { _, offered in
-        guard
-          offered != nil,
-          isAskingWhyStopping == false,
-          showingSettings == false,
-          // Here for the duller of the two reasons above, and not optional: with
-          // the history sheet up, presenting this one would consume the offer and
-          // draw nothing. Left unconsumed it stays on the engine.
-          showingHistory == false
-        else { return }
-        guard let taken = engine.consumePendingReflection() else { return }
-        // Snapshotted at the moment of presentation rather than read live, so
-        // the footer line cannot change its mind while somebody is reading it.
-        reflectionBreakIsRunning = engine.isRunning
-        closedReflectionPrompts = taken.prompts
-        // Frozen here, before the control is worked out from it. See the note
-        // on `completionSubject`: this is the subject of the one write, and a
-        // block can begin behind this sheet.
-        completionSubject = currentCompletionSubject()
-        resetCompletionControl()
-        reflection = taken
+        guard offered != nil else { return }
+        presentReflectionIfPossible()
       }
       // A REFUSED TAP BELONGS TO THE BLOCK IT HAPPENED IN.
       //
@@ -752,7 +725,22 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       // ON `.closed` ONLY. `.alreadyGone` means the task was finished or deleted
       // somewhere else, which this app did not do; widening the trigger would
       // change the rule's meaning from "completed" to "believed gone".
-      completedThisSprint?.record(taskID: subject.taskID)
+      //
+      // AND ONLY WHILE A SPRINT IS ACTUALLY IN PROGRESS. The set is emptied by
+      // `SprintBoundaryObserver`, which watches the timer and clears on the
+      // *transition* into rest. Nothing re-fires once the timer is already at
+      // rest — so an id recorded after that transition would be cleared by
+      // nothing until the end of the *next* sprint, withholding a task for a
+      // whole extra sprint. That is the precise failure D21b exists to prevent,
+      // inverted. A task ticked off while no sprint is running was not
+      // "completed during a sprint" and there is nothing to withhold it from, so
+      // the rule simply does not apply. The same predicate is used here as there,
+      // rather than a second copy of it.
+      if SprintBoundaryObserver.sprintHasEnded(
+        isRunning: engine.isRunning,
+        completedInSprint: engine.completedInSprint) == false {
+        completedThisSprint?.record(taskID: subject.taskID)
+      }
     case .alreadyGone:
       todoistIsReachable = true
     case .offline:
@@ -947,6 +935,51 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
   /// already written the moment it was made.
   private func settingsSheetClosed() {
     Task { await engine.synchronize() }
+    presentReflectionIfPossible()
+  }
+
+  /// Presents the end-of-block prompt if one is waiting and nothing is in the way.
+  ///
+  /// **WHY THIS IS A FUNCTION AND NOT JUST AN `onChange`.** The engine offers a
+  /// reflection at most once, and consuming it clears it — which is what stops it
+  /// being presented twice. The offer therefore has to be *taken* at a moment
+  /// when it can actually be drawn, and there are two such moments, not one: when
+  /// the offer arrives, and when whatever was covering the screen goes away.
+  ///
+  /// Watching only the arrival is the bug this fixes. A work block can end while
+  /// the history sheet or the settings sheet is open; SwiftUI will not present a
+  /// second sheet from the same view while one is up, so the guard below skips
+  /// it. Nothing then re-fired — `onChange` watches `pendingReflection`, which
+  /// has not changed — and the *next* block's end overwrote the offer. The taps
+  /// themselves were never at risk (they are written down when they are tapped),
+  /// but the sentences explaining them were never asked for, and neither was the
+  /// one Todoist write this app is allowed to make. Calling this from each
+  /// sheet's `onDismiss` closes that door.
+  ///
+  /// **The stop sheet is deliberately not one of those moments.** That sheet
+  /// already carries a field for every tap in the block, so there is nothing left
+  /// to ask; presenting a second modal over somebody who has just decided to quit
+  /// is the exact thing D14 exists to prevent. Its offer is left unconsumed and
+  /// is harmlessly replaced when the next block ends.
+  private func presentReflectionIfPossible() {
+    guard
+      engine.pendingReflection != nil,
+      isAskingWhyStopping == false,
+      showingSettings == false,
+      showingHistory == false,
+      reflection == nil
+    else { return }
+    guard let taken = engine.consumePendingReflection() else { return }
+    // Snapshotted at the moment of presentation rather than read live, so
+    // the footer line cannot change its mind while somebody is reading it.
+    reflectionBreakIsRunning = engine.isRunning
+    closedReflectionPrompts = taken.prompts
+    // Frozen here, before the control is worked out from it. See the note
+    // on `completionSubject`: this is the subject of the one write, and a
+    // block can begin behind this sheet.
+    completionSubject = currentCompletionSubject()
+    resetCompletionControl()
+    reflection = taken
   }
 
   // MARK: Formatting
