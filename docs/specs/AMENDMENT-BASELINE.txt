@@ -1,31 +1,28 @@
-5
+0
 
 The number of ratified deltas whose replacement text has never been applied to SPEC.md, as counted
 by DeltaIntegrityTests.everyRatifiedSpecAmendmentIsApplied.
 
+IT IS ZERO, AND THE POINT IS TO KEEP IT THERE.
+Every amendment outstanding on 2026-08-24 — D1, D2, D3, D4, D17, D18, D20 — was applied that day at
+the owner's instruction. The contract now says what the project actually does.
+
+The test fails if the real number EXCEEDS this one. At zero that means any delta ratified from now on
+must reach SPEC.md in the same change, or the build goes red immediately. That is the behaviour the
+ratchet existed to reach: for two months, twenty-two deltas were ratified and none was applied, and
+nothing noticed.
+
 HOW THE COUNT WORKS, AND WHY IT NEEDS NO MAINTENANCE
 A delta owes an amendment when the text it says the spec CURRENTLY says is still present in SPEC.md.
 Apply the amendment and that text is gone, so the delta stops being counted on the next run. There is
-no list to keep in step.
+no list to keep in step. D2 was the first confirmation: applying it dropped the count from six to five
+with nothing edited but the spec itself.
 
-The test fails if the real number EXCEEDS this one, so the backlog may shrink or hold but never grow:
-ratifying a new amendment without applying it fails the build immediately. Lower this number as you
-work through them. Never raise it — raising it is the act this file exists to make visible.
+ONE THING THE DETECTOR CANNOT SEE, kept here as a warning rather than a live item:
+  D18 quoted the spec as "OAuth sign-in." while SPEC.md read "OAuth sign-in;" — a full stop against a
+  semicolon. Matching is verbatim on purpose, because fuzzy comparison buys one true positive at the
+  cost of false ones, and a check that cries wolf stops being read. D18 has been applied, but it was
+  never counted, so nothing about the number above moved when it was. A future delta that paraphrases
+  the spec rather than quoting it will be invisible the same way. Quote exactly.
 
-OUTSTANDING, DETECTED, as of 2026-08-24 (D2 applied to SPEC.md the same day, unblocking F7):
-  D1   Minimum iOS 18.0 -> 26.0, and watchOS 26.0
-  D3   AlarmKit primary; the Live Activity is required, not optional
-  D4   The end-of-pomodoro sheet, and that break time starts behind it
-  D17  A session plan: several Todoist items, in the order you will work them
-  D20  Stop as a music control, beside skip
-
-OUTSTANDING, NOT DETECTED — one, and the reason is worth knowing:
-  D18  Todoist authenticates with a personal API token, not OAuth.
-
-  The detector matches quotations verbatim. D18 quotes the spec as "OAuth sign-in." while SPEC.md
-  actually reads "OAuth sign-in;" — a full stop against a semicolon. Loosening the match to catch it
-  would mean fuzzy comparison, which buys one true positive at the cost of false ones, and a check
-  that cries wolf is a check people stop reading. So it is recorded here by hand instead.
-
-  The real backlog is therefore SEVEN. When D18 is applied, lower the number above by one anyway:
-  the detector never counted it, so the count will not move on its own.
+Never raise this number. Raising it is the act this file exists to make visible.

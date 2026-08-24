@@ -13,7 +13,7 @@ A focus timer that works with the fixed toolset (Todoist, Apple Music) so that s
 
 - **Pomodoro** — one timed work block followed by a short break. Default 25/5.
 - **Sprint** — a set of N pomodoros ending in a long break. Default 4, then 15.
-- **Task / Project / Section** — Todoist's terms, Todoist's data. The app defines none of its own. A pomodoro is attached to exactly one Todoist task (or, if no task is chosen, to a project).
+- **Task / Project / Section** — Todoist's terms, Todoist's data. The app defines none of its own. A pomodoro is attached to exactly one Todoist task (or, if no task is chosen, to a project). Before a sprint, the user may build a **session plan**: an ordered list of Todoist tasks and projects, drawn from the cache, which the timer works through. Each pomodoro attaches to the plan's current item, so the one-task-per-pomodoro rule is unchanged. A plan creates nothing and writes nothing.
 - **I / E** — internal / external distraction.
 
 ## Locked decisions
@@ -23,23 +23,23 @@ A focus timer that works with the fixed toolset (Todoist, Apple Music) so that s
 | Task source | Todoist. **All** projects, sections, and tasks are visible in the picker. |
 | Todoist writes | **Complete a task** only. No create, no edit, no comment. Enforced by hook, not by prose. |
 | Music source | Apple Music (MusicKit). User picks an existing playlist or song from their library. Playlist loops when it ends. |
-| Music during a sprint | Skip-forward is the only control. Music can be toggled on/off before a sprint. |
+| Music during a sprint | Skip-forward and stop are the only controls. Stop silences the music for the remainder of the current block; the timer is unaffected and the next block starts music again. Music can be toggled on/off before a sprint. |
 | Music during breaks | Pauses. Resumes at the next pomodoro. |
 | Distraction capture | Two buttons, I and E, tappable during a pomodoro. A tap records timestamp + task. At the end of that pomodoro the app prompts for one sentence per tap (skippable). |
 | Stats | Counts for everything: pomodoros per task, project, and day; I/E per task and day. Plus a Markdown export via the share sheet for the Rhodia review. |
 | Timer customization | Work length, short break, long break, pomodoros-per-sprint, sound on/off, auto-start next block on/off. Nothing else. |
 | Data | Local only (SwiftData). Todoist token in Keychain. No analytics, no accounts, no server. |
-| Minimum iOS | 18.0 (adjust to Marty's phone at C2). |
+| Minimum iOS | 26.0. Minimum watchOS 26.0. |
 
 ## Features (the agent's track)
 
 Each feature is a gate. Crossing it needs Marty's verbal yes on the plan.
 
 - **F1 — Skeleton.** SwiftUI app, SwiftData store, settings model, SwiftLint, GitHub Actions CI (build + unit tests on a macOS runner), `LICENSE`, `README`. *Done when:* CI is green on `main` and the app launches to an empty timer.
-- **F2 — Timer engine.** Pomodoro / short / long break cycle per settings. Survives backgrounding (state persisted, local notification fires when a block ends). Live Activity on the Lock Screen if it fits in budget; otherwise notification only. *Done when:* unit tests cover the cycle and a backgrounded timer ends on time on a device.
-- **F3 — Todoist.** OAuth sign-in; fetch projects, sections, tasks; picker; attach a task to the current pomodoro; **complete** a task with one button at the end of a pomodoro. *Verify at build time:* the current Todoist API version and rate limits (a third-party timer broke in early 2026 on a deprecated endpoint — don't repeat that). *Done when:* sign-in, pick, and complete work against Marty's real account.
+- **F2 — Timer engine.** Pomodoro / short / long break cycle per settings. Survives backgrounding (state persisted). Block ends fire through AlarmKit, so the alert sounds through silent mode and through an active Focus. A Live Activity on the Lock Screen and in the Dynamic Island is required, not optional — AlarmKit's countdown API mandates one. *Done when:* unit tests cover the cycle and a backgrounded timer ends on time on a device.
+- **F3 — Todoist.** Sign in with a Todoist personal API token, entered once and stored in Keychain; fetch projects, sections, tasks; picker; attach a task to the current pomodoro; **complete** a task with one button at the end of a pomodoro. *Verify at build time:* the current Todoist API version and rate limits (a third-party timer broke in early 2026 on a deprecated endpoint — don't repeat that). *Done when:* token entry, pick, and complete work against Marty's real account.
 - **F4 — Apple Music.** MusicKit authorization; library playlist/song picker; play, loop, skip; on/off toggle; pause on breaks. *Verify at build time:* background audio entitlement and MusicKit behavior with the timer in background. *Done when:* a playlist plays through a full sprint on a device with the screen locked.
-- **F5 — Distraction log.** I/E buttons on the running-timer screen; tap → record; end-of-pomodoro sentence prompt; persisted. *Done when:* a pomodoro with three taps yields three records with the right task and timestamps.
+- **F5 — Distraction log.** I/E buttons on the running-timer screen; tap → record; end-of-pomodoro sentence prompt; persisted. At the end of a pomodoro the app presents one sheet containing a sentence field per distraction tap (each skippable) and, once F3 has landed, the Complete-task button. The break timer starts running the instant the block ends, behind the sheet — reflection never consumes break time. The auto-start-next-block setting governs the pomodoro after the break, not this sheet. *Done when:* a pomodoro with three taps yields three records with the right task and timestamps.
 - **F6 — Stats and export.** Counts per task, project, day; I/E per task, day; Markdown export. *Done when:* the export of one real study day is readable in the Rhodia without translation.
 - **F7 — Watch companion.** watchOS 26 companion app. The phone is the source of truth and runs the only timer engine. The watch displays the running block, the block kind, and the attached task, and puts the I and E distraction buttons on the wrist. The watch never runs a timer of its own, never controls music, never picks a task, and never edits a distraction note. *Done when:* three wrist taps during a pomodoro, with the phone in another room, yield three records on the phone with the right task and timestamps.
 
@@ -75,7 +75,7 @@ August 21, 2026
 
 ## Amendments applied
 
-D2
+D1 D2 D3 D4 D17 D18 D20
 
 Ratified deltas whose text has been written into this file. `DeltaIntegrityTests` reads this list;
 `docs/specs/AMENDMENT-BASELINE.txt` counts what is still outstanding, and the exact replacement text
