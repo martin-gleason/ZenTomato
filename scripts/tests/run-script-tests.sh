@@ -35,6 +35,7 @@ readonly REPO_ROOT="$(cd -- "${SCRIPTS_DIR}/.." && pwd)"
 readonly FIXTURES_DIR="${SCRIPT_DIR}/fixtures"
 
 readonly CHECK_TODOIST="${SCRIPTS_DIR}/check-todoist-writes.sh"
+readonly CHECK_REWRITE="${SCRIPTS_DIR}/check-wholesale-rewrite.sh"
 readonly ALLOWLIST="${SCRIPTS_DIR}/todoist-allowed-endpoints.txt"
 
 work_dir="$(mktemp -d -- "${TMPDIR:-/tmp}/zentomato-script-tests.XXXXXX")"
@@ -246,11 +247,103 @@ test_secrets_file_is_git_ignored() {
   pass "$name"
 }
 
+
+# ---------------------------------------------------------------------------
+# The wholesale-rewrite hook.
+#
+# Run against a REAL throwaway git repository rather than a stub, because the
+# check reads the staged index through `git diff --cached` and `git show HEAD:`.
+# A fake would only prove the fake works.
+# ---------------------------------------------------------------------------
+make_rewrite_repo() {
+  local dir="$1"
+  mkdir -p -- "${dir}/docs/plans"
+  git -C "$dir" init -q
+  git -C "$dir" config user.email t@example.com
+  git -C "$dir" config user.name Test
+  # 40 lines, comfortably over the 20-line floor the check applies.
+  seq 1 40 | sed 's/^/original line /' > "${dir}/docs/plans/F9.md"
+  git -C "$dir" add docs/plans/F9.md
+  git -C "$dir" commit -qm "add a plan"
+}
+
+test_rewrite_hook_refuses_wholesale_replacement() {
+  local name="rewriteHookRefusesWholesaleReplacement"
+  local dir="${work_dir}/rewrite-refuse"
+  make_rewrite_repo "$dir"
+
+  printf 'a three line\nreplacement of\nforty lines\n' > "${dir}/docs/plans/F9.md"
+  git -C "$dir" add docs/plans/F9.md
+  printf 'docs(F9): rewrite\n' > "${dir}/msg"
+
+  if ( cd "$dir" && "$CHECK_REWRITE" msg >/dev/null 2>&1 ); then
+    fail "$name" "the check allowed a 92%% replacement with no declaration"
+    return
+  fi
+  pass "$name"
+}
+
+test_rewrite_hook_allows_a_declared_rewrite() {
+  local name="rewriteHookAllowsADeclaredRewrite"
+  local dir="${work_dir}/rewrite-declared"
+  make_rewrite_repo "$dir"
+
+  printf 'a three line\nreplacement of\nforty lines\n' > "${dir}/docs/plans/F9.md"
+  git -C "$dir" add docs/plans/F9.md
+  printf 'docs(F9): rewrite\n\nRewrites: docs/plans/F9.md — superseded by the new gate\n' > "${dir}/msg"
+
+  if ! ( cd "$dir" && "$CHECK_REWRITE" msg >/dev/null 2>&1 ); then
+    fail "$name" "a declared rewrite was refused" \
+      "the escape hatch is what keeps the check from being deleted"
+    return
+  fi
+  pass "$name"
+}
+
+test_rewrite_hook_allows_ordinary_editing() {
+  local name="rewriteHookAllowsOrdinaryEditing"
+  local dir="${work_dir}/rewrite-edit"
+  make_rewrite_repo "$dir"
+
+  # Change six of forty lines. Editing, not replacement.
+  sed -i.bak '1,6s/original/revised/' "${dir}/docs/plans/F9.md" && rm -f "${dir}/docs/plans/F9.md.bak"
+  git -C "$dir" add docs/plans/F9.md
+  printf 'docs(F9): tighten the summary\n' > "${dir}/msg"
+
+  if ! ( cd "$dir" && "$CHECK_REWRITE" msg >/dev/null 2>&1 ); then
+    fail "$name" "ordinary editing was refused" \
+      "a check that fires on normal work is one somebody turns off"
+    return
+  fi
+  pass "$name"
+}
+
+test_rewrite_hook_ignores_a_new_file() {
+  local name="rewriteHookIgnoresANewFile"
+  local dir="${work_dir}/rewrite-add"
+  make_rewrite_repo "$dir"
+
+  printf 'brand new\n' > "${dir}/docs/plans/F10.md"
+  git -C "$dir" add docs/plans/F10.md
+  printf 'docs(F10): a new plan\n' > "${dir}/msg"
+
+  if ! ( cd "$dir" && "$CHECK_REWRITE" msg >/dev/null 2>&1 ); then
+    fail "$name" "adding a file was treated as a rewrite" \
+      "an added file has nothing to destroy"
+    return
+  fi
+  pass "$name"
+}
+
 test_no_writes_hook_catches_new_endpoint
 test_no_writes_hook_catches_bare_path
 test_no_writes_hook_catches_builder_path
 test_no_writes_hook_allows_close
 test_secrets_file_is_git_ignored
+test_rewrite_hook_refuses_wholesale_replacement
+test_rewrite_hook_allows_a_declared_rewrite
+test_rewrite_hook_allows_ordinary_editing
+test_rewrite_hook_ignores_a_new_file
 
 echo
 echo "run-script-tests.sh: ${passed} passed, ${failed} failed"

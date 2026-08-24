@@ -1,0 +1,38 @@
+#!/bin/bash
+#
+# .githooks/commit-msg — the half of the gate that needs the commit message.
+#
+# ENABLE IT WITH:  make hooks
+#
+# WHY THIS FILE EXISTS AT ALL
+# `pre-commit` cannot read the commit message; only `commit-msg` receives it. The wholesale-rewrite
+# check needs it, because its escape hatch is a declaration in the message:
+#
+#   Rewrites: docs/plans/F7.md — replaced wholesale because <reason>
+#
+# The staged index is fully available here, so the diff this reads is the same diff `pre-commit`
+# would have read. Everything else stays in `pre-commit`, which runs earlier and fails faster.
+#
+# LIKE `pre-commit`, THIS IS A CONVENIENCE AND NOT THE GATE. `--no-verify` bypasses it; continuous
+# integration runs the same check and branch protection is what makes it binding.
+
+set -uo pipefail
+
+readonly REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${REPO_ROOT}" || exit 2
+
+printf 'commit-msg: wholesale-rewrite check…\n'
+if ! ./scripts/check-wholesale-rewrite.sh "$1"; then
+  cat >&2 <<'REFUSED'
+
+commit-msg: commit refused.
+
+  A document was replaced rather than edited. If that was an accident, the original is still in
+  git — recover it with `git checkout HEAD -- <path>` and read it before writing again.
+
+REFUSED
+  exit 1
+fi
+
+printf 'commit-msg: passed.\n'
+exit 0

@@ -173,4 +173,104 @@ struct DeltaIntegrityTests {
       }
       .joined(separator: "\n")
   }
+
+  // MARK: The contract's amendment backlog
+
+  /// `everyRatifiedSpecAmendmentIsApplied` — H2. The gap between what was ratified and what the
+  /// contract actually says, made countable.
+  ///
+  /// **THE AGENT MAY NOT FIX THIS, AND THAT IS WHY THE TEST EXISTS.** `CLAUDE.md` and
+  /// `conventions.md` both say the agent never edits `SPEC.md`; spec authority is the owner's.
+  /// So this test cannot close the gap. It can only refuse to let the gap stay invisible.
+  ///
+  /// **What went wrong without it.** Twenty-two deltas were ratified between 2026-08-21 and
+  /// 2026-08-24 and not one was ever applied to `SPEC.md`. The contract still said minimum iOS 18.0
+  /// after D1 raised it to 26, still said OAuth sign-in after D18 replaced it with a pasted token,
+  /// still listed watchOS as out of scope after D2 moved the remote half in. `CLAUDE.md`'s working
+  /// loop opens with *"Re-read `SPEC.md`"* — so an agent following its instructions exactly gets
+  /// answers that are two months stale, and then re-derives from 1,000 lines of deltas or, worse,
+  /// believes the contract. That is what happened at the F7 gate.
+  ///
+  /// **How a delta is judged to need spec text.** It carries a `**Currently:**` block — the
+  /// convention this file uses for quoting the spec line a delta replaces. A delta that records a
+  /// verification result or a build decision has no such block and is not counted.
+  ///
+  /// **How to make it pass:** apply the amendment to `SPEC.md` and add its id to the
+  /// `## Amendments applied` list there. Not by editing this test.
+  @Test("everyRatifiedSpecAmendmentIsApplied")
+  func everyRatifiedSpecAmendmentIsApplied() throws {
+    let lines = try Self.deltaFileLines()
+    var owed: [(id: String, summary: String)] = []
+
+    for (index, line) in lines.enumerated() where line.hasPrefix("## D") {
+      guard let id = Self.headingID(line) else { continue }
+      let end = lines[(index + 1)...].firstIndex { $0.hasPrefix("## D") } ?? lines.count
+      let body = lines[index..<end].joined(separator: "\n")
+      guard body.contains("**Currently:**") else { continue }
+      guard body.contains("Ratified") else { continue }
+      guard body.contains("REJECTED") == false else { continue }
+      let summary = line.dropFirst(3).prefix(72)
+      owed.append((id, String(summary)))
+    }
+
+    let applied = try Self.appliedAmendments()
+    let outstanding = owed.filter { applied.contains($0.id) == false }
+    let baseline = try Self.amendmentBaseline()
+
+    // THE RATCHET, AND WHY IT IS NOT SIMPLY `outstanding.isEmpty`.
+    //
+    // Nine amendments are outstanding today. Asserting zero would fail every run until the owner
+    // works through all nine — and under branch protection a permanently red test blocks every
+    // merge, including the features still to come. A gate that cannot be met is a gate somebody
+    // deletes, and then the check is gone rather than satisfied.
+    //
+    // So the assertion is on the DIRECTION instead: the backlog may shrink or hold, never grow.
+    // Ratifying a new amendment without applying it fails immediately, which is the behaviour that
+    // let this reach nine in the first place. The baseline lives in a committed file, so lowering it
+    // is a visible edit in a diff rather than a number somebody nudged.
+    #expect(
+      outstanding.count <= baseline,
+      Comment(rawValue: """
+        The unapplied-amendment backlog grew: \(outstanding.count) outstanding against a baseline of \(baseline).
+        A delta was ratified without its text reaching docs/specs/SPEC.md. Apply it, add its id to the
+        '## Amendments applied' list there, and lower the number in docs/specs/AMENDMENT-BASELINE.txt.
+        """))
+
+    // Named on every run whether or not the ratchet trips, because the point is that the gap is
+    // countable and visible rather than merely bounded.
+    if outstanding.isEmpty == false {
+      print("""
+
+        ── SPEC.md amendment backlog: \(outstanding.count) outstanding (baseline \(baseline)) ──
+        The contract states things that are no longer true, so "re-read SPEC.md" returns stale
+        answers. Only the owner may close these; the agent never edits the contract.
+
+        \(outstanding.map { "  \($0.id) — \($0.summary)" }.joined(separator: "\n"))
+
+        """)
+    }
+  }
+
+  /// The highest number of unapplied amendments this repository currently tolerates.
+  ///
+  /// A missing or unreadable file means zero, so deleting it makes the test stricter rather than
+  /// silently switching it off.
+  private static func amendmentBaseline() throws -> Int {
+    let url = repositoryRoot.appending(path: "docs/specs/AMENDMENT-BASELINE.txt")
+    guard let text = try? String(contentsOf: url, encoding: .utf8) else { return 0 }
+    let digits = text.split(separator: "\n")
+      .first { $0.trimmingCharacters(in: .whitespaces).first?.isNumber == true }
+    return Int(digits?.trimmingCharacters(in: .whitespaces) ?? "0") ?? 0
+  }
+
+  /// The ids listed under `## Amendments applied` in `SPEC.md`, or an empty set when the section
+  /// does not exist yet.
+  private static func appliedAmendments() throws -> Set<String> {
+    let spec = try String(
+      contentsOf: repositoryRoot.appending(path: "docs/specs/SPEC.md"), encoding: .utf8)
+    guard let start = spec.range(of: "## Amendments applied") else { return [] }
+    let rest = spec[start.upperBound...]
+    let section = rest.range(of: "\n## ").map { String(rest[..<$0.lowerBound]) } ?? String(rest)
+    return deltaIDs(in: section)
+  }
 }

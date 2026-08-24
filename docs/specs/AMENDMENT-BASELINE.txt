@@ -1,0 +1,21 @@
+9
+
+The number of ratified deltas whose text has never been applied to SPEC.md.
+
+DeltaIntegrityTests.everyRatifiedSpecAmendmentIsApplied fails if the real number exceeds this one,
+so the backlog may shrink or hold but never grow. Ratifying a new amendment without applying it
+fails the build immediately.
+
+LOWER THIS NUMBER when you apply an amendment to SPEC.md and add its id to the '## Amendments
+applied' list there. Never raise it. Raising it is the act this file exists to make visible.
+
+Outstanding as of 2026-08-24, recorded by C6:
+  D1   Minimum iOS 18.0 -> 26.0
+  D2   watchOS companion moves from Phase 2 into v0.1 as F7
+  D3   F2 alerting: AlarmKit primary, Live Activity promoted to required
+  D4   End-of-pomodoro sequence made explicit
+  D14  Stopping mid-block shows one sheet, not two
+  D17  A session plan: several Todoist items, in the order you will work them
+  D18  Todoist authenticates with a personal API token
+  D20  A Stop control for music, beside skip
+  D21  A completion records whether the task was recurring

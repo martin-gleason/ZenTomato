@@ -114,9 +114,10 @@ ci: checks test ## Everything continuous integration runs, in the same order
 
 hooks: ## Enable the pre-commit hooks in .githooks
 	@git config core.hooksPath .githooks
-	@echo "make hooks: pre-commit hooks enabled (git config core.hooksPath .githooks)."
-	@echo "            They run lint, the Todoist allowlist check, and the secret"
-	@echo "            scan. Tests are left to CI — they are too slow for a commit."
+	@echo "make hooks: git hooks enabled (git config core.hooksPath .githooks)."
+	@echo "            pre-commit: lint, the Todoist allowlist check, the secret scan."
+	@echo "            commit-msg: the wholesale-rewrite check, which needs the message."
+	@echo "            Tests are left to CI — they are too slow for a commit."
 
 clean: ## Remove build products and the generated project
 	@rm -rf $(DERIVED_DATA) $(PROJECT)
