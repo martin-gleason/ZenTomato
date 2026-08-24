@@ -162,29 +162,61 @@ struct StatsPeriod: Sendable, Equatable {
     return lhs < rhs ? -1 : 1
   }
 
-  /// Busiest project first, then by name. Used by the query when it builds the
-  /// rows and never applied twice.
+  /// **A thing with no name always sorts last, whatever its count.**
+  ///
+  /// This is the one place the order is not simply "busiest first", and it is
+  /// deliberate. *No task* is a footnote — it is the residue of blocks worked
+  /// before Todoist was connected, blocks attached to a project on its own, and
+  /// blocks attached to nothing at all. Sorted by size it would frequently be
+  /// the first line of a section, where it reads as the heading's answer rather
+  /// than as its remainder. Pushed to the end it reads as what it is.
+  ///
+  /// - Returns: a negative number when only `lhs` has a name, a positive one
+  ///   when only `rhs` does, and zero when they are alike — in which case the
+  ///   caller carries on to the counts.
+  static func compareNamed(_ lhs: Bool, _ rhs: Bool) -> Int {
+    if lhs == rhs { return 0 }
+    return lhs ? -1 : 1
+  }
+
+  /// Named projects first, busiest first inside that, then by name.
+  ///
+  /// Used by the query when it builds the rows and never applied a second time.
   static func projectIsBefore(_ lhs: StatsProjectRow, _ rhs: StatsProjectRow) -> Bool {
+    let byNamed = compareNamed(lhs.title != nil, rhs.title != nil)
+    if byNamed != 0 { return byNamed < 0 }
     if lhs.pomodoroCount != rhs.pomodoroCount { return lhs.pomodoroCount > rhs.pomodoroCount }
     return compareNames(lhs.title, rhs.title) < 0
   }
 
-  /// Busiest task first, then by task title, then by project name.
+  /// Named tasks first, busiest first inside that, then by task title, then by
+  /// project name.
   ///
-  /// The third comparison is what makes the order total rather than nearly
+  /// The last comparison is what makes the order total rather than nearly
   /// total: two projects can each hold a row with no task, and without it their
   /// order would be whatever the machine happened to do that day — which a
   /// byte-for-byte golden file would notice, on somebody else's machine, a week
   /// later.
   static func taskRowIsBefore(_ lhs: StatsTaskRow, _ rhs: StatsTaskRow) -> Bool {
+    let byNamed = compareNamed(lhs.title != nil, rhs.title != nil)
+    if byNamed != 0 { return byNamed < 0 }
     if lhs.pomodoroCount != rhs.pomodoroCount { return lhs.pomodoroCount > rhs.pomodoroCount }
     let byTitle = compareNames(lhs.title, rhs.title)
     if byTitle != 0 { return byTitle < 0 }
     return compareNames(lhs.projectTitle, rhs.projectTitle) < 0
   }
 
-  /// Most-interrupted group first, then by task title, then by project name.
+  /// Named groups first, most-interrupted first inside that, then by task
+  /// title, then by project name.
+  ///
+  /// A group is unnamed only when it has **neither** a task nor a project. A
+  /// group with a project and no task still has something to be called, and is
+  /// ordered among the named ones.
   static func groupIsBefore(_ lhs: StatsDistractionGroup, _ rhs: StatsDistractionGroup) -> Bool {
+    let lhsNamed = lhs.taskTitle != nil || lhs.projectTitle != nil
+    let rhsNamed = rhs.taskTitle != nil || rhs.projectTitle != nil
+    let byNamed = compareNamed(lhsNamed, rhsNamed)
+    if byNamed != 0 { return byNamed < 0 }
     if lhs.count != rhs.count { return lhs.count > rhs.count }
     let byTitle = compareNames(lhs.taskTitle, rhs.taskTitle)
     if byTitle != 0 { return byTitle < 0 }

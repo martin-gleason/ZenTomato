@@ -22,8 +22,7 @@ import SwiftData
 ///
 /// `@MainActor` — main-thread only — because it holds a `ModelContext`, and
 /// those are not safe to share between threads. Everything it hands back is a
-/// plain immutable value with no database row in it, so the answer can go
-/// anywhere the answer is wanted.
+/// plain immutable value with no database row in it.
 @MainActor
 struct StatsQuery {
   // MARK: Lifecycle
@@ -61,6 +60,11 @@ struct StatsQuery {
     for block in blocks {
       let placement = BlockAttribution(block, calendar: calendar)
       attribution[block.id] = placement
+      // The read reaches one day further back than the span, so that a tap
+      // made just after midnight can still find the block it belongs to. Those
+      // extra blocks are here to be *recognised*, never to be counted: their
+      // day is outside the span, and a span counts its own days.
+      guard range.contains(placement.day) else { continue }
       if let counted = CountedBlock(block, calendar: calendar) {
         assembly.add(counted)
       }
@@ -90,11 +94,19 @@ struct StatsQuery {
   private let context: ModelContext
   private let calendar: Calendar
 
-  /// Every block that **began** inside the span.
+  /// Every block that began inside the span, **and the day before it**.
   ///
   /// The bound is on `startedAt` and on nothing else, because a block belongs
   /// entirely to the day it began. Half-open — `>= lower`, `< upper` — so a
   /// block beginning exactly at midnight lands in one span and one only.
+  ///
+  /// **The extra day at the start is the mirror of the widened tap window
+  /// below.** A tap at 00:05 on the first day of the span may belong to a block
+  /// that began at 23:50 the night before; without that block in hand the tap
+  /// matches nothing and would be shown on the wrong day with no task against
+  /// it. Those blocks are used to recognise taps and never to count anything —
+  /// `period(_:)` drops any whose day is outside the span. A block cannot run
+  /// for a whole day, so one day back is enough.
   ///
   /// **Neither `kind` nor `wasAbandoned` is in the predicate.** `BlockKind` is
   /// stored as a value SwiftData splits into marker columns, and F5's review
@@ -106,7 +118,7 @@ struct StatsQuery {
   /// as an empty span rather than being silently mixed into a wrong total, and
   /// it is the same shape every other read in this app takes.
   private func fetchBlocks(in bounds: StatsRange.Bounds) -> [PomodoroSession] {
-    let lower = bounds.lower
+    let lower = calendar.date(byAdding: .day, value: -1, to: bounds.lower) ?? bounds.lower
     let upper = bounds.upper
     let descriptor = FetchDescriptor<PomodoroSession>(
       predicate: #Predicate { $0.startedAt >= lower && $0.startedAt < upper },
@@ -134,9 +146,8 @@ struct StatsQuery {
 
   /// Every task ticked off inside the span.
   ///
-  /// A completion belongs to the day it was recorded (D11), independently of
-  /// any block. Completing a task is not a pomodoro and is never counted as
-  /// one.
+  /// A completion belongs to the day it was recorded (D11), independently of any
+  /// block. Completing a task is not a pomodoro and is never counted as one.
   private func fetchCompletions(in bounds: StatsRange.Bounds) -> [CompletedTaskRecord] {
     let lower = bounds.lower
     let upper = bounds.upper
@@ -154,12 +165,11 @@ struct StatsQuery {
   ///
   /// A tap whose block is not among the ones fetched is **not dropped**. It is
   /// placed on the day of its own timestamp with no task and no project, which
-  /// is what `Distraction.swift` promises in its own documentation: an
-  /// unmatched row must be shown as having no block rather than treated as an
-  /// error. The engine has no path that produces one; the branch exists so that
-  /// if one ever appears it is visible instead of deleted. It is dropped only
-  /// if its own day falls outside the span being counted, because a day outside
-  /// the span is not part of the answer.
+  /// is what `Distraction.swift` promises: an unmatched row is shown as having
+  /// no block rather than treated as an error. The engine has no path that
+  /// produces one; the branch exists so that if one ever appears it is visible
+  /// instead of deleted. Either way a tap is dropped when the day it lands on
+  /// falls outside the span, which is not part of this answer.
   private static func entry(
     for tap: Distraction,
     attribution: [UUID: BlockAttribution],
@@ -172,6 +182,9 @@ struct StatsQuery {
       return StatsDistractionEntry(
         day: day, time: time, kind: tap.kind, note: tap.note, taskTitle: nil, projectTitle: nil)
     }
+    // Its block began the night before the span. The tap belongs to that day,
+    // and that day is not part of this answer.
+    guard range.contains(block.day) else { return nil }
     return StatsDistractionEntry(
       day: block.day,
       time: time,
@@ -234,10 +247,9 @@ private struct CountedBlock {
 // MARK: - BlockAttribution
 
 /// Where a block sat and what it was attached to — kept for **every** block
-/// fetched, including the breaks and the ones that were stopped.
-///
-/// This is how a tap recorded inside a block that was later stopped keeps its
-/// task and its day even though the block itself counts for nothing.
+/// fetched: the breaks, the stopped ones, and the ones from the extra day
+/// before the span. This is how a tap inside a block that was later stopped
+/// keeps its task and its day even though the block counts for nothing.
 private struct BlockAttribution {
   let day: StatsDay
   let taskTitle: String?
