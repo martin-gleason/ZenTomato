@@ -62,14 +62,36 @@ echo "  platforms : ${platforms}"
 failed=0
 dev_mode_ok=0
 
-if printf '%s' "${platforms}" | grep -qi "watchOS"; then
-  echo "  OK — it is a watchOS profile."
-else
-  echo "  FAIL — this profile does not cover watchOS."
-  echo "         An iOS profile cannot authorise a watchOS app, however correctly"
-  echo "         the app itself is signed. This is the usual cause."
-  failed=1
-fi
+# THE PLATFORM LIST IS NOT THE TEST, AND ASSERTING IT WAS A BUG.
+#
+# This script first demanded that the platform list contain "watchOS". It does
+# not, even on a working setup: Xcode's managed profile for a watch app is
+# labelled `iOS xrOS visionOS` because a companion watch app is provisioned under
+# the iOS profile type. Once the real fix landed — an explicit App ID for
+# com.martingleason.ZenTomato.watchkitapp, with the watch registered — this
+# script would still have called it broken.
+#
+# A check that fails on a working configuration is worse than no check: it is
+# read once, disbelieved, and then ignored when it is right.
+#
+# What actually decides whether the watch app can install is the App ID and the
+# device list, both checked below.
+app_id="$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" "${decoded}" 2>/dev/null)"
+echo "  App ID    : ${app_id}"
+
+case "${app_id}" in
+  *com.martingleason.ZenTomato.watchkitapp)
+    echo "  OK — an explicit App ID for the watch app."
+    ;;
+  *\*)
+    echo "  WARN — a wildcard App ID. It can install, but cannot carry a"
+    echo "         capability, which is why MusicKit is unentitled (see O14)."
+    ;;
+  *)
+    echo "  FAIL — this profile is for ${app_id}, not the watch app."
+    failed=1
+    ;;
+esac
 
 # Asked once, before anything needs it. devicectl will not write JSON to a pipe,
 # so it gets a real file.
