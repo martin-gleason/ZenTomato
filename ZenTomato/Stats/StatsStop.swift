@@ -28,13 +28,22 @@ struct StatsStop: Sendable, Equatable {
   /// Kept because a break can be stopped too, and a section called *where I
   /// bailed* that leaves those out is not answering its own question. A
   /// non-work block has no attachment and is named by its kind instead.
-  let blockKind: BlockKind
+  let kind: BlockKind
 
   /// The task's title as it read when the block began, or nothing.
   let taskTitle: String?
 
   /// The project's name as it read when the block began, or nothing.
   let projectTitle: String?
+
+  /// What the block was called: its task, failing that its project, failing
+  /// that nothing at all.
+  ///
+  /// A convenience so that the two readers name a stopped block the same way. A
+  /// stop with neither has nothing worth labelling — a middle segment reading
+  /// *no task* would be noise on the rarest lines in the document — and a
+  /// stopped break is named by its kind instead.
+  var title: String? { taskTitle ?? projectTitle }
 
   /// What the person wrote when they stopped, or nothing.
   ///

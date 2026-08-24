@@ -142,6 +142,12 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
           plan: plan,
           opensOnThePlan: plan.isEmpty == false)
       }
+      // The pomodoro history sheet: today's count, the three lists, and the
+      // export. Reached from the one corner of the timer screen that is empty in
+      // every state. It reads; it writes nothing and it starts nothing.
+      .sheet(isPresented: $showingHistory) {
+        StatsView()
+      }
       // The Music sheet: the switch, what is chosen, and the library to choose
       // from. Reached from the music row's line, which is a control only while
       // the timer is idle — D19 says music is set before a sprint, and a screen
@@ -180,7 +186,15 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       // harmlessly replaced the next time a block ends, exactly as the stop-sheet
       // case already behaves.
       .onChange(of: engine.pendingReflection) { _, offered in
-        guard offered != nil, isAskingWhyStopping == false, showingSettings == false else { return }
+        guard
+          offered != nil,
+          isAskingWhyStopping == false,
+          showingSettings == false,
+          // Here for the duller of the two reasons above, and not optional: with
+          // the history sheet up, presenting this one would consume the offer and
+          // draw nothing. Left unconsumed it stays on the engine.
+          showingHistory == false
+        else { return }
         guard let taken = engine.consumePendingReflection() else { return }
         // Snapshotted at the moment of presentation rather than read live, so
         // the footer line cannot change its mind while somebody is reading it.
@@ -391,6 +405,16 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
   /// make. It carries the task with it — see `CompletionRequest`.
   @State private var completionRequest: CompletionRequest?
 
+  /// Whether the pomodoro history sheet is up.
+  @State private var showingHistory = false
+
+  /// The tasks ticked off since this sprint began (D21b).
+  ///
+  /// Optional so this screen can be looked at in a preview with nothing behind
+  /// it, exactly as `SettingsView` reads the engine. In the app there is always
+  /// one, built and handed down by `ZenTomatoApp`.
+  @Environment(SprintCompletions.self) private var completedThisSprint: SprintCompletions?
+
   /// Whether the Music sheet is up.
   @State private var showingMusic = false
 
@@ -432,6 +456,7 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       onStart: { self.startBlock() },
       onStop: { self.stopBlock() },
       onOpenSettings: { self.showingSettings = true },
+      onOpenHistory: { self.showingHistory = true },
       onOpenPlan: { self.openPlan() },
       // Called and finished on the spot. No `Task`, no `await`, nothing queued.
       onInternalDistraction: { self.record(.internalInterruption) },
@@ -714,7 +739,21 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
     completionFailure = TaskCompletionSection.failureMessage(for: outcome)
 
     switch outcome {
-    case .closed, .alreadyGone:
+    case .closed:
+      todoistIsReachable = true
+      // D21b: A TASK THIS APP JUST CLOSED DOES NOT COME BACK INTO THIS SPRINT.
+      //
+      // Closing a recurring task in Todoist does not finish it — it advances it
+      // to its next occurrence, so it is active again immediately and the picker
+      // would happily offer it back the same afternoon. The rule holds for every
+      // task, not only recurring ones, which is why it needs no recurrence
+      // knowledge and cannot be wrong about one it guessed at.
+      //
+      // ON `.closed` ONLY. `.alreadyGone` means the task was finished or deleted
+      // somewhere else, which this app did not do; widening the trigger would
+      // change the rule's meaning from "completed" to "believed gone".
+      completedThisSprint?.record(taskID: subject.taskID)
+    case .alreadyGone:
       todoistIsReachable = true
     case .offline:
       todoistIsReachable = false

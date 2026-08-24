@@ -14,6 +14,11 @@ struct StatsProjectRow: Sendable, Equatable {
   /// The project's name snapshot, or nothing for blocks that recorded no
   /// project.
   ///
+  /// Named `title` rather than `projectTitle` so that a project row and a task
+  /// row answer the same question with the same word — the screen draws both
+  /// through one shape, and the rows carry no other name it could be confused
+  /// with.
+  ///
   /// **Nothing is common, and today it is the usual case.** The timer records
   /// what the session plan handed it, and a planned *task* is handed over with
   /// its title alone — the plan holds no project for it. So blocks worked
@@ -21,7 +26,7 @@ struct StatsProjectRow: Sendable, Equatable {
   /// whatever words the reader chooses for nothing. It is the honest reading of
   /// what was written down; changing what gets written down is a change to the
   /// timer's attachment path, not to this count.
-  let projectTitle: String?
+  let title: String?
 
   /// The tasks worked under this project, ordered by pomodoro count descending
   /// and then by title.

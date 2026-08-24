@@ -166,7 +166,7 @@ struct StatsPeriod: Sendable, Equatable {
   /// rows and never applied twice.
   static func projectIsBefore(_ lhs: StatsProjectRow, _ rhs: StatsProjectRow) -> Bool {
     if lhs.pomodoroCount != rhs.pomodoroCount { return lhs.pomodoroCount > rhs.pomodoroCount }
-    return compareNames(lhs.projectTitle, rhs.projectTitle) < 0
+    return compareNames(lhs.title, rhs.title) < 0
   }
 
   /// Busiest task first, then by task title, then by project name.
