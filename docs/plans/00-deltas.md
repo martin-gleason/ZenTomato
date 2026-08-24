@@ -9,6 +9,8 @@ Each delta states the current spec text, the proposed text, and why.
 
 ## D1 — Minimum iOS 18.0 → 26.0
 
+**Ratified 2026-08-21**, under *Ratified 2026-08-21 — D1–D6 accepted; build authorised starting at F1* below.
+
 **Currently:** *Locked decisions* table — `Minimum iOS | 18.0 (adjust to Marty's phone at C2).`
 **Proposed:** `Minimum iOS | 26.0. Minimum watchOS 26.0.`
 
@@ -19,6 +21,8 @@ and because two other deltas (D2, D3) are only possible at 26.0.
 ---
 
 ## D2 — watchOS companion moves from Phase 2 into v0.1 as F7
+
+**Ratified 2026-08-21**, under *Ratified 2026-08-21 — D1–D6 accepted; build authorised starting at F1* below.
 
 **Currently:** *Out of scope for v0.1* — `watchOS (remote and standalone) · macOS · …`
 **Proposed:** replace with `standalone watchOS · macOS · …`, and add to the feature list:
@@ -43,6 +47,8 @@ exactly that reason — see the build order in `F1.md`.
 
 ## D3 — F2 alerting: AlarmKit primary, Live Activity promoted to required
 
+**Ratified 2026-08-21**, under *Ratified 2026-08-21 — D1–D6 accepted; build authorised starting at F1* below.
+
 **Currently:** *F2* — `Survives backgrounding (state persisted, local notification fires when a block
 ends). Live Activity on the Lock Screen if it fits in budget; otherwise notification only.`
 **Proposed:** `Survives backgrounding (state persisted). Block ends fire through AlarmKit, so the alert
@@ -66,6 +72,8 @@ silently degrading — see `F2.md`, "Authorization denied".
 
 ## D4 — End-of-pomodoro sequence made explicit
 
+**Ratified 2026-08-21**, under *Ratified 2026-08-21 — D1–D6 accepted; build authorised starting at F1* below.
+
 **Currently:** F5 says the app `prompts for one sentence per tap (skippable)` at the end of a pomodoro.
 F3 says `complete a task with one button at the end of a pomodoro`. The settings list includes
 `auto-start next block on/off`. The spec does not say how these three share the same moment.
@@ -84,6 +92,8 @@ stop being a clock you can trust.
 ---
 
 ## D5 — Todoist API version (verification result, recorded for the file)
+
+**Ratified 2026-08-21**, under *Ratified 2026-08-21 — D1–D6 accepted; build authorised starting at F1* below.
 
 Not a change of intent — F3 already instructs *"verify at build time the current Todoist API version
 and rate limits."* This records the answer so it is not re-derived later.
@@ -319,6 +329,8 @@ decision is made deliberately at that gate rather than discovered during a relea
 
 ## D10 — F2 gains the settings screen
 
+**Ratified 2026-08-22**, at the gate that authorised the feature it belongs to.
+
 **Raised and ratified 2026-08-22, during the F2 gate.**
 
 **This is a spec defect, not a scope request.** `SPEC.md` line 30 locks *Timer customization — work
@@ -347,6 +359,8 @@ toggle — the music on/off is session state owned by F4, and `SPEC.md` says "No
 ---
 
 ## D11 — Completed tasks are recorded and exported
+
+**Ratified 2026-08-22**, at the gate that authorised the feature it belongs to.
 
 **Raised and ratified 2026-08-22.**
 
@@ -806,6 +820,53 @@ It was the other candidate and it loses on two counts. The toggle lives in the m
 beside the countdown, so it is a longer reach at the moment somebody is trying not to break
 concentration. And the toggle means *"I use music"* whereas this means *"not this block"* — collapsing
 them would make one control answer two questions.
+
+---
+
+## D14 — Stopping mid-block shows one sheet, not two
+
+**Ratified 2026-08-23 at the F5 gate. Written down 2026-08-24 from its own implementation** — it was
+decided, built, cited by name in five production files, and never recorded. D15's preamble names this
+exact failure mode one section below; D15 was caught at the time and this was not. `C6` found it by
+cross-checking every `D<n>` cited in the tree against the headings in this file, and `H1`'s
+`DeltaIntegrityTests` now does that check on every run.
+
+**Currently:** D13 requires a written reason to stop mid-block. F5 asks for one optional sentence per
+distraction tap at the end of a block. Nothing said what happens when a block with taps in it is
+stopped — both want the same instant.
+
+**Proposed, and built:** **one sheet, not two back to back.** The required reason sits on top, under
+the question, with no header of its own; the skippable sentences sit below a rule, under a header that
+announces itself as a subordinate topic.
+
+### Why
+
+Two modal sheets in succession — at the moment somebody has decided to quit — is the surest way to
+train them to dismiss both without reading. **The one that would get dismissed is the one that
+matters:** the reason for stopping is the sentence the app charges for a stop, and the day somebody
+least wants to write it, the day they bailed and would rather not think about why, is the day it is
+worth the most.
+
+### What it does not change
+
+Both requirement levels stay exactly as their own deltas set them. Five signals separate them before a
+word is typed, and every one is additive rather than corrective — position, resting height, outline
+weight, one quiet word on the required field only, and the confirm button being visibly switched off.
+
+**No red, no amber, no asterisk, no badge, no count of what is missing**, and nothing appears, moves
+or changes colour if the switched-off button is tapped. Stopping is not an error and the person is not
+in trouble.
+
+### Where it lives
+
+`ZenTomato/Views/StopReasonSheet.swift` is the merged sheet. `ZenTomato/Views/ReflectionFieldList.swift`
+is the shared row list, a file of its own precisely so the two sheets that draw these rows are one
+composition rather than two layouts that drift apart the first time either is touched.
+
+A second consequence, recorded because the code cites D14 for it too: the end-of-block prompt is never
+presented on top of the stop sheet. The offer is left unconsumed and is replaced when the next block
+ends. See `TimerView.presentReflectionIfPossible()`, which excludes the stop sheet deliberately while
+re-presenting after the settings and history sheets.
 
 ---
 
