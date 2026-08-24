@@ -30,6 +30,7 @@ permission prompt.
 | O9  | **The merged stop sheet with taps in it, at AX5**            | F5     | The single surface D14 was written for. Three chained sheets on one view, and the switched-off confirm button, unexercised at the largest text size. |
 | O10 | **Apply the nine outstanding spec amendments**               | C6     | `SPEC.md` still states things that are no longer true. Counted in `docs/specs/AMENDMENT-BASELINE.txt`; the agent may not close these. |
 | O11 | **F7's gate: D2 into `SPEC.md`**                             | F7     | `docs/plans/F7.md`: *"Until D2 is merged into `SPEC.md`, this feature does not exist and no line of it may be written."* Part of O10, listed separately because it blocks a feature. |
+| O13 | **Provision the Apple Watch for development** | C8 | The watch app builds, embeds and signs correctly, but is signed with an iOS profile that does not cover watchOS and does not list the watch. iOS installs the phone app and silently skips the watch app. Blocks F7's device check. `scripts/check-watch-provisioning.sh` |
 | O12 | **Three Todoist API facts, against a live token**            | F3b    | `scripts/check-todoist-facts.sh`. Whether an archived project resolves by id, whether sync reports deletions as tombstones or by silence, and whether old numeric task ids still resolve. |
 **Owner response**
 
