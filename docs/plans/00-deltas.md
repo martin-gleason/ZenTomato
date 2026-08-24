@@ -759,3 +759,50 @@ removing something the user needs.
 That is the general answer to this tension, and it is worth stating once here: **when a rule about
 movement conflicts with an affordance somebody needs, reserve the space.** Suppressing the affordance
 was tried in F3 and the cost was the whole feature.
+
+---
+
+## D20 — A Stop control for music, beside skip
+
+**Ratified 2026-08-23**, from the device session.
+
+**Currently:** `SPEC.md` line 27 — *"Skip-forward is the only control."*
+**Proposed:** *"Skip-forward and stop are the only controls. Stop silences the music for the remainder
+of the current block; the timer is unaffected and the next block starts music again."*
+
+### The gap it fills
+
+The music switch is deliberately locked while a block runs (music is chosen *before* a sprint). The
+consequence, which only became visible on a real phone: **mid-block there was no way to silence music
+at all.** The choices were to endure it, or to Stop the timer — which since D13 costs a written
+sentence and abandons the pomodoro.
+
+So a playlist that turns out to be wrong for the work in front of you could cost you the block. That
+is a worse outcome than the one skip-only was protecting against.
+
+### What Stop does, exactly
+
+Silences the music. **The timer does not notice** — the block runs on, the alarm is untouched, and
+nothing is recorded. The next block starts music again, because the silence is about *this* block and
+not a change of mind about music.
+
+That last part is what keeps it a transport control rather than a setting in disguise. A button that
+looked like transport and quietly flipped a persistent switch would be two different kinds of thing
+wearing one icon.
+
+### The fence, and why it barely moves
+
+**The playback protocol does not change.** It already has `pause()` — used on every break — and this
+is the same verb reached from a different place. Nothing new becomes expressible: still no previous,
+no seek, no scrub, no shuffle, no volume.
+
+What widens is the *UI*, from one button to two. That is the honest cost, and the scope fence updates
+from "skip is the only control" to "skip and stop are the only controls" — still checkable, still
+greppable, and still excluding everything MusicKit offers on the same object.
+
+### Why not simply unlock the toggle mid-sprint
+
+It was the other candidate and it loses on two counts. The toggle lives in the music row rather than
+beside the countdown, so it is a longer reach at the moment somebody is trying not to break
+concentration. And the toggle means *"I use music"* whereas this means *"not this block"* — collapsing
+them would make one control answer two questions.

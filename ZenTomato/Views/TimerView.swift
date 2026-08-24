@@ -436,7 +436,8 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       onOpenMusic: { self.showingMusic = true },
       // Straight through to the player, with nothing in between. It is the only
       // transport control this app has.
-      onSkipTrack: { self.music.skipForward() })
+      onSkipTrack: { self.music.skipForward() },
+      onSilenceBlock: { self.music.silenceThisBlock() })
   }
 
   // MARK: Turning the engine into something to draw

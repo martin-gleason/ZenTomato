@@ -127,6 +127,10 @@ enum MusicCopy {
 
   /// The skip button, spoken.
   static let skipLabel = "Skip to the next track"
+  /// Says what it silences and, just as importantly, what it does not.
+  static let stopLabel = "Stop the music"
+  static let stopHint = "Silences the music for the rest of this block. The timer keeps running."
+
   static let skipHint = "Plays the next track. Nothing else changes."
 
   /// While the library is being read.
@@ -361,6 +365,13 @@ struct MusicRowModel: Equatable {
   /// unfinished rather than as deliberate.
   let canSkip: Bool
 
+  /// Whether the stop control is offered (D20).
+  ///
+  /// The same conditions as `canSkip`: both are transport, both need something
+  /// actually playing to act on. They appear and disappear together, which is
+  /// what keeps the reserved row a single decision rather than two.
+  let canStop: Bool
+
   // MARK: Derived
 
   /// How many things in this row can actually be operated.
@@ -371,7 +382,7 @@ struct MusicRowModel: Equatable {
   /// break it is 0. While idle it is 2 — the switch and the line — and neither of
   /// those is a transport control, because nothing is playing.
   var interactiveControlCount: Int {
-    (isTogglable ? 1 : 0) + (isLineTappable ? 1 : 0) + (canSkip ? 1 : 0)
+    (isTogglable ? 1 : 0) + (isLineTappable ? 1 : 0) + (canSkip ? 1 : 0) + (canStop ? 1 : 0)
   }
 
   // MARK: The rule
@@ -426,8 +437,17 @@ struct MusicRowModel: Equatable {
         // of it has gone.
         isLineTappable: true,
         toggleHint: availability.explanation ?? MusicCopy.toggleHint,
-        canSkip: false)
+        canSkip: false,
+        canStop: false)
     }
+
+    // Both transport controls answer the same question — is there sound to act
+    // on — so they are one decision rather than two that could drift apart.
+    let transportIsLive = kind == .work
+      && isEnabled
+      && availability == .ready
+      && selection != nil
+      && playback == .playing
 
     return MusicRowModel(
       isOn: isOn,
@@ -440,11 +460,8 @@ struct MusicRowModel: Equatable {
         playback: playback),
       isLineTappable: false,
       toggleHint: availability.explanation ?? MusicCopy.lockedHint,
-      canSkip: kind == .work
-        && isEnabled
-        && availability == .ready
-        && selection != nil
-        && playback == .playing)
+      canSkip: transportIsLive,
+      canStop: transportIsLive)
   }
 
   // MARK: Private

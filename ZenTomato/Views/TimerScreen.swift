@@ -56,6 +56,9 @@ struct TimerScreen: View {
   /// only reachable while a focus block is actually playing something.
   var onSkipTrack: () -> Void = { }
 
+  /// Silence the music for the rest of this block (D20).
+  var onSilenceBlock: () -> Void = { }
+
   var body: some View {
     VStack(spacing: Spacing.none) {
       centreColumn
@@ -210,7 +213,8 @@ struct TimerScreen: View {
           model: music,
           onToggleMusic: onToggleMusic,
           onOpenMusic: onOpenMusic,
-          onSkipTrack: onSkipTrack)
+          onSkipTrack: onSkipTrack,
+          onSilenceBlock: onSilenceBlock)
           .padding(.top, Spacing.md)
           // SIXTEEN POINTS BELOW IT AS WELL, AND THE SIXTEEN IS PRICED.
           //

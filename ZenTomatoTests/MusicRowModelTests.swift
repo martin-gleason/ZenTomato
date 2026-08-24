@@ -26,22 +26,37 @@ struct MusicRowModelTests {
   /// the question this feature will be asked and a number is the only answer
   /// that cannot be fudged. Idle is two: the switch and the line, neither of
   /// which is a transport control, because nothing is playing.
-  @Test("skipIsTheOnlyControl")
-  func skipIsTheOnlyControl() {
+  /// Skip and stop are the ONLY transport controls, and only while a focus block
+  /// is actually making sound (D20).
+  ///
+  /// This test failed when stop was added, which is what it is for. The count is
+  /// asserted as a number rather than described in a comment precisely so that
+  /// widening the row is a decision somebody has to make on purpose — a volume
+  /// slider or a shuffle toggle would break it too, and neither has a delta.
+  @Test("skipAndStopAreTheOnlyControls")
+  func skipAndStopAreTheOnlyControls() {
     let idle = Self.row(isRunning: false, kind: .work)
     #expect(idle.interactiveControlCount == 2)
     #expect(idle.canSkip == false)
+    #expect(idle.canStop == false, "there is nothing playing to stop")
 
     let working = Self.row(isRunning: true, kind: .work, playback: .playing)
-    #expect(working.interactiveControlCount == 1)
+    #expect(working.interactiveControlCount == 2)
     #expect(working.canSkip)
+    #expect(working.canStop)
     #expect(working.isTogglable == false)
     #expect(working.isLineTappable == false)
+
+    // Both answer the same question — is there sound to act on — so they must
+    // never disagree. A row offering stop but not skip, or the reverse, would
+    // change the reserved row's width at a block boundary.
+    #expect(working.canSkip == working.canStop)
 
     for breakKind in [BlockKind.shortBreak, BlockKind.longBreak] {
       let onABreak = Self.row(isRunning: true, kind: breakKind, playback: .playing)
       #expect(onABreak.interactiveControlCount == 0)
       #expect(onABreak.canSkip == false)
+      #expect(onABreak.canStop == false)
     }
   }
 

@@ -357,6 +357,30 @@ final class MusicCoordinator {
   /// change of mind about whether there should be sound, so it must not cancel
   /// a load that is in flight — but it still re-checks the counter afterwards,
   /// so a skip that lands after a break has begun cannot leave sound running.
+  /// Silences the music for the rest of this block (D20).
+  ///
+  /// **The timer does not notice.** The block runs on, the alarm is untouched,
+  /// and nothing is recorded — this is about the sound, not about the pomodoro.
+  ///
+  /// The silence lasts one block. The next one starts music again, because the
+  /// answer to "not this block" is not "I have changed my mind about music". A
+  /// button that looked like transport and quietly flipped the persistent switch
+  /// would be two different kinds of thing wearing one icon.
+  ///
+  /// It exists because the switch is locked while a block runs, so without it
+  /// there was no way to silence music at all except stopping the timer — which
+  /// since D13 costs a written sentence and abandons the pomodoro. A playlist
+  /// that turns out to be wrong for the work in front of you should not cost a
+  /// block.
+  func silenceThisBlock() {
+    guard isPlaying || isStarting else { return }
+    isSilencedForThisBlock = true
+    soundTask?.cancel()
+    generation += 1
+    player.pause()
+    refreshIsPlaying()
+  }
+
   func skipForward() {
     guard player.isPlaying else { return }
     let mine = generation
@@ -426,7 +450,10 @@ final class MusicCoordinator {
       availability: availability,
       selection: selection)
 
-    guard wantsSound, let wanted = selection else {
+    // A block the person silenced (D20) behaves exactly like one where music is
+    // off — the queue and the place in it are kept, so the next block picks up
+    // where this one left off rather than starting the playlist again.
+    guard wantsSound, !isSilencedForThisBlock, let wanted = selection else {
       isStarting = false
       goQuiet()
       return
@@ -620,6 +647,10 @@ final class MusicCoordinator {
   /// Whether this app has asked the player to do anything since it last let the
   /// queue go. See `goQuiet()`.
   private var hasTouchedThePlayer = false
+
+  /// Whether the person silenced the music for the block now running (D20).
+  /// Cleared at every block change, because it means "not this block".
+  private(set) var isSilencedForThisBlock = false
 
   /// Bumped by every `apply()`. Work that comes back holding an older number
   /// knows a newer decision has been taken since it began.

@@ -83,6 +83,9 @@ struct MusicRow: View {
   /// The skip button was pressed. Only reachable while a focus block is playing.
   var onSkipTrack: () -> Void = { }
 
+  /// Silence the music for the rest of this block (D20). The timer is untouched.
+  var onSilenceBlock: () -> Void = { }
+
   var body: some View {
     Group {
       if dynamicTypeSize >= Self.stackingThreshold {
@@ -91,7 +94,7 @@ struct MusicRow: View {
           HStack(spacing: Spacing.sm) {
             musicSwitch
             Spacer(minLength: Spacing.xs)
-            skipSlot
+            transportSlots
           }
         }
       } else {
@@ -99,7 +102,7 @@ struct MusicRow: View {
           musicSwitch
           lineLabel
           Spacer(minLength: Spacing.xs)
-          skipSlot
+          transportSlots
         }
       }
     }
@@ -239,6 +242,50 @@ struct MusicRow: View {
   /// whatever the real button measures at the reader's own text size rather than
   /// a number somebody guessed. Hidden here means unreachable by eye, by rotor,
   /// by Full Keyboard Access and by Voice Control — not merely transparent.
+  /// The two transport controls, together.
+  ///
+  /// **They appear and disappear as one.** Both answer the same question — is
+  /// there sound to act on — so splitting them into two independent decisions
+  /// would be two chances for the reserved row to change width, and the whole
+  /// point of the reserved row is that nothing moves.
+  private var transportSlots: some View {
+    HStack(spacing: Spacing.none) {
+      skipSlot
+      stopSlot
+    }
+  }
+
+  /// Silence for the rest of this block. `stop.circle` rather than `stop`,
+  /// because an unfilled square alone reads as a placeholder at this size.
+  ///
+  /// Muted grey like its neighbour: the screen's one piece of colour is the word
+  /// above the number, and a red stop button would claim it AND imply something
+  /// destructive. Nothing is destroyed — the block runs on and the next one plays.
+  @ViewBuilder
+  private var stopSlot: some View {
+    if model.canStop {
+      stopButton(action: onSilenceBlock)
+    } else {
+      stopButton(action: { })
+        .hidden()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+  }
+
+  private func stopButton(action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      Image(systemName: "stop.circle")
+        .font(Typography.label)
+        .foregroundStyle(Color(.textMuted))
+        .frame(width: Spacing.controlHeight, height: Spacing.controlHeight)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(Text(MusicCopy.stopLabel))
+    .accessibilityHint(Text(MusicCopy.stopHint))
+  }
+
   @ViewBuilder
   private var skipSlot: some View {
     if model.canSkip {
