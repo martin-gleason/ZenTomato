@@ -62,9 +62,20 @@ import SwiftData
 final class SessionPlanStore: SessionAttaching {
   // MARK: Lifecycle
 
-  /// - Parameter context: the app's database handle. Held, not copied.
-  init(context: ModelContext) {
+  /// - Parameters:
+  ///   - context: the app's database handle. Held, not copied.
+  ///   - completedThisSprint: the tasks ticked off since this sprint began
+  ///     (D21b). The plan asks it one question — *does it hold this string* —
+  ///     and learns nothing about blocks, sprints, breaks or the timer.
+  ///
+  ///     It has a default so that a plan built for a test or a preview gets an
+  ///     empty set of its own rather than every call site having to invent one.
+  ///     **The app must pass the shared instance**, or a task completed during
+  ///     a sprint would come back into it — which is the whole of what D21b
+  ///     exists to prevent.
+  init(context: ModelContext, completedThisSprint: SprintCompletions = SprintCompletions()) {
     self.context = context
+    self.completedThisSprint = completedThisSprint
     reload()
   }
 
@@ -174,6 +185,14 @@ final class SessionPlanStore: SessionAttaching {
   func replacePlan(with selections: [Selection]) -> Bool {
     deleteEveryRow()
 
+    // D21b, belt and braces. The picker does not offer a task ticked off during
+    // this sprint, so this normally removes nothing — it is one line so that the
+    // rule is a property of the store rather than of a screen, and a second way
+    // into the plan later cannot quietly reintroduce work already done.
+    let selections = selections.filter {
+      $0.kind == .project || completedThisSprint.contains($0.todoistID) == false
+    }
+
     if selections.isEmpty == false {
       let plan = SessionPlan(createdAt: Date(), currentIndex: 0)
       context.insert(plan)
@@ -276,7 +295,36 @@ final class SessionPlanStore: SessionAttaching {
   ///   all.
   func takeNextAttachment() -> SessionAttachment? {
     reload()
-    guard let plan, let item = currentItem else { return nil }
+    guard let plan else { return nil }
+
+    // D21b: step over anything already ticked off in this sprint before taking
+    // one. Completing a recurring task in Todoist does not finish it — it
+    // advances it to the next occurrence, so it is active again immediately and
+    // could otherwise be handed back to the very next block of the same
+    // afternoon.
+    //
+    // **This is the existing step-over, not a new kind of state.** The cursor
+    // moves; the item is not removed, not marked, not reordered, and nothing is
+    // written on it. Projects are never skipped — D21b is about tasks, and only
+    // a task can be ticked off.
+    var index = currentIndex
+    while items.indices.contains(index),
+          items[index].kind == .task,
+          completedThisSprint.contains(items[index].todoistID) {
+      index += 1
+    }
+
+    guard items.indices.contains(index) else {
+      // Everything left had already been done. The cursor still moves past it,
+      // so the plan screen shows those items behind the cursor in the quieter
+      // ink rather than pretending they are still ahead.
+      plan.currentIndex = index
+      _ = persist()
+      reload()
+      return nil
+    }
+
+    let item = items[index]
     plan.currentIndex = item.position + 1
     _ = persist()
     reload()
@@ -433,6 +481,9 @@ final class SessionPlanStore: SessionAttaching {
   // MARK: Private
 
   private let context: ModelContext
+
+  /// The tasks ticked off since this sprint began (D21b). Asked, never told.
+  private let completedThisSprint: SprintCompletions
 
   /// The single plan row, or `nil` when no plan has been made.
   private var plan: SessionPlan?
