@@ -135,6 +135,55 @@ struct NoCaptureSurfaceTests {
     #expect(PickerScreenModel.searchPrompt == "Search your Todoist tasks")
   }
 
+  // MARK: The history screen
+
+  /// **F6 adds four screens and none of them accepts typing.**
+  ///
+  /// This is the second place the rule was most likely to break, after the
+  /// picker's search. A history screen is where a search box over the log
+  /// belongs in every other app on the phone, and where "add a note to this
+  /// day" reads as an obvious kindness. Neither exists: the distraction
+  /// sentences are read-only here, and the one place a sentence is ever written
+  /// is the end-of-block sheet, at the moment the block ends.
+  ///
+  /// The absence of the *control* is checked mechanically by `StatsFenceTests`,
+  /// which greps the four directories for every text-entry type. This checks the
+  /// other half — the **vocabulary** — because a control that invited making
+  /// something would have to be labelled, and a label is what this catches.
+  @Test("noSentenceOnTheHistoryScreenInvitesCreatingATask")
+  func noSentenceOnTheHistoryScreenInvitesCreatingATask() {
+    for sentence in Self.everySentenceTheHistoryScreenCanSay {
+      for word in Self.creationWords {
+        #expect(
+          sentence.range(of: word, options: .caseInsensitive) == nil,
+          "“\(sentence)” contains “\(word)”.")
+      }
+    }
+  }
+
+  /// The empty state states a fact and never asks anybody to do anything.
+  ///
+  /// Somebody who installed the app this morning is in this state, and so is
+  /// somebody with four hundred pomodoros who chose last February. A screen that
+  /// answered either of them with an invitation would be a capture surface with
+  /// better manners.
+  @Test("theHistoryScreensEmptyStateOffersNothingToDo")
+  func theHistoryScreensEmptyStateOffersNothingToDo() {
+    let empty = [
+      StatsScreenModel.emptyHeading(for: StatsRange.day(StatsDay(year: 2026, month: 8, day: 23, weekday: 1))),
+      StatsScreenModel.emptyDetail,
+      StatsScreenModel.emptyOrigin
+    ]
+
+    for sentence in empty {
+      for word in Self.creationWords + ["start a", "let's", "try "] {
+        #expect(
+          sentence.range(of: word, options: .caseInsensitive) == nil,
+          "“\(sentence)” invites rather than states.")
+      }
+    }
+  }
+
   // MARK: The credential field
 
   /// The token screen's own state can hold a credential and can do exactly one
@@ -217,6 +266,41 @@ struct NoCaptureSurfaceTests {
     PickerScreenModel.planSummary(count: 1),
     PickerScreenModel.planSummary(count: 3),
     PickerScreenModel.nextInPlan("Draft the Q3 summary")
+  ]
+
+  /// Every sentence F6's screens can put in front of somebody.
+  ///
+  /// Collected here for the same reason the picker's list is: a sentence typed
+  /// inline in a view is a sentence outside the pattern this file checks, and
+  /// the picker's list was once five of about fifteen — the ten it was missing
+  /// being the empty states, which is precisely where a create affordance gets
+  /// added.
+  private static let everySentenceTheHistoryScreenCanSay = [
+    StatsScreenModel.screenTitle,
+    StatsScreenModel.todayKicker,
+    StatsScreenModel.daysHeader,
+    StatsScreenModel.projectsHeader,
+    StatsScreenModel.tasksHeader,
+    StatsScreenModel.rangeHeader,
+    StatsScreenModel.rangeStartLabel,
+    StatsScreenModel.rangeEndLabel,
+    StatsScreenModel.rangeResetLabel,
+    StatsScreenModel.doneLabel,
+    StatsScreenModel.todayIsAlwaysToday,
+    StatsScreenModel.emptyDetail,
+    StatsScreenModel.emptyOrigin,
+    StatsScreenModel.exportHint,
+    StatsScreenModel.rangeHint,
+    StatsScreenModel.openDayHint,
+    StatsScreenModel.todaySpokenLabel,
+    StatsScreenModel.exportUnavailable,
+    StatsDaySheet.header,
+    StatsDaySheet.internalWord,
+    StatsDaySheet.externalWord,
+    StatsDaySheet.noNote,
+    StatsWords.noTask,
+    StatsWords.noProject,
+    StatsMarkdown.nothingRecorded
   ]
 
   private static let corpus = PickerScreenModel(
