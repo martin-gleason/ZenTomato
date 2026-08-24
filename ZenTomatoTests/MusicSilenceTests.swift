@@ -95,3 +95,75 @@ struct MusicSilenceTests {
     for _ in 0 ..< 8 { await Task.yield() }
   }
 }
+
+// MARK: - Getting the music back
+
+/// Stop is not a one-way door.
+///
+/// It shipped as one: silence a block and the only way back was Control Centre,
+/// which left this app believing the block was quiet while sound was coming out
+/// of it. Reported from the device as "there is no play button to reactivate it".
+@MainActor
+struct MusicResumeTests {
+  init() {
+    let player = SpyMusicPlayer()
+    self.player = player
+    coordinator = MusicCoordinator(
+      player: player,
+      availability: StubMusicAvailability(),
+      library: StubMusicLibrary(),
+      preferences: StubMusicPreferenceStore(
+        isEnabled: true,
+        selection: MusicSelection(kind: .playlist, identifier: "p.1", title: "Deep Focus")))
+  }
+
+  @Test("the music comes back for the same block")
+  func resumeBringsItBack() async {
+    coordinator.blockChanged(to: .work, isRunning: true)
+    await settle()
+    coordinator.silenceThisBlock()
+    #expect(player.isPlaying == false)
+
+    coordinator.resumeThisBlock()
+    await settle()
+
+    #expect(coordinator.isSilencedForThisBlock == false)
+    #expect(player.isPlaying, "the same block plays again")
+  }
+
+  /// The row offers one control in two states rather than two controls — the
+  /// count D20 ratified is unchanged.
+  @Test("silenced offers start, playing offers stop, never both")
+  func oneControlTwoStates() {
+    let playing = Self.row(playback: .playing, isSilenced: false)
+    #expect(playing.canStop)
+    #expect(playing.stopIsResume == false)
+    #expect(playing.interactiveControlCount == 2)
+
+    let silenced = Self.row(playback: .silent, isSilenced: true)
+    #expect(silenced.canStop, "there must be a way back")
+    #expect(silenced.stopIsResume)
+    // Skip is not offered: there is nothing to skip to when nothing is playing.
+    #expect(silenced.canSkip == false)
+    #expect(silenced.interactiveControlCount == 1)
+  }
+
+  // MARK: Private
+
+  private let player: SpyMusicPlayer
+  private let coordinator: MusicCoordinator
+
+  private static func row(
+    playback: MusicRowModel.Playback,
+    isSilenced: Bool
+  ) -> MusicRowModel {
+    MusicRowModel.forTimer(
+      isRunning: true, kind: .work, isEnabled: true, availability: .ready,
+      selection: MusicSelection(kind: .playlist, identifier: "p.1", title: "Deep Focus"),
+      playback: playback, isSilenced: isSilenced)
+  }
+
+  private func settle() async {
+    for _ in 0 ..< 8 { await Task.yield() }
+  }
+}

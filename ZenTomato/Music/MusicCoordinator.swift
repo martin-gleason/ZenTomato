@@ -412,6 +412,21 @@ final class MusicCoordinator {
   /// bump the generation counter: a skip is not a change of what should be
   /// playing, so it must not supersede an in-flight load of the very thing it is
   /// skipping within.
+  /// Starts the music again after Stop, for the block that is running.
+  ///
+  /// The other half of `silenceThisBlock()`. Without it Stop was a one-way door:
+  /// silence the block and the only way back was Control Centre, which left this
+  /// app believing the block was silent while sound was coming out of it — and
+  /// the next thing that called `apply()` would have paused it again.
+  ///
+  /// One control with two states rather than a third button. The row still
+  /// offers exactly two things, which is what D20 ratified.
+  func resumeThisBlock() {
+    guard isSilencedForThisBlock else { return }
+    isSilencedForThisBlock = false
+    apply()
+  }
+
   func skipForward() {
     guard player.isPlaying else { return }
     let mine = generation
@@ -596,6 +611,21 @@ final class MusicCoordinator {
   private func refreshIsPlaying() {
     isPlaying = player.isPlaying
     nowPlayingTitle = player.nowPlayingTitle
+    // NO AUTOMATIC UN-SILENCING HERE, AND THAT IS A DELIBERATE LIMIT.
+    //
+    // It is tempting to clear the silence whenever the player reports playing —
+    // Control Centre can start what this app paused, and it does not say so. But
+    // a load this app had already superseded ALSO finishes by reporting playing,
+    // because MusicKit's play() is not cancellation-cooperative, and from here
+    // the two are indistinguishable. Clearing on either would let a stopped
+    // block restart itself, which is exactly the defect the reassertion path
+    // exists to prevent, arriving through a different door.
+    //
+    // So the way back is the button, which now exists. What remains is narrow
+    // and known: start the music from Control Centre while a block is silenced
+    // and this app still believes it is silent, so the next thing that applies
+    // state will pause it again. Pressing play in the app rather than in Control
+    // Centre does the right thing, and the button is right there.
   }
 
   /// Re-states silence if silence is what the rule currently wants.

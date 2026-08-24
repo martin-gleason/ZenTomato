@@ -128,6 +128,9 @@ enum MusicCopy {
   /// The skip button, spoken.
   static let skipLabel = "Skip to the next track"
   /// Says what it silences and, just as importantly, what it does not.
+  static let resumeLabel = "Start the music"
+  static let resumeHint = "Plays the music again for the rest of this block."
+
   static let stopLabel = "Stop the music"
   static let stopHint = "Silences the music for the rest of this block. The timer keeps running."
 
@@ -372,6 +375,13 @@ struct MusicRowModel: Equatable {
   /// what keeps the reserved row a single decision rather than two.
   let canStop: Bool
 
+  /// Whether that control is currently offering to START rather than to stop.
+  ///
+  /// One control with two states, not two controls. The row still offers exactly
+  /// two things — skip, and this — which is what D20 ratified; what changed is
+  /// that Stop stopped being a one-way door.
+  let stopIsResume: Bool
+
   // MARK: Derived
 
   /// How many things in this row can actually be operated.
@@ -417,7 +427,8 @@ struct MusicRowModel: Equatable {
     selectionIsGone: Bool = false,
     libraryIsEmpty: Bool = false,
     playback: Playback = .silent,
-    nowPlayingTitle: String? = nil
+    nowPlayingTitle: String? = nil,
+    isSilenced: Bool = false
   ) -> MusicRowModel {
     let isAvailable = availability == .ready || availability == .notAsked
     let isOn = isEnabled && isAvailable
@@ -439,7 +450,8 @@ struct MusicRowModel: Equatable {
         isLineTappable: true,
         toggleHint: availability.explanation ?? MusicCopy.toggleHint,
         canSkip: false,
-        canStop: false)
+        canStop: false,
+        stopIsResume: false)
     }
 
     // Both transport controls answer the same question — is there sound to act
@@ -462,7 +474,11 @@ struct MusicRowModel: Equatable {
       isLineTappable: false,
       toggleHint: availability.explanation ?? MusicCopy.lockedHint,
       canSkip: transportIsLive,
-      canStop: transportIsLive)
+      // Offered while sound is playing (to stop it) AND while this block has
+      // been silenced (to start it again). Skip is offered only in the first
+      // case: there is nothing to skip to when nothing is playing.
+      canStop: transportIsLive || isSilenced,
+      stopIsResume: isSilenced)
   }
 
   /// What the player is doing, and what it is doing it to.

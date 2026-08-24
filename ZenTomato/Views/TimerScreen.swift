@@ -59,6 +59,9 @@ struct TimerScreen: View {
   /// Silence the music for the rest of this block (D20).
   var onSilenceBlock: () -> Void = { }
 
+  /// Start the music again for this block.
+  var onResumeBlock: () -> Void = { }
+
   var body: some View {
     VStack(spacing: Spacing.none) {
       centreColumn
@@ -214,7 +217,8 @@ struct TimerScreen: View {
           onToggleMusic: onToggleMusic,
           onOpenMusic: onOpenMusic,
           onSkipTrack: onSkipTrack,
-          onSilenceBlock: onSilenceBlock)
+          onSilenceBlock: onSilenceBlock,
+          onResumeBlock: onResumeBlock)
           .padding(.top, Spacing.md)
           // SIXTEEN POINTS BELOW IT AS WELL, AND THE SIXTEEN IS PRICED.
           //

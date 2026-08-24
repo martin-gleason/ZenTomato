@@ -86,6 +86,9 @@ struct MusicRow: View {
   /// Silence the music for the rest of this block (D20). The timer is untouched.
   var onSilenceBlock: () -> Void = { }
 
+  /// Start the music again for this block, after Stop.
+  var onResumeBlock: () -> Void = { }
+
   var body: some View {
     Group {
       if dynamicTypeSize >= Self.stackingThreshold {
@@ -258,26 +261,33 @@ struct MusicRow: View {
   @ViewBuilder
   private var stopSlot: some View {
     if model.canStop {
-      stopButton(action: onSilenceBlock)
+      stopButton(
+        isResume: model.stopIsResume,
+        action: model.stopIsResume ? onResumeBlock : onSilenceBlock)
     } else {
-      stopButton(action: { })
+      stopButton(isResume: false, action: { })
         .hidden()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
   }
 
-  private func stopButton(action: @escaping () -> Void) -> some View {
+  /// One control, two states. `play.circle` when the block has been silenced and
+  /// this would start it again; `stop.circle` while sound is coming out.
+  ///
+  /// The same slot either way, so the reserved row cannot change width — which is
+  /// the whole reason the row is reserved.
+  private func stopButton(isResume: Bool, action: @escaping () -> Void) -> some View {
     Button(action: action) {
-      Image(systemName: "stop.circle")
+      Image(systemName: isResume ? "play.circle" : "stop.circle")
         .font(Typography.label)
         .foregroundStyle(Color(.textMuted))
         .frame(width: Spacing.controlHeight, height: Spacing.controlHeight)
         .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .accessibilityLabel(Text(MusicCopy.stopLabel))
-    .accessibilityHint(Text(MusicCopy.stopHint))
+    .accessibilityLabel(Text(isResume ? MusicCopy.resumeLabel : MusicCopy.stopLabel))
+    .accessibilityHint(Text(isResume ? MusicCopy.resumeHint : MusicCopy.stopHint))
   }
 
   /// The skip button, or the exact space it would take.
