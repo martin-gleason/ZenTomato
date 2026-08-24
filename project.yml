@@ -308,6 +308,17 @@ targets:
       # hand by the owner as F5-T0 and never modified since; the watch compiles
       # the same file rather than restating the two cases.
       - path: ZenTomato/Distraction/DistractionTally.swift
+      # The app icon, from the one catalog both platforms draw from. Just the
+      # catalog and not the whole Resources directory — that also holds
+      # Silence.caf, the bundled silent alarm sound, which is F2's and has no
+      # business on a wrist.
+      #
+      # WITHOUT THIS THE WATCH APP INSTALLS WITH A BLANK ICON and nothing says
+      # so: an app icon is not required to build, so there is no warning, and
+      # ASSETCATALOG_COMPILER_APPICON_NAME below names an icon the target cannot
+      # see. It is the third silent-install failure in this feature, after the
+      # missing embed and the missing provisioning.
+      - path: ZenTomato/Resources/Assets.xcassets
     configFiles:
       Debug: Config/App.xcconfig
       Release: Config/App.xcconfig

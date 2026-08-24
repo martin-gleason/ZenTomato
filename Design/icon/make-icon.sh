@@ -128,6 +128,17 @@ draw AppIcon-dark   "#1c1f22" "#e06a50" "#4c5c36" "#3f4c2d" "#8aa163"
 draw AppIcon-tinted "#ffffff" "#7d7d7d" "#242424" "#1a1a1a" "#4a4a4a"
 
 # --- The catalog entry -----------------------------------------------------
+#
+# FOUR ENTRIES, NOT THREE: three iOS appearances and one for watchOS.
+#
+# The watch app draws its icon from this same catalog, and an entry is matched by
+# PLATFORM — so the three `"platform" : "ios"` entries below are invisible to
+# watchOS however correct they look. Without the fourth the watch app installs
+# with no icon at all and nothing reports a problem: there is no build warning,
+# because an app icon is not required to build.
+#
+# watchOS takes the light artwork and has no dark or tinted appearance of its
+# own, which is why one entry covers it.
 cat > "${ICONSET}/Contents.json" <<'JSON'
 {
   "images" : [
@@ -135,6 +146,12 @@ cat > "${ICONSET}/Contents.json" <<'JSON'
       "filename" : "AppIcon-light.png",
       "idiom" : "universal",
       "platform" : "ios",
+      "size" : "1024x1024"
+    },
+    {
+      "filename" : "AppIcon-light.png",
+      "idiom" : "universal",
+      "platform" : "watchos",
       "size" : "1024x1024"
     },
     {
@@ -169,4 +186,4 @@ cat > "${ICONSET}/Contents.json" <<'JSON'
 }
 JSON
 
-echo "make-icon.sh: wrote 3 appearances into ZenTomato/Resources/Assets.xcassets/AppIcon.appiconset/"
+echo "make-icon.sh: wrote 3 iOS appearances and the watchOS icon into ZenTomato/Resources/Assets.xcassets/AppIcon.appiconset/"
