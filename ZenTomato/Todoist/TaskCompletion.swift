@@ -4,12 +4,20 @@ import SwiftData
 /// Ticking one task off in Todoist — the only change this app can make to
 /// anybody's Todoist account.
 ///
-/// THE ORDER OF THE THREE STEPS IS THE WHOLE CONTRACT
+/// THE ORDER OF THE FOUR STEPS IS THE WHOLE CONTRACT
 ///
 ///   1. Ask Todoist to close the task, and wait for it to say it did.
-///   2. **Only then** write the local record of the completion.
-///   3. **Only then** drop the task from the local copy of Todoist, so the
+///   2. **Only then** read whether the local copy says the task recurs (D21).
+///   3. **Only then** write the local record of the completion, carrying that
+///      answer with it.
+///   4. **Only then** drop the task from the local copy of Todoist, so the
 ///      picker stops offering something that is no longer there.
+///
+/// Steps 2 and 4 are in that order for a reason of their own, and swapping them
+/// breaks nothing visibly: the recurrence answer would come back `false` on
+/// every completion for ever, and the export's *Repeating* section would simply
+/// look like a quiet fortnight. `recurrenceIsReadBeforeTheCachedRowIsDropped`
+/// is the test that fails when they are swapped.
 ///
 /// Step 2 never happens before step 1 succeeds. A local row claiming a
 /// completion that failed would be worse than no row: the log this app exists to
@@ -142,10 +150,20 @@ final class TaskCompletion {
   /// otherwise so careful about. So a failure is followed by one more attempt at
   /// the record **alone**, with the optional half left out.
   private func recordLocally(taskID: String, titleSnapshot: String, at instant: Date) {
+    // READ BEFORE YOU DELETE. This line must stay above the deletion three
+    // lines down, and `recurrenceIsReadBeforeTheCachedRowIsDropped` fails the
+    // moment it does not. Asking a row that has already been removed returns
+    // "not recurring", on every completion, for ever, and silently: the
+    // export's Repeating section would simply be empty and read as a quiet
+    // fortnight. That is the exact failure D21 warns about, arriving through
+    // the one door nobody was watching.
+    let wasRecurring = recurrenceOfMirroredTask(id: taskID)
+
     context.insert(CompletedTaskRecord(
       taskID: taskID,
       titleSnapshot: titleSnapshot,
-      completedAt: instant))
+      completedAt: instant,
+      wasRecurring: wasRecurring))
 
     do {
       try context.delete(model: CachedTask.self, where: #Predicate { $0.id == taskID })
@@ -155,11 +173,14 @@ final class TaskCompletion {
       context.rollback()
     }
 
-    // Second attempt, with the record and nothing else.
+    // Second attempt, with the record and nothing else. It carries the same
+    // answer, read before anything was removed: a retry that quietly wrote
+    // `false` would be the same bug with a rarer trigger.
     context.insert(CompletedTaskRecord(
       taskID: taskID,
       titleSnapshot: titleSnapshot,
-      completedAt: instant))
+      completedAt: instant,
+      wasRecurring: wasRecurring))
     do {
       try context.save()
     } catch {
@@ -169,5 +190,32 @@ final class TaskCompletion {
       // has been lost is a row in this app's own history, not the completion.
       context.rollback()
     }
+  }
+
+  /// Whether the local copy of Todoist says this task recurs (D21).
+  ///
+  /// Read from the mirror rather than from the network, because this runs after
+  /// a close that has already succeeded and a second request is a second thing
+  /// that can fail — and because the answer is needed even when the phone has
+  /// since gone offline.
+  ///
+  /// **`false` covers two different situations and cannot tell them apart:**
+  /// the task does not recur, and the task is not in the mirror at all — which
+  /// happens when somebody is signed out, when the copy has been cleared, or
+  /// when the last refresh did not return it. The completion then lands among
+  /// the one-off completions in the export. That is a small, honest, visible
+  /// loss; a third state would be a larger and much quieter one, and this
+  /// project's lint rules forbid an optional boolean by name.
+  private func recurrenceOfMirroredTask(id: String) -> Bool {
+    // Bound to a plain local first: a database predicate may only capture a
+    // value, never a path through another object.
+    let todoistID = id
+    var descriptor = FetchDescriptor<CachedTask>(
+      predicate: #Predicate<CachedTask> { $0.id == todoistID })
+    descriptor.fetchLimit = 1
+    // A refused read reads as "not recurring", which is the same answer as a
+    // task that is not in the mirror, and is already documented above as one of
+    // the two things `false` can mean.
+    return (try? context.fetch(descriptor))?.first?.isRecurring ?? false
   }
 }

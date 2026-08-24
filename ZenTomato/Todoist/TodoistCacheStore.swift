@@ -180,7 +180,11 @@ final class TodoistCacheStore {
         projectID: task.projectID,
         sectionID: task.sectionID,
         childOrder: task.childOrder,
-        syncedAt: syncedAt))
+        syncedAt: syncedAt,
+        // D21, and the one place this boolean enters the app. Todoist puts it
+        // inside the due object, and a task with no due date has no object at
+        // all — which is an ordinary task, and not recurring.
+        isRecurring: task.due?.isRecurring ?? false))
     }
 
     do {

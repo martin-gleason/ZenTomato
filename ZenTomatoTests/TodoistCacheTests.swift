@@ -175,7 +175,8 @@ struct TodoistCacheTests {
     context.insert(CompletedTaskRecord(
       taskID: "t0",
       titleSnapshot: "Something finished last week",
-      completedAt: .now))
+      completedAt: .now,
+      wasRecurring: false))
     try context.save()
 
     let store = TodoistCacheStore(
@@ -245,6 +246,120 @@ struct TodoistCacheTests {
 
     try await store.refresh(now: openedAt.addingTimeInterval(2))
     #expect(stub.recordedRequests.count == 6)
+  }
+
+  // MARK: Reading a due date (D21)
+
+  /// The documented shape, with `is_recurring` set, read from **real
+  /// snake-case JSON**.
+  ///
+  /// **This is the test that catches the wrong key**, and it only catches it
+  /// because the input is text rather than a Swift value. A hand-built
+  /// `TodoistTaskDTO.Due(isRecurring: true)` cannot spell a key wrong, so a
+  /// test built from one would pass just as happily against a decoder reading
+  /// `is_recurring` from the task root — where it does not exist, where it
+  /// would always be missing, and where the answer would therefore be `false`
+  /// on every task for ever with nothing to notice.
+  ///
+  /// The JSON below is Todoist's own documented example, confirmed against
+  /// Doist's own API v1 client library, which declares `is_recurring` inside
+  /// the `Due` object and not on the task.
+  @Test("aRecurringTaskIsReadFromInsideItsDueObject")
+  func aRecurringTaskIsReadFromInsideItsDueObject() throws {
+    let json = Data("""
+      {
+        "id": "6XGgmFVcrG5RRjVr",
+        "content": "Budget with YNAB by 7:30 AM",
+        "project_id": "6X7rM8997g3RQmvh",
+        "section_id": null,
+        "child_order": 1,
+        "due": {
+          "date": "2016-08-05T07:00:00.000000Z",
+          "timezone": null,
+          "is_recurring": true,
+          "string": "tomorrow at 10:00",
+          "lang": "en"
+        }
+      }
+      """.utf8)
+
+    let task = try JSONDecoder().decode(TodoistTaskDTO.self, from: json)
+
+    #expect(task.due?.isRecurring == true)
+    #expect(task.content == "Budget with YNAB by 7:30 AM")
+  }
+
+  /// A task with no `due` key at all reads, and is not recurring.
+  ///
+  /// This is most tasks in most accounts. A required field here would make
+  /// **every task on the account fail to decode**, which presents as an empty
+  /// picker on a real phone and in nobody's test.
+  @Test("aTaskWithNoDueKeyStillDecodes")
+  func aTaskWithNoDueKeyStillDecodes() throws {
+    let json = Data("""
+      {"id": "t1", "content": "Draft the summary", "project_id": "p1", "section_id": null, "child_order": 0}
+      """.utf8)
+
+    let task = try JSONDecoder().decode(TodoistTaskDTO.self, from: json)
+
+    #expect(task.due == nil)
+    #expect((task.due?.isRecurring ?? false) == false)
+  }
+
+  /// An explicit `"due": null` reads too, and is not recurring.
+  @Test("aTaskWithAnExplicitNullDueStillDecodes")
+  func aTaskWithAnExplicitNullDueStillDecodes() throws {
+    let json = Data("""
+      {"id": "t1", "content": "Draft the summary", "project_id": "p1", "section_id": null,
+       "child_order": 0, "due": null}
+      """.utf8)
+
+    let task = try JSONDecoder().decode(TodoistTaskDTO.self, from: json)
+
+    #expect(task.due == nil)
+  }
+
+  /// A due object that arrives **without** `is_recurring` reads, and is not
+  /// recurring.
+  ///
+  /// The rarest of the three tolerances and the same catastrophe: a required
+  /// field would take the whole task down with it, and the whole page of tasks
+  /// with that.
+  @Test("aDueObjectWithNoRecurrenceFlagStillDecodes")
+  func aDueObjectWithNoRecurrenceFlagStillDecodes() throws {
+    let json = Data("""
+      {"id": "t1", "content": "Draft the summary", "project_id": "p1", "section_id": null,
+       "child_order": 0,
+       "due": {"date": "2026-08-24", "string": "tomorrow", "lang": "en"}}
+      """.utf8)
+
+    let task = try JSONDecoder().decode(TodoistTaskDTO.self, from: json)
+
+    #expect(task.due?.isRecurring == false)
+  }
+
+  /// The flag reaches the local copy, from the one place it enters the app.
+  @Test("recurrenceReachesTheMirroredRow")
+  func recurrenceReachesTheMirroredRow() async throws {
+    let stub = StubTodoistTransport(answers: [
+      .page(rows: [StubTodoistTransport.projectRow(id: "p1", name: "Admin")]),
+      .page(rows: []),
+      .page(rows: [
+        [
+          "id": "t-habit", "content": "Budget with YNAB by 7:30 AM", "project_id": "p1",
+          "section_id": NSNull(), "child_order": 0,
+          "due": ["date": "2026-08-24", "string": "every day", "lang": "en", "is_recurring": true]
+        ],
+        StubTodoistTransport.taskRow(id: "t-plain", content: "Draft the summary", projectID: "p1", order: 1)
+      ])
+    ])
+    let store = TodoistCacheStore(context: context, client: Self.client(stub))
+
+    try await store.refresh(now: Date(timeIntervalSince1970: 1_000_000))
+
+    let tasks = try Self.rows(CachedTask.self, in: context).sorted { $0.id < $1.id }
+    #expect(tasks.map(\.id) == ["t-habit", "t-plain"])
+    #expect(tasks.map(\.isRecurring) == [true, false])
   }
 
   // MARK: Helpers

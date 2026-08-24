@@ -89,6 +89,11 @@ struct TodoistSectionDTO: Decodable, Sendable, Equatable {
 /// Todoist calls the task's title `content`, and this type keeps that name so
 /// that anybody comparing this file with Todoist's documentation is reading the
 /// same word in both places.
+///
+/// **The `due` object is read for one boolean and nothing else** (D21). See
+/// `TodoistTaskDTO.Due`, and `CachedTask.isRecurring` for why that is a visible
+/// argument with the build contract's not-mirrored table rather than a small
+/// reasonable commit.
 struct TodoistTaskDTO: Decodable, Sendable, Equatable {
   /// Todoist's identifier — an opaque string. This is the value the close
   /// command is addressed to, and the value a plan item stores.
@@ -107,11 +112,57 @@ struct TodoistTaskDTO: Decodable, Sendable, Equatable {
   /// Todoist's own position for this task.
   let childOrder: Int
 
+  /// Todoist's due information, reduced to the one fact D21 needs.
+  ///
+  /// **`nil` is the ordinary case, not a failure.** A task with no due date has
+  /// no `due` object at all, and most tasks in most accounts do not have one.
+  /// Because this property is optional, Swift's generated decoder asks for it
+  /// with *decode if present* — so both a missing key and an explicit `null`
+  /// produce `nil` rather than making the whole task fail to read. That
+  /// tolerance is not decoration: a required field here would make **every task
+  /// on the account fail to decode** the day Todoist ships a shape this app did
+  /// not anticipate, which presents as an empty picker on a real phone and in
+  /// nobody's test.
+  let due: Due?
+
+  /// The one thing this app reads out of a due date.
+  ///
+  /// Verified against Doist's own API v1 client library before a line of this
+  /// was written, because D21 says in as many words that *"a boolean read from
+  /// the wrong key is silently always false"*. The vendor's own decoder for the
+  /// endpoint this app calls declares `is_recurring: bool = False` **inside**
+  /// the `Due` object — not on the task — and the field is optional there too.
+  ///
+  /// Nothing else is taken from it: no date, no schedule string, no time zone,
+  /// no language. D21: *"It is not a recurrence rule, a schedule, a due date,
+  /// or anything that could reconstruct one."*
+  struct Due: Decodable, Sendable, Equatable {
+    /// Whether the task repeats.
+    let isRecurring: Bool
+
+    private enum CodingKeys: String, CodingKey {
+      case isRecurring = "is_recurring"
+    }
+
+    /// Reads the flag, and treats its absence as *not recurring*.
+    ///
+    /// Written by hand rather than generated, for one reason: the generated
+    /// version would make `is_recurring` **required**, and a due object that
+    /// arrived without it would fail to decode — taking its whole task with it,
+    /// and with it the whole page of tasks. Missing means no, which is both the
+    /// safe answer and the one Doist's own client uses as its default.
+    init(from decoder: any Decoder) throws {
+      let container = try decoder.container(keyedBy: CodingKeys.self)
+      isRecurring = try container.decodeIfPresent(Bool.self, forKey: .isRecurring) ?? false
+    }
+  }
+
   private enum CodingKeys: String, CodingKey {
     case id
     case content
     case projectID = "project_id"
     case sectionID = "section_id"
     case childOrder = "child_order"
+    case due
   }
 }
