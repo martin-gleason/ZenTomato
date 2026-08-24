@@ -17,20 +17,32 @@ permission prompt.
 
 ## Needs the owner
 
-| # | Item | From | Why it is still open |
-|---|---|---|---|
-| O1 | **One real day's export, read beside the Rhodia** | F6 | `SPEC.md`'s *Done when* for F6, and the only judgement of "readable without translation". The golden file is a format test, not the criterion. |
-| O2 | **Migration over an existing install** | F6 | `CachedTask.isRecurring` and `CompletedTaskRecord.wasRecurring` are the first schema change since F2. The 2026-08-24 build was installed over the old app; if the history survived, lightweight migration worked. |
-| O3 | **A full sprint with the screen locked, uninterrupted** | F4 | `SPEC.md`'s *Done when* for F4. Every transition has been seen individually and a 4-pomodoro sprint completed, but never once as the single run the spec describes. |
-| O4 | **Headphones, CarPlay, and an incoming phone call** | F4 | Three audio-interruption paths, none exercised. |
-| O5 | **A playlist short enough to reach its end, to prove looping** | F4 | The loop is asserted in tests against a stand-in; no real playlist has run out. |
-| O6 | **The alarm firing through an active Focus, and through silent mode** | F2 | This is *why* AlarmKit was chosen over a notification, and it has never been tested with a Focus on. |
-| O7 | **Sound off** | F2 | AlarmKit has no silent case, so one of the six locked settings rests entirely on a bundled silent audio file. |
-| O8 | **VoiceOver on hardware** | F2, F5 | The countdown was coarsened to whole minutes to cut announcement spam; whether iOS re-announces at all is runtime behaviour nobody has listened to. F5 adds the capture buttons' labels, values and announcements. |
-| O9 | **The merged stop sheet with taps in it, at AX5** | F5 | The single surface D14 was written for. Three chained sheets on one view, and the switched-off confirm button, unexercised at the largest text size. |
-| O10 | **Apply the nine outstanding spec amendments** | C6 | `SPEC.md` still states things that are no longer true. Counted in `docs/specs/AMENDMENT-BASELINE.txt`; the agent may not close these. |
-| O11 | **F7's gate: D2 into `SPEC.md`** | F7 | `docs/plans/F7.md`: *"Until D2 is merged into `SPEC.md`, this feature does not exist and no line of it may be written."* Part of O10, listed separately because it blocks a feature. |
-| O12 | **Three Todoist API facts, against a live token** | F3b | `scripts/check-todoist-facts.sh`. Whether an archived project resolves by id, whether sync reports deletions as tombstones or by silence, and whether old numeric task ids still resolve. |
+| #   | Item                                                         | From   | Why it is still open                                         |
+|-----|--------------------------------------------------------------|--------|--------------------------------------------------------------|
+| O1  | **One real day's export, read beside the Rhodia**            | F6     | `SPEC.md`'s *Done when* for F6, and the only judgement of "readable without translation". The golden file is a format test, not the criterion. |
+| O2  | **Migration over an existing install**                       | F6     | `CachedTask.isRecurring` and `CompletedTaskRecord.wasRecurring` are the first schema change since F2. The 2026-08-24 build was installed over the old app; if the history survived, lightweight migration worked. |
+| O3  | **A full sprint with the screen locked, uninterrupted**      | F4     | `SPEC.md`'s *Done when* for F4. Every transition has been seen individually and a 4-pomodoro sprint completed, but never once as the single run the spec describes. |
+| O4  | **Headphones, CarPlay, and an incoming phone call**          | F4     | Three audio-interruption paths, none exercised.              |
+| O5  | **A playlist short enough to reach its end, to prove looping** | F4     | The loop is asserted in tests against a stand-in; no real playlist has run out. |
+| O6  | **The alarm firing through an active Focus, and through silent mode** | F2     | This is *why* AlarmKit was chosen over a notification, and it has never been tested with a Focus on. |
+| O7  | **Sound off**                                                | F2     | AlarmKit has no silent case, so one of the six locked settings rests entirely on a bundled silent audio file. |
+| O8  | **VoiceOver on hardware**                                    | F2, F5 | The countdown was coarsened to whole minutes to cut announcement spam; whether iOS re-announces at all is runtime behaviour nobody has listened to. F5 adds the capture buttons' labels, values and announcements. |
+| O9  | **The merged stop sheet with taps in it, at AX5**            | F5     | The single surface D14 was written for. Three chained sheets on one view, and the switched-off confirm button, unexercised at the largest text size. |
+| O10 | **Apply the nine outstanding spec amendments**               | C6     | `SPEC.md` still states things that are no longer true. Counted in `docs/specs/AMENDMENT-BASELINE.txt`; the agent may not close these. |
+| O11 | **F7's gate: D2 into `SPEC.md`**                             | F7     | `docs/plans/F7.md`: *"Until D2 is merged into `SPEC.md`, this feature does not exist and no line of it may be written."* Part of O10, listed separately because it blocks a feature. |
+| O12 | **Three Todoist API facts, against a live token**            | F3b    | `scripts/check-todoist-facts.sh`. Whether an archived project resolves by id, whether sync reports deletions as tombstones or by silence, and whether old numeric task ids still resolve. |
+**Owner response**
+
+After f7 drops, we’ll test a 1 hour pomodoro sprint that addresses the following items:
+- O1 - O3
+- O5 - O8
+
+The following should be applied before this is reviewed:
+- O10 — Approved
+- O11
+- O12 — Approved
+
+O4 will be scheduled sometime today.
 
 ## Needs the agent
 
