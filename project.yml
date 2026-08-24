@@ -75,6 +75,16 @@ targets:
       # folder iOS looks in. A watch app is embedded at `Watch/` inside the
       # container app; anywhere else and the phone installs an app the watch
       # never learns about.
+      #
+      # VERIFIED, and worth saying how, because it was nearly recorded as broken.
+      # A device build puts ZenTomatoWatch.app inside ZenTomato.app/Watch/ with
+      # WKApplication true, WKCompanionAppBundleIdentifier pointing at the phone
+      # app, and an arm64_32 binary. Three earlier checks said it was missing —
+      # all three were wrong, because they ran xcodebuild by hand WITHOUT
+      # -derivedDataPath and then looked in the project's local DerivedData,
+      # which the Makefile uses and those commands did not. Check embedding with
+      # `make build`, or pass the flag; a bare xcodebuild writes somewhere else
+      # entirely.
       - target: ZenTomatoWatch
         embed: true
         copy:
