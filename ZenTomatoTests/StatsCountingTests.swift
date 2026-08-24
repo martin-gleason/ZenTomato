@@ -274,28 +274,30 @@ struct StatsCountingTests {
     #expect(unattached.tasks.map(\.title) == ["Ch.3 draft", nil])
   }
 
-  /// What a task-attached block looks like **today**, as the shipped app writes
-  /// it.
+  /// A task the mirror has never heard of still records what it can.
   ///
-  /// **This is a finding, pinned as a test rather than left as a sentence.**
-  /// The timer copies whatever the session plan hands it, and
-  /// `SessionPlanStore.attachment(for:)` hands over a planned *task* with its
-  /// title alone — both project columns stay empty. So every task-attached
-  /// block on the owner's phone currently groups under *no project*, and the
-  /// export's `## Projects` section, whose whole job is "where the time went",
-  /// reads as one unnamed heading with every task under it.
+  /// **This test used to pin a defect, and its history is worth keeping.** Before
+  /// D22, `SessionPlanStore.attachment(for:)` handed over a planned *task* with
+  /// its title alone and both project columns empty — so every task-attached
+  /// block grouped under *no project*, and the export's `## Projects` section,
+  /// whose whole job is "where the time went", read as one unnamed heading with
+  /// everything under it. The comment here said the day it was fixed this test
+  /// would start failing.
   ///
-  /// Nothing here is wrong: the counting rule reports the snapshot on the row,
-  /// which is what `F6.md` requires and what makes a fortnight-old review show
-  /// what was true then. The gap is in what gets written down, one layer
-  /// earlier, and closing it is a change to the attachment path rather than to
-  /// this count — so it is reported in the pull request instead of being
-  /// quietly fixed inside a stats feature.
+  /// **It did not fail, and that is the lesson.** The fix reads the project from
+  /// the local Todoist mirror, and this test seeds no mirror rows — so it was
+  /// never exercising the shipped path at all. It was describing the fallback and
+  /// calling it "what the app does today". A test can be honest about the wrong
+  /// thing.
   ///
-  /// The day it is fixed, this test is what says so: it starts failing, and the
-  /// expectation below is the one to change.
-  @Test("aTaskAttachedBlockAsTheAppActuallyWritesItToday")
-  func aTaskAttachedBlockAsTheAppActuallyWritesItToday() throws {
+  /// So it is kept, renamed for what it actually covers, and the real case is
+  /// tested separately in `aTaskCarriesItsProjectWhenTheMirrorKnowsIt`. What it
+  /// still guarantees is worth guaranteeing: a task the mirror cannot resolve —
+  /// nothing synced yet, or the row swept after being finished elsewhere — starts
+  /// a block anyway, with its own title and no project. A block that records what
+  /// it can beats one that refuses to begin.
+  @Test("aTaskWithNoMirrorRowRecordsWhatItCan")
+  func aTaskWithNoMirrorRowRecordsWhatItCan() throws {
     let plan = SessionPlanStore(context: context)
     plan.replacePlan(with: [.init(todoistID: "t1", titleSnapshot: "Ch.3 draft", kind: .task)])
     let attachment = try #require(plan.takeNextAttachment())

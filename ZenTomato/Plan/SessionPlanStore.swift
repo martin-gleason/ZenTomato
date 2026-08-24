@@ -328,7 +328,7 @@ final class SessionPlanStore: SessionAttaching {
     plan.currentIndex = item.position + 1
     _ = persist()
     reload()
-    return Self.attachment(for: item)
+    return attachment(for: item)
   }
 
   /// What a planned item looks like to the timer.
@@ -338,21 +338,76 @@ final class SessionPlanStore: SessionAttaching {
   /// one Todoist task (or, if no task is chosen, to a project)."* Todoist's ids
   /// are opaque strings, so a project id and a task id are indistinguishable —
   /// which is the whole reason a planned item records which of the two it is.
-  static func attachment(for item: Item) -> SessionAttachment {
+  /// **D22: A PLANNED TASK CARRIES ITS PROJECT WITH IT.**
+  ///
+  /// This used to hand back `projectID: nil, projectTitle: nil` for every
+  /// planned task, and only a block attached to a whole *project* recorded any
+  /// project identity at all. The consequence did not show up until F6 tried to
+  /// count: the export's `## Projects` section — the one that answers "where did
+  /// the time go" — collapsed into a single `No project` heading with every task
+  /// underneath it. The type's own documentation always said `projectID` is "of
+  /// the attached task, or of the planned project itself", so this is the
+  /// behaviour that was meant all along rather than a new idea.
+  ///
+  /// **Where the project comes from.** The plan does not carry it — a planned
+  /// item holds one identifier and one title and D17 fixes it at four stored
+  /// properties, which is a fence worth keeping. It does not need to carry it:
+  /// the picker only ever offers tasks that are in the local Todoist mirror, and
+  /// `CachedTask.projectID` is non-optional, so the mirror already knows the
+  /// answer. This reads it there, at the moment the block begins.
+  ///
+  /// **Both halves are frozen here, and that is the point.** The id is what the
+  /// export groups by, so a project renamed half way through a fortnight stays
+  /// one heading instead of splitting into two that each under-report. The name
+  /// is the fallback for when the id stops resolving — deleting a project in
+  /// Todoist deletes it and all of its tasks, and the id then dangles for ever
+  /// with no endpoint that will ever name it again. Without the snapshot every
+  /// block in a deleted project would degrade to `No project`, which is exactly
+  /// the defect above arriving later by a different door.
+  ///
+  /// **A missing mirror row is not an error.** If the task is not in the mirror —
+  /// nothing synced yet, or it was finished elsewhere and swept — the attachment
+  /// is made exactly as it was before, with the task's own title and no project.
+  /// A block that records what it can is better than one that refuses to start.
+  func attachment(for item: Item) -> SessionAttachment {
     switch item.kind {
     case .task:
-      SessionAttachment(
+      let project = projectOfTask(id: item.todoistID)
+      return SessionAttachment(
         taskID: item.todoistID,
         taskTitle: item.titleSnapshot,
-        projectID: nil,
-        projectTitle: nil)
+        projectID: project?.id,
+        projectTitle: project?.name)
     case .project:
-      SessionAttachment(
+      return SessionAttachment(
         taskID: nil,
         taskTitle: nil,
         projectID: item.todoistID,
         projectTitle: item.titleSnapshot)
     }
+  }
+
+  /// The project a mirrored task belongs to, or `nil` when either row is absent.
+  ///
+  /// Two reads rather than a relationship, because the mirror stores Todoist's
+  /// shape — a task holds its project's identifier as a plain string — and a
+  /// task whose project has not been mirrored yet must not be unreadable. Each
+  /// predicate binds a local constant first: a database predicate may only
+  /// capture a plain value, never a path through another object.
+  private func projectOfTask(id: String) -> (id: String, name: String?)? {
+    let todoistID = id
+    var taskQuery = FetchDescriptor<CachedTask>(
+      predicate: #Predicate<CachedTask> { $0.id == todoistID })
+    taskQuery.fetchLimit = 1
+    guard let projectID = (try? context.fetch(taskQuery))?.first?.projectID else { return nil }
+
+    let mirroredID = projectID
+    var projectQuery = FetchDescriptor<CachedProject>(
+      predicate: #Predicate<CachedProject> { $0.id == mirroredID })
+    projectQuery.fetchLimit = 1
+    // The id is worth recording even when the name is not mirrored: it is what
+    // the export groups by, and a name can arrive with the next refresh.
+    return (id: projectID, name: (try? context.fetch(projectQuery))?.first?.name)
   }
 
   // MARK: What a block is actually attached to
