@@ -113,6 +113,41 @@ final class TimerEngine {
   /// distractions back is F6's job and no part of it is here.
   private(set) var currentBlockDistractions: [DistractionPrompt] = []
 
+  /// Takes a tap that arrived from the wrist and, if it belongs to the block
+  /// running now, adds it to the sentences this block will be asked about.
+  ///
+  /// **THE ROW IS ALREADY WRITTEN BEFORE THIS IS CALLED.** `WatchTapInbox` has
+  /// committed it, and nothing here can lose it: this only decides whether the
+  /// end-of-block sheet asks for a sentence about it. A tap the engine never
+  /// hears about keeps its row and its `nil` note, which F5 already treats as a
+  /// completely normal outcome — *"the counts alone are the data the spec asks
+  /// for"*.
+  ///
+  /// **WHY THIS EXISTS AT ALL.** The prompt list is held in memory rather than
+  /// read back from the database, so a tap written straight to the store — which
+  /// is exactly what a wrist tap is — would never appear in the sheet. `F7.md`
+  /// says a wrist tap *"gets a sentence field in the phone's end-of-pomodoro
+  /// sheet like any other, provided it arrives before the sheet is presented"*,
+  /// and without this it never would, however promptly it arrived.
+  ///
+  /// **The session check is the whole of the safety.** A tap is adopted only if
+  /// it names the block running right now. One from a block that has already
+  /// ended is not held over and not reassigned — that would put a distraction
+  /// from twenty minutes ago into the sheet for a block it did not happen in,
+  /// which is the defect `recordDistraction(_:)` guards the same way. Late is
+  /// fine; wrong is not.
+  ///
+  /// - Returns: `true` when the sheet will ask about it.
+  @discardableResult
+  func adoptWristTap(id: UUID, kind: DistractionKind, at instant: Date, sessionID: UUID) -> Bool {
+    guard isRunning, let state, state.isRunning, state.kind == .work else { return false }
+    guard state.sessionID == sessionID else { return false }
+    guard currentBlockDistractions.contains(where: { $0.id == id }) == false else { return false }
+
+    currentBlockDistractions.append(DistractionPrompt(id: id, kind: kind, timestamp: instant))
+    return true
+  }
+
   /// Set once, at the end of a work block the app was awake to see end, when
   /// that block had at least one tap. The screen takes it and clears it.
   ///
