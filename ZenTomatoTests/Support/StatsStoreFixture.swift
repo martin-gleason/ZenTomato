@@ -297,6 +297,18 @@ enum StatsStoreFixture {
   ///
   /// The identity is built from a fixed pattern rather than being random, so a
   /// failing test prints something a person can match against the tables above.
+  /// A stable, readable id fragment for a project name, so that two blocks in
+  /// the same project get the same project id — which is what Todoist does, and
+  /// what the export now groups by.
+  static func slug(_ name: String) -> String {
+    name.lowercased()
+      .map { $0.isLetter || $0.isNumber ? $0 : "-" }
+      .reduce(into: "") { out, ch in
+        if ch == "-", out.hasSuffix("-") { return }
+        out.append(ch)
+      }
+  }
+
   static func block(
     _ number: Int,
     from startedAt: Date,
@@ -315,7 +327,17 @@ enum StatsStoreFixture {
       abandonReason: reason,
       taskID: task == nil ? nil : "td-task-block-\(number)",
       taskTitle: task,
-      projectID: project == nil ? nil : "td-project-block-\(number)",
+      // **THE PROJECT ID IS DERIVED FROM THE PROJECT, NOT FROM THE BLOCK.**
+      // It used to be "td-project-block-\(number)", giving every single block
+      // its own project — which no real account can produce, because blocks in
+      // one project share one id. That was invisible while the export grouped by
+      // *name*: eight blocks all called "Thesis" merged anyway. Under D22 the
+      // export groups by id, and the fixture immediately produced eight separate
+      // "Thesis" headings of one pomodoro each. The fixture was wrong, not the
+      // grouping. Hashing the name keeps ids distinctive enough for
+      // `noIdentifiersInOutput` to have something real to search for, while
+      // making equal projects share an id the way Todoist does.
+      projectID: project.map { "td-project-\(Self.slug($0))" },
       projectTitle: project)
   }
 

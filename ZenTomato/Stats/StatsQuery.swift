@@ -54,7 +54,7 @@ struct StatsQuery {
     guard let bounds = range.bounds(in: calendar) else { return .empty(for: range) }
 
     let blocks = fetchBlocks(in: bounds)
-    var assembly = PeriodAssembly()
+    var assembly = PeriodAssembly(liveNames: fetchProjectNames())
     var attribution: [UUID: BlockAttribution] = [:]
 
     for block in blocks {
@@ -76,7 +76,10 @@ struct StatsQuery {
     for tap in fetchTaps(around: blocks, within: bounds) {
       guard let entry = Self.entry(for: tap, attribution: attribution, range: range, in: calendar)
       else { continue }
-      assembly.add(entry)
+      // The id travels beside the entry rather than inside it: `StatsDistraction-
+      // Entry` is one of the value types the exported page is built from, and
+      // none of those may carry an identifier.
+      assembly.add(entry, projectID: attribution[tap.sessionID]?.projectID)
     }
 
     for record in fetchCompletions(in: bounds) {
@@ -124,6 +127,22 @@ struct StatsQuery {
       predicate: #Predicate { $0.startedAt >= lower && $0.startedAt < upper },
       sortBy: [SortDescriptor(\.startedAt)])
     return (try? context.fetch(descriptor)) ?? []
+  }
+
+  /// `project id -> name`, as Todoist is mirrored on this device right now.
+  ///
+  /// **Read once per answer, so the whole page is labelled from one reading.**
+  /// One unfiltered fetch of a table that holds a personal account's projects —
+  /// tens of rows, not thousands — which is why it is not narrowed to the ids
+  /// actually needed: building that filter would cost more than the fetch.
+  ///
+  /// A project the mirror has never seen, or one that has been archived and so
+  /// no longer comes back when the mirror refreshes, simply has no entry here.
+  /// That is not an error: the group falls back to the name recorded on the row,
+  /// and the page still reads.
+  private func fetchProjectNames() -> [String: String] {
+    let mirrored = (try? context.fetch(FetchDescriptor<CachedProject>())) ?? []
+    return Dictionary(mirrored.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
   }
 
   /// Every tap that could belong to one of those blocks.
@@ -192,209 +211,5 @@ struct StatsQuery {
       note: tap.note,
       taskTitle: block.taskTitle,
       projectTitle: block.projectTitle)
-  }
-}
-
-// MARK: - CountedBlock
-
-/// One block that counts, and `nil` for every block that does not.
-///
-/// **This `init?` is the entire counting rule, in one place, with no second
-/// copy anywhere in the app.** It is `fileprivate` — visible only inside
-/// `StatsQuery.swift` — so no other file can hold one, and therefore no other
-/// file can build a total from one.
-private struct CountedBlock {
-  /// The day the block began.
-  let day: StatsDay
-
-  /// How long it actually ran, in whole seconds.
-  let seconds: Int
-
-  /// The task's title as it read when the block began, or nothing.
-  let taskTitle: String?
-
-  /// The project's name as it read when the block began, or nothing.
-  let projectTitle: String?
-
-  /// Decides whether a recorded block is a pomodoro, and where it belongs.
-  ///
-  /// The three rules `F6.md` states, in the order it states them:
-  ///
-  ///   * **Breaks are not pomodoros.** A rest is not work, however dutifully
-  ///     it was taken.
-  ///   * **Abandoned blocks count for nothing.** A sprint you bailed on is not
-  ///     four pomodoros. They stay fully visible under *Stopped early*, with
-  ///     the sentence the person wrote, and in no count anywhere.
-  ///   * **A day is the local calendar day of the block's start.** A block
-  ///     beginning at 23:50 and ending at 00:15 belongs entirely to the day it
-  ///     began. `endedAt` is never handed to `StatsDay`, here or anywhere else.
-  ///
-  /// The length is measured rather than assumed, so a block genuinely cut short
-  /// by the clock is counted at what it ran. It is clamped at zero because F5
-  /// found and fixed a backward clock jump that could write a start after an
-  /// end, and a negative number in the header would be the loudest possible
-  /// symptom of the next one.
-  init?(_ session: PomodoroSession, calendar: Calendar) {
-    guard session.kind == .work else { return nil }
-    guard session.wasAbandoned == false else { return nil }
-    day = StatsDay.containing(session.startedAt, in: calendar)
-    seconds = max(0, Int(session.endedAt.timeIntervalSince(session.startedAt)))
-    taskTitle = session.taskTitle
-    projectTitle = session.projectTitle
-  }
-}
-
-// MARK: - BlockAttribution
-
-/// Where a block sat and what it was attached to — kept for **every** block
-/// fetched: the breaks, the stopped ones, and the ones from the extra day
-/// before the span. This is how a tap inside a block that was later stopped
-/// keeps its task and its day even though the block counts for nothing.
-private struct BlockAttribution {
-  let day: StatsDay
-  let taskTitle: String?
-  let projectTitle: String?
-
-  init(_ session: PomodoroSession, calendar: Calendar) {
-    day = StatsDay.containing(session.startedAt, in: calendar)
-    taskTitle = session.taskTitle
-    projectTitle = session.projectTitle
-  }
-}
-
-// MARK: - PeriodAssembly
-
-/// The buckets the answer is built up in, and the one place they are turned
-/// into rows.
-///
-/// **Days and projects are filled from the same blocks and the same taps**, so
-/// the two can only agree. Nothing here counts anything a second time: a block
-/// adds one to a day and one to a task, and the totals on `StatsPeriod` are
-/// sums over those rows rather than a third tally kept alongside them.
-private struct PeriodAssembly {
-  // MARK: Adding
-
-  /// A block that counted: one pomodoro, on one day, against one task.
-  mutating func add(_ counted: CountedBlock) {
-    days[counted.day, default: DayBucket()].pomodoros += 1
-    days[counted.day, default: DayBucket()].seconds += counted.seconds
-    let key = LeafKey(projectTitle: counted.projectTitle, taskTitle: counted.taskTitle)
-    leaves[key, default: Leaf()].pomodoros += 1
-    leaves[key, default: Leaf()].seconds += counted.seconds
-  }
-
-  /// A tap. Kept in the order it arrives, which is the order it happened.
-  ///
-  /// Taps are counted against the task they were tapped against **even when
-  /// their block was later stopped**. The tap is a finished fact of its own,
-  /// and the block you bailed out of is the most interesting one in the log.
-  mutating func add(_ entry: StatsDistractionEntry) {
-    days[entry.day, default: DayBucket()].taps.append(entry)
-    let key = LeafKey(projectTitle: entry.projectTitle, taskTitle: entry.taskTitle)
-    switch entry.kind {
-    case .internalInterruption: leaves[key, default: Leaf()].internalTaps += 1
-    case .externalInterruption: leaves[key, default: Leaf()].externalTaps += 1
-    }
-  }
-
-  /// A block somebody stopped. It joins no count — it only makes its day a day
-  /// that has something on it, and adds one line to its own section.
-  ///
-  /// The day is the day the block **began**; the time is the moment it was
-  /// stopped. One day rule everywhere beats a second rule that reads slightly
-  /// better in one rare case.
-  mutating func add(stop session: PomodoroSession, at placement: BlockAttribution, in calendar: Calendar) {
-    stops.append(StatsStop(
-      day: placement.day,
-      time: StatsClockTime.at(session.endedAt, in: calendar),
-      kind: session.kind,
-      taskTitle: placement.taskTitle,
-      projectTitle: placement.projectTitle,
-      reason: session.abandonReason))
-    touch(placement.day)
-  }
-
-  /// A task ticked off. Not a pomodoro, and never counted as one — it only
-  /// makes its day a day that has something on it.
-  mutating func add(_ completion: StatsCompletion) {
-    completions.append(completion)
-    touch(completion.day)
-  }
-
-  // MARK: Finishing
-
-  /// Turns the buckets into the finished answer.
-  func finished(for range: StatsRange) -> StatsPeriod {
-    var byProject: [String?: [StatsTaskRow]] = [:]
-    for (key, leaf) in leaves {
-      byProject[key.projectTitle, default: []].append(StatsTaskRow(
-        title: key.taskTitle,
-        projectTitle: key.projectTitle,
-        pomodoroCount: leaf.pomodoros,
-        focusedSeconds: leaf.seconds,
-        internalCount: leaf.internalTaps,
-        externalCount: leaf.externalTaps))
-    }
-
-    return StatsPeriod(
-      range: range,
-      days: days
-        .map {
-          StatsDayRow(
-            day: $0.key,
-            pomodoroCount: $0.value.pomodoros,
-            focusedSeconds: $0.value.seconds,
-            distractions: $0.value.taps)
-        }
-        .sorted { $0.day < $1.day },
-      projects: byProject
-        .map { StatsProjectRow(title: $0.key, tasks: $0.value.sorted(by: StatsPeriod.taskRowIsBefore)) }
-        .sorted(by: StatsPeriod.projectIsBefore),
-      // Oldest first, then by title. Only the date is ever printed, so ordering
-      // the same day's completions by name is both deterministic and the order
-      // a reader would put them in themselves.
-      completions: completions.sorted {
-        $0.day == $1.day ? StatsPeriod.compareNames($0.title, $1.title) < 0 : $0.day < $1.day
-      },
-      // Left in the order the blocks were fetched, which is oldest first by the
-      // moment each block began — the same order their printed days are in, and
-      // a total order, so two stops in the same minute cannot swap places
-      // between one run and the next.
-      stops: stops)
-  }
-
-  // MARK: Private
-
-  /// What a project and task pair is keyed by. Both halves may be absent, and
-  /// the pair with neither is the group for blocks attached to nothing.
-  private struct LeafKey: Hashable {
-    let projectTitle: String?
-    let taskTitle: String?
-  }
-
-  /// One task's running totals.
-  private struct Leaf {
-    var pomodoros = 0
-    var seconds = 0
-    var internalTaps = 0
-    var externalTaps = 0
-  }
-
-  /// One day's running totals, and its taps in the order they happened.
-  private struct DayBucket {
-    var pomodoros = 0
-    var seconds = 0
-    var taps: [StatsDistractionEntry] = []
-  }
-
-  private var days: [StatsDay: DayBucket] = [:]
-  private var leaves: [LeafKey: Leaf] = [:]
-  private var completions: [StatsCompletion] = []
-  private var stops: [StatsStop] = []
-
-  /// Makes a day exist without changing any of its numbers, so that a day whose
-  /// only evidence is a stop or a completion still appears with its zeroes.
-  private mutating func touch(_ day: StatsDay) {
-    if days[day] == nil { days[day] = DayBucket() }
   }
 }

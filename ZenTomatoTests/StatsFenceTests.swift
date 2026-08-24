@@ -132,8 +132,8 @@ struct StatsFenceTests {
   /// **A day is the local calendar day of the block's START.**
   ///
   /// Two halves. `wasAbandoned` — the rule that a stopped block counts for
-  /// nothing — appears in exactly three files tree-wide: the row that stores it,
-  /// the engine that writes it, and the one query that reads it. And `.endedAt`
+  /// nothing — appears in exactly four files tree-wide, listed exhaustively so a
+  /// fifth reader must be argued for rather than appear. And `.endedAt`
   /// never appears in the same expression as `StatsDay`, because deciding a day
   /// from a block's *end* is the one silent way to get the counting rule wrong:
   /// it moves every midnight block onto the wrong day and nothing looks broken.
@@ -144,7 +144,7 @@ struct StatsFenceTests {
       .map(\.lastPathComponent)
       .sorted()
 
-    #expect(holders == ["PomodoroSession.swift", "StatsQuery.swift", "TimerEngine.swift"])
+    #expect(holders == ["PeriodAssembly.swift", "PomodoroSession.swift", "StatsQuery.swift", "TimerEngine.swift"])
 
     for file in try Self.swiftFiles(under: "ZenTomato") {
       for line in try Self.code(of: file).components(separatedBy: "\n") {

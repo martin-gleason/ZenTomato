@@ -385,4 +385,6 @@ struct StatsQueryStoreTests {
     // And the answer is still only the fortnight, not the year.
     #expect(query.period(StatsStoreFixture.fortnightRange).days.count == 10)
   }
+
+  // MARK: D22 — one project, one heading
 }
