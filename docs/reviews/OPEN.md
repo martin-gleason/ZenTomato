@@ -101,6 +101,15 @@ notification, proven on hardware for the first time.
 **CarPlay: pass.** The owner: *"the song played through the app and didn't miss a beat."*
 O4 closes — all three interruption paths now exercised.
 
+**Playlist looping: pass.** *"the playlists repeats."* O5 closes. The loop had only ever been
+asserted against a stand-in; no real playlist had run out until now.
+
+**Wrist taps at over fifty feet: pass, informally.** *"the watch taps were captured a distance
+over 50 feet."* D2's *Done when* asks for the phone in another room; fifty feet is past that.
+O15 stays open only until the full pass confirms it with the timestamps checked, which is the
+half that actually matters — that a queued tap arrives saying **when it happened**, not when
+it was delivered.
+
 **A defect the wrist found, and it was costing data.** The owner: *"tapping the app in the
 watch has a long delay — more than 2 seconds — and it led to an excessive number of I and E
 clicks."*
