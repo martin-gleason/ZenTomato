@@ -93,7 +93,12 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
   var body: some View {
     screen
       .sheet(isPresented: $showingSettings, onDismiss: settingsSheetClosed) {
-        SettingsView(tokens: tokens, cache: cache, plan: plan)
+        SettingsView(
+          tokens: tokens, cache: cache, plan: plan,
+          // Read at presentation rather than watched: the sheet is opened, read
+          // and closed, and a state that changed underneath somebody mid-read
+          // would be more startling than useful.
+          musicAvailability: music.availability)
       }
       // The toll on the one exit a running block has. Presented rather than
       // acted on: tapping Stop opens this, and the block keeps running until a

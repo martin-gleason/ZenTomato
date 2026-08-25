@@ -42,6 +42,16 @@ struct SettingsView: View {
   /// The session plan. Emptied by signing out.
   let plan: SessionPlanStore
 
+  /// Whether Apple Music can actually be used, read live from the coordinator.
+  ///
+  /// **Shown here rather than only in the music picker, and that is the whole of
+  /// this change.** The state was drawn as a footer *beneath the library list* —
+  /// so on an account with a lot of playlists it sat behind two minutes of
+  /// scrolling, which is the same as not being there. A person wondering whether
+  /// this app can see their subscription looks in Settings, where this app
+  /// already keeps the other service's state.
+  let musicAvailability: MusicAvailability
+
   /// Removes the credential, this app's copy of Todoist, and the session plan.
   ///
   /// **Every record of a task this app completed is kept.** Those rows are this
@@ -126,6 +136,7 @@ struct SettingsView: View {
       SettingsForm(
         settings: row,
         isBlockRunning: engine?.isRunning == true,
+        musicAvailability: musicAvailability,
         tokens: tokens,
         cache: cache,
         plan: plan)
@@ -156,6 +167,11 @@ private struct SettingsForm: View {
   /// the form appears.
   let isBlockRunning: Bool
 
+  /// Whether Apple Music can be used. Defaulted for the same reason the Todoist
+  /// collaborators below are optional: this screen must be drawable in a preview
+  /// with nothing behind it.
+  var musicAvailability: MusicAvailability = .notAsked
+
   /// The Todoist collaborators. **Optional so that this screen can be looked at
   /// in a preview with nothing behind it**, which is the arrangement the timer
   /// engine above already uses. In the app all three are always there.
@@ -171,6 +187,7 @@ private struct SettingsForm: View {
       blockLengths
       sprint
       whenABlockEnds
+      music
       todoist
     }
     // iOS's own grouped-list background is a grey that fights this app's warm
@@ -325,6 +342,40 @@ private struct SettingsForm: View {
   /// **The token field is never drawn on this screen.** This file's own doc
   /// comment says there is no text field here and there never may be; the row
   /// pushes to the screen that owns the field instead.
+  /// Where Apple Music stands, in the place people look for it.
+  ///
+  /// **It mirrors the Todoist section below deliberately.** This app talks to two
+  /// services and their state should be legible in the same place and the same
+  /// shape; a reader should not have to learn where each one hides. That
+  /// consistency is the reason for the section, and it is a reason that holds
+  /// whether or not a second music service ever arrives.
+  ///
+  /// **No new setting, and nothing to change here.** `AppSettings` still holds
+  /// exactly six values — this is a report, not a control. The switch that turns
+  /// music on lives on the timer screen where the choice is actually made,
+  /// because D19 puts music decisions before a sprint rather than inside one.
+  ///
+  /// **Never amber, never a warning triangle**, however badly it has gone. The
+  /// same rule the music row already follows: this app not being able to play
+  /// music is not an error condition, and the timer is unaffected either way.
+  @ViewBuilder
+  private var music: some View {
+    Section {
+      LabeledContent("Apple Music") {
+        Text(MusicCopy.settingsStatus(for: musicAvailability))
+          .font(Typography.body)
+          .foregroundStyle(Color(.textMuted))
+      }
+      .font(Typography.body)
+      .accessibilityElement(children: .combine)
+    } header: {
+      header("Music")
+    } footer: {
+      footer(MusicCopy.settingsFooter(for: musicAvailability))
+    }
+    .listRowBackground(Color(.surfaceRaised))
+  }
+
   @ViewBuilder
   private var todoist: some View {
     if let tokens {
