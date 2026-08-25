@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import Testing
 
 @testable import ZenTomato
@@ -70,17 +71,35 @@ struct StatsMarkdownGoldenTests {
   /// executed half, so that adding such a field later fails here rather than
   /// appearing on a page somebody prints.
   @Test("noIdentifiersInOutput")
+  @MainActor
   func noIdentifiersInOutput() throws {
-    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight)
+    // BUILT FROM ROWS THAT ACTUALLY CARRY IDENTIFIERS, and that is the whole point of A11's
+    // sibling finding. This test used to run against `StatsPeriodFixture`, whose own
+    // documentation says "no identifier of any kind appears anywhere in it" — so four of its
+    // five assertions were tautologies. It searched a document that could not have contained
+    // what it was searching for, and would have kept passing if `StatsTaskRow` gained a
+    // `taskID` tomorrow and the page printed it.
+    //
+    // `StatsStoreFixture` writes real ones: `td-task-habit-0001`, `td-project-thesis`, and a
+    // UUID per session. Going through the store and the query means the strings below are
+    // genuinely present in the data and genuinely absent from the page.
+    let container = try TestStore.inMemoryContainer()
+    let context = container.mainContext
+    try StatsStoreFixture.writeFortnight(into: context)
+    let query = StatsQuery(context: context, calendar: StatsStoreFixture.calendar)
+    let document = StatsMarkdown.document(for: query.period(StatsStoreFixture.fortnightRange))
+
+    // The page is not empty — otherwise this passes by having nothing to print.
+    #expect(document.contains("pomodoro"))
 
     let uuids = try NSRegularExpression(
       pattern: "[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}")
     let range = NSRange(document.startIndex..<document.endIndex, in: document)
-    #expect(uuids.numberOfMatches(in: document, range: range) == 0)
+    #expect(uuids.numberOfMatches(in: document, range: range) == 0, "A session UUID reached the page.")
 
-    // Todoist's own identifiers are opaque alphanumeric strings. These are the
-    // shapes the app's fixtures and its real account both produce.
-    for shape in ["td-", "6XGgmFVcrG5RRjVr", "project_id", "task_id", "sessionID"] {
+    // Todoist's own identifiers are opaque alphanumeric strings. Every shape below is in the
+    // store this document was built from.
+    for shape in ["td-", "td-task-", "td-project-", "project_id", "task_id", "sessionID"] {
       #expect(document.contains(shape) == false, "The page contains \(shape).")
     }
   }
