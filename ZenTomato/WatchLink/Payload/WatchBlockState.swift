@@ -38,9 +38,16 @@ struct WatchBlockState: Codable, Equatable, Sendable {
 
     /// What the block is attached to, already resolved to a title by the phone.
     ///
+    /// **A task's title, or a project's, or nothing** — in that order, because
+    /// `SPEC.md` says a pomodoro is attached to *"exactly one Todoist task (or, if
+    /// no task is chosen, to a project)"*. It was called `taskTitle` and carried
+    /// only the first of those, so a block attached to a project showed **no
+    /// context at all** on the wrist: a countdown, and nothing to say what it was
+    /// for. Half the cases the spec allows, silently blank.
+    ///
     /// A title, never an identifier: the watch has no cache to resolve one
     /// against and no business holding Todoist's ids.
-    var taskTitle: String?
+    var attachmentTitle: String?
 
     /// The session the phone will attribute a tap to. Sent so a tap can name the
     /// block it happened in even if it is delivered long afterwards.
