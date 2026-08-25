@@ -119,3 +119,15 @@ DerivedData/
 # as a standalone file. The shipped icon is drawn from scratch instead — see
 # Design/icon/make-icon.sh.
 Design/ZenTomato.svg
+
+# --- Private working documents ------------------------------------------------
+#
+# Research and drafts that belong to the owner rather than to the project. This
+# one was swept into a commit by a `git add docs` that named a directory instead
+# of the files actually changed, pushed to a branch, and had to be removed from
+# that branch's history afterwards.
+#
+# The lesson is the pattern rather than the file: stage what you changed, not
+# where you were working.
+docs/dual-licensing-report.md
+docs/*-report.md
