@@ -441,7 +441,14 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       // Called and finished on the spot. No `Task`, no `await`, nothing queued.
       onInternalDistraction: { self.record(.internalInterruption) },
       onExternalDistraction: { self.record(.externalInterruption) },
-      onToggleMusic: { self.toggleMusic($0) },
+      // **`assumeIsolated` rather than a `Task` hop, deliberately.** SwiftUI calls
+      // a `Binding` setter on the main actor, so this asserts something already
+      // true rather than arranging for it — and if that ever stopped being true
+      // it would trap loudly here instead of racing quietly. A `Task { @MainActor }`
+      // would also compile, and would defer the toggle by a run-loop turn: a
+      // switch that moves one turn after the tap is exactly the kind of lag F7
+      // spent a device session finding.
+      onToggleMusic: { isOn in MainActor.assumeIsolated { self.toggleMusic(isOn) } },
       onOpenMusic: { self.showingMusic = true },
       // Straight through to the player, with nothing in between. It is the only
       // transport control this app has.

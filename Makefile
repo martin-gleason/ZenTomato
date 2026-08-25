@@ -46,7 +46,7 @@ XCODEBUILD_FLAGS := \
 .DEFAULT_GOAL := help
 
 .PHONY: help generate simulator build test device script-tests lint \
-        check-todoist check-secrets checks ci hooks clean
+        check-todoist check-secrets check-release checks ci hooks clean
 
 # --- Entry points ----------------------------------------------------------
 
@@ -91,6 +91,9 @@ test: generate simulator ## Build and run the unit tests
 # the CI workflow run the identical script. A gate that is implemented twice is
 # a gate that is enforced once.
 
+check-release: generate ## Compile the configuration that actually ships
+	@./scripts/check-release-build.sh
+
 lint: ## Run swiftlint --strict
 	@./scripts/check-lint.sh
 
@@ -108,7 +111,7 @@ script-tests: ## Run the shell-level tests for the secrets and hook scripts
 
 checks: lint check-todoist check-secrets script-tests ## Run every non-Xcode gate
 
-ci: checks test ## Everything continuous integration runs, in the same order
+ci: checks test check-release ## Everything continuous integration runs, in the same order
 
 # --- Housekeeping ----------------------------------------------------------
 
@@ -120,6 +123,6 @@ hooks: ## Enable the pre-commit hooks in .githooks
 	@echo "            Tests are left to CI — they are too slow for a commit."
 
 clean: ## Remove build products and the generated project
-	@rm -rf $(DERIVED_DATA) $(PROJECT)
-	@echo "make clean: removed $(DERIVED_DATA) and $(PROJECT)."
+	@rm -rf $(DERIVED_DATA) DerivedData-release $(PROJECT)
+	@echo "make clean: removed $(DERIVED_DATA), DerivedData-release and $(PROJECT)."
 	@echo "            Config/Secrets.xcconfig was kept — it is yours, not a build product."
