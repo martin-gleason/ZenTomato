@@ -96,11 +96,28 @@ moment.
 - Markdown metacharacters in Todoist titles are not escaped: a task named `**Thesis**`
   renders as markup on the page. Only affects the Rhodia read, which is the whole point of
   the feature.
-- A device that changes time zone re-attributes historical days, so two exports of the same
-  fortnight disagree. Correct across DST already — every boundary goes through `Calendar` —
-  but the time-zone case is unspecified and untested. **Decide the rule, write it down, pin
-  it with a test.** This one may want your ruling rather than mine: it is a question about
-  what a fortnight *means* when you have moved.
+- **A8 — the time-zone question, researched and ruled: document it, pin it, do not change
+  it.** The owner: *"I honestly think this is a deep edge case."* That is right, and the
+  research supports leaving it.
+
+  Two camps exist and they split cleanly. **Recompute** — Clockify and Google Analytics store
+  UTC and render in the reader's *current* timezone, so history moves when you do. **Freeze at
+  recording** — Strava stores both the UTC instant *and* the local date in the athlete's
+  timezone, and an activity *"will be counted for the day it was started."*
+
+  Strava's model is the right one for a Rhodia review: a pomodoro done at 9am on a Tuesday in
+  London stays Tuesday after you fly to Tokyo. **And half of it is already built** — the day
+  rule is the local calendar day of the block's *start*, which is the hard half. What is
+  missing is that `StatsQuery` resolves it with `.current` rather than with the zone the block
+  actually ran in.
+
+  **The fix is a stored time-zone identifier on `PomodoroSession`, and that is a schema
+  change.** Which makes it a delta, twenty days from the stop, for a fault that requires
+  crossing a zone *and* then reading a fortnight that spans the crossing. Not worth it now.
+
+  So: a test pins today's behaviour so it cannot drift silently, `docs/reviews/OPEN.md`
+  records it as a known limitation, and v1.1 gets it alongside the other schema work — where
+  one migration can carry several columns instead of this one carrying itself.
 
 ### F6b-T6 — Close the guard's hole *(A10)*
 
@@ -141,6 +158,72 @@ buys a rebase for nothing. F6b branches off `main` once F7 lands.
 stops stating something false), then T2's measurements (because unmeasured performance work
 is guesswork), then T3 (tests that cannot fail have already let three real defects through
 here). T4 through T6 are genuine but survivable.
+
+## How this pass stays inside v0.1
+
+The owner's question, and the sharpest one asked of this plan: **how do you polish and
+optimise without quietly building v1.1?**
+
+It is a real risk rather than a theoretical one, because **performance work's natural moves
+look exactly like architecture work.** Optimising usually means adding a cache, an actor, a
+queue, or a layer of indirection — and every one of those is also what a sync engine wants.
+"Make it faster" is the most respectable cover story available for "lay v1.1's foundations".
+`D16` already names the test: *would I write this the same way if bi-directional sync were
+never coming?*
+
+### The insight that makes it tractable
+
+**The legitimate performance moves are about *when* and *where* existing work happens. They
+add nothing.**
+
+1. Move it **off the main actor** — where.
+2. Do it **lazily rather than eagerly** — when.
+3. Do it **once rather than repeatedly** — how often.
+
+None of the three requires a new type, a new protocol, or a new store. They rearrange work
+that already exists. A3, the strongest candidate in this pass, is exactly move (1) and (2).
+
+**The dangerous fourth move is caching.** A cache is new machinery, it is persistent state,
+and it is precisely what a sync layer needs first. **So this pass adds no cache.** If a
+measurement genuinely demands one, the pass stops and writes a delta, because at that point
+the argument is about architecture and belongs in front of the owner.
+
+### The same rule for polish
+
+**Polish uses the existing design tokens. It does not add any.** `SPEC.md` puts *themes* out
+of scope and the token layer is exactly where a theme system would begin — a new `ColorRole`
+case is how that starts, one reasonable-looking commit at a time. So the count of roles is
+fixed for the duration.
+
+Likewise: no new SwiftData model, no new protocol (a protocol is the shape of "swappable
+later"), no new `AppSettings` field, and none of the parked v1.1 or v1.5 work — the tomato
+artwork, themes, gamification, EventKit — however much any of it would count as polish.
+
+### Measurement is the anti-drift mechanism, not just good practice
+
+F6b-T2 leads with measurement because **you cannot justify speculative architecture under a
+rule that nothing changes without a number indicting it.** That is the guard doing double
+duty: it keeps the optimisation honest *and* it keeps the scope honest, because speculative
+machinery never has a number behind it.
+
+### F6b-T0 — the fence, built first
+
+Written before any of the rest, and modelled on `StatsFenceTests` and `WatchLinkTests`, which
+already read the tree through `#filePath`:
+
+| Assertion | Catches |
+|---|---|
+| `ColorRole` cases and `Typography` roles unchanged | a theme system starting as "polish" |
+| `@Model` count unchanged | a local task model arriving early |
+| No new `protocol` declarations in touched directories | "extract for testability" becoming an abstraction layer |
+| `AppSettings` still six fields | the existing fence, re-run |
+| No `sync`, `push`, `pull`, `remote`, `conflict`, `EventKit`, `Theme` vocabulary | v1.1 by name |
+| No new persistent store or `UserDefaults` key | a cache, arriving quietly |
+
+**And one number rather than an assertion:** the PR reports net production lines added versus
+deleted. A repair pass should mostly *delete* — removal cannot prepare for anything. If the
+line count climbs, something is being built rather than repaired, and that is worth a
+sentence explaining why rather than a test forbidding it.
 
 ## Verification
 
