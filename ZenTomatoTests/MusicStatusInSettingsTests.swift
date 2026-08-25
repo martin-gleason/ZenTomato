@@ -136,18 +136,27 @@ struct MusicStatusInSettingsTests {
     let settings = try Self.source("ZenTomato/Views/SettingsView.swift")
     let form = try #require(Self.formBody(of: settings), "The Settings form is gone.")
 
-    #expect(
-      form.contains(where: { $0 == "music" }),
+    let todoist = try #require(
+      form.first(where: { $0.line == "todoist" }),
+      "The Todoist section is not in the form either, so this test proves nothing.")
+    let music = try #require(
+      form.first(where: { $0.line == "music" }),
       """
       The music section is declared but not placed in the Settings form, so nobody \
-      can reach it. The form renders: \(form.joined(separator: ", "))
+      can reach it. The form renders: \(form.map(\.line).joined(separator: ", "))
       """)
-    // The neighbours, so that a form emptied wholesale cannot pass the line above
-    // by coincidence, and so the ordering decision is written down: music sits
-    // beside Todoist because both are this app's outside services.
-    #expect(form.contains(where: { $0 == "todoist" }))
+
+    // **Unconditionally.** Todoist's depth is the form's own, so a music section
+    // nested deeper is inside a conditional and is a row somebody can be shown or
+    // not shown depending on state — which is the same as unreachable for whoever
+    // falls on the wrong side of it.
     #expect(
-      form.firstIndex(of: "music") ?? 0 < form.firstIndex(of: "todoist") ?? 0,
+      music.indent == todoist.indent,
+      "The music section is rendered conditionally; it must be there for everyone.")
+
+    let order = form.map(\.line)
+    #expect(
+      order.firstIndex(of: "music") ?? 0 < order.firstIndex(of: "todoist") ?? 0,
       "Music is meant to sit directly above Todoist.")
 
     #expect(settings.contains("MusicCopy.settingsStatus"), "Settings shows no status.")
@@ -167,12 +176,59 @@ struct MusicStatusInSettingsTests {
     let settings = try Self.source("ZenTomato/Views/SettingsView.swift")
     let timer = try Self.source("ZenTomato/Views/TimerView.swift")
 
+    // **Comments stripped first.** The previous version searched the whole file
+    // for a substring — the exact defect this suite was blocked on last round,
+    // reintroduced in the commit that fixed it. It would have passed with the
+    // call sitting in a comment.
+    let code = Self.stripped(settings)
     #expect(
-      settings.contains(".task { refreshMusicAvailability() }"),
+      code.contains(".task { refreshMusicAvailability() }"),
       "Settings never asks again, so it can report a state stale since launch.")
+
+    // Attached to the screen, not to one section. Everything the form renders is
+    // declared below `body`, so a refresh that has migrated onto a section sits
+    // after those declarations rather than before them.
+    if let task = code.range(of: ".task { refreshMusicAvailability() }"),
+       let firstSection = code.range(of: "private var music: some View") {
+      #expect(
+        task.lowerBound < firstSection.lowerBound,
+        "The refresh has moved onto a section, where it fires on cell recycling rather than on open.")
+    }
+
     #expect(
       timer.contains("refreshMusicAvailability: { music.refreshAvailability() }"),
       "Settings is given the do-nothing default, so its refresh is decorative.")
+  }
+
+  /// `theMiddleLinkIsWired` — the link that had no test at all.
+  ///
+  /// **Found by deleting two lines and watching 467 tests pass.** The wiring is
+  /// three links long — `TimerView` → `SettingsView` → `SettingsForm` — and both
+  /// values carry preview defaults on `SettingsForm`. So removing them from
+  /// `SettingsView`'s construction of the form still compiles, still passes, and
+  /// leaves the row reporting "Not set up" forever with a refresh that does
+  /// nothing. The two tests either side of this one both check only the
+  /// `TimerView` end.
+  @Test("theMiddleLinkIsWired")
+  func theMiddleLinkIsWired() throws {
+    let settings = Self.stripped(try Self.source("ZenTomato/Views/SettingsView.swift"))
+
+    guard let call = settings.range(of: "SettingsForm(\n        settings: row,") else {
+      Issue.record("SettingsView no longer builds the form the way this test expects.")
+      return
+    }
+    guard let end = settings.range(of: ")", range: call.upperBound..<settings.endIndex) else {
+      Issue.record("Could not find the end of the SettingsForm call.")
+      return
+    }
+    let arguments = String(settings[call.upperBound..<end.lowerBound])
+
+    #expect(
+      arguments.contains("musicAvailability: musicAvailability"),
+      "SettingsView drops the music state, so the form falls back to its preview default.")
+    #expect(
+      arguments.contains("refreshMusicAvailability: refreshMusicAvailability"),
+      "SettingsView drops the refresh, so the form falls back to doing nothing.")
   }
 
   /// `settingsIsGivenTheRealState` — wired to the coordinator, not to a default.
@@ -220,15 +276,34 @@ struct MusicStatusInSettingsTests {
 
   // MARK: Private
 
-  /// The identifiers the Settings `Form` actually renders, in order.
-  private static func formBody(of settings: String) -> [String]? {
+  /// The lines the Settings `Form` renders, **indentation kept**.
+  ///
+  /// An earlier version trimmed each line, which threw away the one thing that
+  /// distinguishes a section rendered by the form from a section rendered only
+  /// when some condition holds. `if false { music }` passed it. The realistic
+  /// regression is not `if false` but a later tidy-up such as
+  /// `if musicAvailability != .notAsked { music }` — which hides the row from
+  /// precisely the person who needs it, and which the form's existing
+  /// `if isBlockRunning` makes look idiomatic.
+  private static func formBody(of settings: String) -> [(indent: Int, line: String)]? {
     guard let start = settings.range(of: "    Form {") else { return nil }
     guard let end = settings.range(of: "\n    }\n", range: start.upperBound..<settings.endIndex)
     else { return nil }
     return settings[start.upperBound..<end.lowerBound]
       .components(separatedBy: "\n")
-      .map { $0.trimmingCharacters(in: .whitespaces) }
-      .filter { $0.isEmpty == false }
+      .filter { $0.trimmingCharacters(in: .whitespaces).isEmpty == false }
+      .map { line in
+        (indent: line.prefix { $0 == " " }.count, line: line.trimmingCharacters(in: .whitespaces))
+      }
+  }
+
+  /// Comment lines removed, for the reason the other fences give: a test that
+  /// cannot tell a mention from a use passes on the sentence describing the rule.
+  private static func stripped(_ text: String) -> String {
+    text
+      .components(separatedBy: "\n")
+      .filter { $0.trimmingCharacters(in: .whitespaces).hasPrefix("//") == false }
+      .joined(separator: "\n")
   }
 
   private static func source(_ path: String) throws -> String {

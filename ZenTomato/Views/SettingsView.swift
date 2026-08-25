@@ -204,6 +204,11 @@ private struct SettingsForm: View {
       music
       todoist
     }
+    // Tied to the whole screen's lifetime rather than the music section's. A
+    // `Form` is a `List`, so a section's lifetime is cell lifetime and would fire
+    // on recycling rather than once on open — the picker attaches its own refresh
+    // at this level for the same reason.
+    .task { refreshMusicAvailability() }
     // iOS's own grouped-list background is a grey that fights this app's warm
     // page. Dropping it and painting the page underneath is what makes the sheet
     // look like part of the same app as the timer.
@@ -370,21 +375,24 @@ private struct SettingsForm: View {
   @ViewBuilder
   private var music: some View {
     Section {
-      LabeledContent("Status") {
+      LabeledContent("Apple Music") {
         Text(MusicCopy.settingsStatus(for: musicAvailability))
           .font(Typography.body)
           .foregroundStyle(Color(.textMuted))
       }
       .font(Typography.body)
+      // Combined so VoiceOver reads the row as one thing, and labelled
+      // explicitly so it names the service — "Status, Not set up" leaves out the
+      // only word that says what is not set up.
       .accessibilityElement(children: .combine)
+      .accessibilityLabel("Apple Music")
+      .accessibilityValue(MusicCopy.settingsStatus(for: musicAvailability))
     } header: {
-      header("Apple Music")
+      header("Music")
     } footer: {
       footer(MusicCopy.settingsFooter(for: musicAvailability))
     }
     .listRowBackground(Color(.surfaceRaised))
-    // Tied to the section's own lifetime, so closing Settings stops the read.
-    .task { refreshMusicAvailability() }
   }
 
   /// One row in, and — once connected — one way out.
