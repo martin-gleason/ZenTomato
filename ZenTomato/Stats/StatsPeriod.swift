@@ -44,6 +44,18 @@ struct StatsPeriod: Sendable, Equatable {
   /// Blocks stopped early in the span, oldest first. In no count anywhere.
   let stops: [StatsStop]
 
+  /// True when a database read was refused, so this answer is not an answer.
+  ///
+  /// **"Nothing recorded" and "could not be read" are different sentences, and
+  /// conflating them was the one thing in F6 that made the app state something
+  /// false.** A refused read used to render as a confident *"Nothing on Fri 21
+  /// Aug"* on the screen whose entire premise is being trusted, and as *"No
+  /// pomodoros in this range."* in a page filed in a paper notebook as truth.
+  ///
+  /// Defaulted, so every existing construction site keeps working and only the
+  /// query has to know about it.
+  var couldNotBeRead = false
+
   // MARK: Nothing at all
 
   /// The answer for a span with nothing in it.
@@ -52,6 +64,17 @@ struct StatsPeriod: Sendable, Equatable {
   /// instants — a wrong-but-honest empty page rather than a crash.
   static func empty(for range: StatsRange) -> StatsPeriod {
     StatsPeriod(range: range, days: [], projects: [], completions: [], stops: [])
+  }
+
+  /// The answer when the database refused to be read.
+  ///
+  /// Deliberately **not** an empty period with a flag on it. A partial answer
+  /// assembled from a failed read is worse than no answer, because it looks
+  /// exactly like a real one — so nothing is assembled at all and the two
+  /// readers each say so in their own words.
+  static func unreadable(for range: StatsRange) -> StatsPeriod {
+    StatsPeriod(
+      range: range, days: [], projects: [], completions: [], stops: [], couldNotBeRead: true)
   }
 
   /// True when nothing at all was recorded: no finished block, no tap, no
