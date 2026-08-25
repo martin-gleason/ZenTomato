@@ -142,7 +142,12 @@ custom_rules:
   # and assumes they are covered.
   palette_outside_token_layer:
     name: "Palette outside the token layer"
-    included: "(ZenTomato/(App|Views|Models|Timer|Alarm|Shared)|ZenTomatoActivity)/.*\\.swift"
+    # Every directory that draws, which since F6 and F7 means more than it did.
+    # Stats, Export and Sprint arrived with F6 and ZenTomatoWatch with F7, and none
+    # of them was covered — nothing violated the rule, but the guard had a hole,
+    # and a guard with a hole is one that gets believed when it should not be.
+    # Todoist, Plan and Music are here for the same reason: they draw too.
+    included: "(ZenTomato/(App|Views|Models|Timer|Alarm|Shared|Stats|Export|Sprint|Todoist|Plan|Music)|ZenTomatoActivity|ZenTomatoWatch)/.*\\.swift"
     regex: "\\bPalette\\."
     message: "Screens may only name a ColorRole, never a raw Palette step."
     severity: error

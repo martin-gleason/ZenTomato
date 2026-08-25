@@ -121,6 +121,22 @@ final class AppleMusicAvailability: MusicAvailabilityChecking {
     }
 
     do {
+      // APPLE'S DEPRECATION WARNING ON THIS LINE IS NOT ACTIONABLE HERE, and that is
+      // worth writing down so nobody spends an afternoon on it twice.
+      //
+      // Every launch logs: "it has recently become deprecated to request the music
+      // subscription status in process; the new supported code path fetches it in
+      // itunescloudd, but you need to add
+      // com.apple.security.exception.mach-lookup.global-name ... to your sandbox".
+      //
+      // That key is a **macOS App Sandbox** entitlement. iOS apps have no configurable
+      // sandbox exceptions of that kind and this project has no entitlements file at all —
+      // the remediation is written for macOS clients of a framework shared by both. There is
+      // no iOS-side action, so there is nothing to do but read past it.
+      //
+      // The failure it is entangled with IS actionable and is a chore, not code: the app is
+      // signed with a wildcard App ID carrying no MusicKit entitlement, which is why the same
+      // logs carry ICError -7013 "Client is not entitled to access account store". See O14.
       let subscription = try await MusicSubscription.current
       return availability(for: status, subscription: subscription)
     } catch {
