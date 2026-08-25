@@ -43,7 +43,7 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D21** | ratified | yes | 956 | A completion records whether the task was recurring |
 | **D21b** | ratified | — | 992 | A task completed during a sprint does not come back into it |
 | **D22** | ratified | — | 1049 | A block records which project it was for, and the export labe… |
-| **D23** | proposed | — | 1132 | The music picker gets a search field; scope was never exceeded |
+| **D23** | ratified | — | 1132 | The music picker gets a search field; scope was never exceeded |
 
 *24 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
@@ -1132,7 +1132,9 @@ it is a second name on the page and wants a real fortnight's reading before it e
 
 ## D23 — The music picker gets a search field. No spec text changes.
 
-**Proposed 2026-08-25 by the owner. Awaiting ratification.**
+**Proposed 2026-08-25 by the owner. Ratified by the owner 2026-08-25, to be built as F4e.**
+
+**No spec text. No amendment owed; the backlog stays at zero.**
 
 ### Where this came from
 

@@ -119,6 +119,22 @@ struct MusicPickerView: View {
     // same app as the timer — the arrangement `SettingsView` already uses.
     .scrollContentBackground(.hidden)
     .background(Color(.surfacePrimary).ignoresSafeArea())
+    // **Always shown rather than revealed by pulling down.** A field that has to
+    // be discovered is no use to somebody who does not know it is there, and this
+    // exists because the owner scrolled a real library for two minutes without
+    // finding one.
+    .searchable(
+      text: $query,
+      placement: .navigationBarDrawer(displayMode: .always),
+      prompt: MusicCopy.searchPrompt)
+    // **The reveal counters are counts, not positions.** Without this, filtering
+    // four hundred playlists down to three leaves the list still believing it has
+    // already revealed a hundred — so `hasMore` reports nothing left to show and
+    // the reveal never re-arms when the field is cleared. Reset on every change.
+    .onChange(of: query) {
+      shownPlaylists = MusicPickerScreenModel.pageSize
+      shownSongs = MusicPickerScreenModel.pageSize
+    }
   }
 
   // MARK: Private
@@ -135,6 +151,14 @@ struct MusicPickerView: View {
   /// what is drawn; see `MusicPickerScreenModel.pageSize`.
   @State private var shownPlaylists = MusicPickerScreenModel.pageSize
   @State private var shownSongs = MusicPickerScreenModel.pageSize
+
+  /// What has been typed into the search field.
+  ///
+  /// **View state, and deliberately nothing more.** It is not persisted, not
+  /// remembered between sheets, and never leaves this screen. A remembered query
+  /// would be state this app keeps about somebody's listening, which is exactly
+  /// what `D16` says not to build.
+  @State private var query = ""
 
   /// A statement of fact, pinned above everything else because it has to be read
   /// before somebody reaches for the switch rather than after.
@@ -286,16 +310,23 @@ struct MusicPickerView: View {
         if model.isEmpty {
           EmptyLibraryView()
         } else {
+          let playlists = model.playlistRows(matching: query)
+          let songs = model.songRows(matching: query)
+
+          if model.hasNoMatches(for: query) {
+            noMatches
+          }
+
           list(
-            MusicPickerScreenModel.page(model.playlistRows, shown: shownPlaylists),
+            MusicPickerScreenModel.page(playlists, shown: shownPlaylists),
             header: MusicCopy.playlistsHeader,
-            hasMore: MusicPickerScreenModel.hasMore(model.playlistRows, shown: shownPlaylists),
+            hasMore: MusicPickerScreenModel.hasMore(playlists, shown: shownPlaylists),
             revealMore: { shownPlaylists += MusicPickerScreenModel.pageSize })
 
           list(
-            MusicPickerScreenModel.page(model.songRows, shown: shownSongs),
+            MusicPickerScreenModel.page(songs, shown: shownSongs),
             header: MusicCopy.songsHeader,
-            hasMore: MusicPickerScreenModel.hasMore(model.songRows, shown: shownSongs),
+            hasMore: MusicPickerScreenModel.hasMore(songs, shown: shownSongs),
             revealMore: { shownSongs += MusicPickerScreenModel.pageSize })
         }
       }
@@ -353,6 +384,23 @@ struct MusicPickerView: View {
   private func choose(_ selection: MusicSelection) {
     guard selection.identifier != chosen?.identifier else { return }
     onChoose(selection)
+  }
+
+  /// A search that matched nothing.
+  ///
+  /// **Two sentences and no control, which is the condition the search field
+  /// exists under.** `F4-contract.md` §7 permitted a search field only if it
+  /// "must offer nothing when it finds nothing", and this is that: it reuses
+  /// `quietBlock`, which by construction draws text and cannot draw a button.
+  ///
+  /// There is no `ContentUnavailableView` here on purpose. Its initialiser takes
+  /// an `actions` closure, and a slot for an action on the one screen where an
+  /// offer to create a playlist would belong is a slot somebody eventually fills.
+  @ViewBuilder
+  private var noMatches: some View {
+    quietBlock(MusicCopy.noMatchDetail(for: query))
+      .accessibilityLabel(MusicCopy.noMatchHeading)
+      .accessibilityValue(MusicCopy.noMatchDetail(for: query))
   }
 
   /// One line of quiet text where the lists would be, with no control of any

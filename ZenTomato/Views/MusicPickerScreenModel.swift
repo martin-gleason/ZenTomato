@@ -13,12 +13,25 @@ import Foundation
 /// explanation. It is the same mechanism `PickerScreenModel` uses to hold the
 /// no-capture rule on the Todoist picker.
 ///
-/// **THERE IS NO SEARCH FIELD ON THIS SHEET.** The design sketched one, and the
-/// ratified scope fence forbids it by name — a text field of any kind in this
-/// feature is a finding, and a field over a music library is the sharpest
-/// no-capture risk this feature could carry. Long libraries are handled by
-/// revealing rows a page at a time as somebody scrolls, which adds no control at
-/// all: no field, no button, not even a "show more". See `pageSize`.
+/// **THERE IS A SEARCH FIELD ON THIS SHEET, AND THIS PARAGRAPH USED TO DENY IT.**
+/// It read: *"the ratified scope fence forbids it by name — a text field of any
+/// kind in this feature is a finding."* **That was never true.** `F4-contract.md`
+/// §7 anticipated this exact situation and permitted it conditionally: *"Page it,
+/// and if paging turns out to need a search field, that field must offer nothing
+/// when it finds nothing — `NoCaptureSurfaceTests` already covers the idiom and
+/// the same test must cover this picker."*
+///
+/// The false version is quoted rather than deleted because of what it nearly
+/// cost. Paging alone did not turn out to be enough — the owner scrolled a real
+/// library for over two minutes — and a confident sentence in the code claiming
+/// the contract forbade the fix is exactly the kind of thing that ends an
+/// investigation before it starts. `D23` records the decision; the condition is
+/// enforced two ways below.
+///
+/// **The condition, honoured:** a search that finds nothing produces **no rows at
+/// all**, so there is nothing for a "create this playlist" row to be appended to,
+/// and `MusicNoCaptureTests` covers this picker with the same idiom that covers
+/// the Todoist one. Paging survives underneath: see `pageSize`.
 ///
 /// **A ROW IS A TITLE.** No artwork, and no second line. Artwork means a fetch
 /// per row, a blank where somebody is offline, and a second visual language on a
@@ -112,6 +125,42 @@ struct MusicPickerScreenModel: Equatable, Sendable {
   /// the mistake the session plan refuses to make about Todoist.
   var isEmpty: Bool {
     playlists.isEmpty && songs.isEmpty
+  }
+
+  // MARK: Searching
+
+  /// The playlist rows matching `query`, or every playlist when nothing is typed.
+  ///
+  /// **An empty or whitespace-only query means "everything", not "nothing".**
+  /// The Todoist picker takes the opposite default — there, an empty query lists
+  /// no rows, because that screen shows a project tree until you search. Here the
+  /// library *is* the screen, and blanking the field must give it back rather than
+  /// empty it.
+  func playlistRows(matching query: String) -> [Row] {
+    Self.filter(playlistRows, matching: query)
+  }
+
+  /// The song rows matching `query`, on the same terms.
+  func songRows(matching query: String) -> [Row] {
+    Self.filter(songRows, matching: query)
+  }
+
+  /// Whether anything at all matches — **across both lists**.
+  ///
+  /// Asked as one question because the answer drives one sentence. A screen that
+  /// said "no playlists match" while three songs matched underneath would be
+  /// wrong in the most annoying possible way.
+  func hasNoMatches(for query: String) -> Bool {
+    playlistRows(matching: query).isEmpty && songRows(matching: query).isEmpty
+  }
+
+  /// The shared filter. Matching is `SearchMatching.swift`'s rule, the same one
+  /// the Todoist picker uses, so the two screens cannot come to disagree about
+  /// what counts as a match.
+  private static func filter(_ rows: [Row], matching query: String) -> [Row] {
+    let needle = query.trimmedQuery
+    guard needle.isEmpty == false else { return rows }
+    return rows.filter { $0.selection.title.contains(needle, caseAndAccentInsensitively: true) }
   }
 
   /// The first `shown` rows of a list.
