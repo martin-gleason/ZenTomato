@@ -141,6 +141,43 @@ struct MusicSearchTests {
     #expect(body.contains("shownSongs = MusicPickerScreenModel.pageSize"))
   }
 
+  // MARK: What a filter must not hide
+
+  /// `theChosenItemSurvivesAFilter` — F4e-T5, which needed no code.
+  ///
+  /// **The risk:** something is chosen, a query is typed that excludes it, and the
+  /// tick silently vanishes from a list still claiming to be the picker. Somebody
+  /// then reasonably concludes their choice was lost.
+  ///
+  /// It cannot happen, and not by luck. The picker already draws a **"Now chosen"**
+  /// section above the library, for a reason F4 recorded — an item that has left
+  /// the library entirely would otherwise disappear with nowhere to report it. That
+  /// section sits outside `library` in the view body, so the filter never reaches
+  /// it. The plan listed this as a task; the answer was that F4's own handling of a
+  /// different problem had already covered it.
+  ///
+  /// This reads the source, because the guarantee is structural: it lives in the
+  /// order of the body, and a tidy-up that moved the chosen section inside the
+  /// filtered lists would silently reintroduce exactly the risk above.
+  @Test("theChosenItemSurvivesAFilter")
+  func theChosenItemSurvivesAFilter() throws {
+    let picker = Self.stripped(try Self.source("ZenTomato/Views/MusicPickerView.swift"))
+    guard let body = picker.range(of: "var body: some View {"),
+          let end = picker.range(of: "\n    }\n", range: body.upperBound..<picker.endIndex) else {
+      Issue.record("The picker's body is no longer where this test reads it.")
+      return
+    }
+    let lines = picker[body.upperBound..<end.lowerBound]
+      .components(separatedBy: "\n")
+      .map { $0.trimmingCharacters(in: .whitespaces) }
+
+    let chosen = try #require(lines.firstIndex(of: "nowChosenSection(chosen)"))
+    let library = try #require(lines.firstIndex(of: "library"))
+    #expect(
+      chosen < library,
+      "The chosen item is drawn inside the filtered library, so a query can hide it.")
+  }
+
   // MARK: Private
 
   private static let library = MusicPickerScreenModel(
