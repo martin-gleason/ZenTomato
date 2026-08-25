@@ -203,10 +203,10 @@ struct MusicPickerView: View {
   @ViewBuilder
   private var musicFooter: some View {
     switch availability {
-    case .denied: footer(MusicCopy.deniedFooter)
-    case .restricted: footer(MusicCopy.restrictedFooter)
-    case .noSubscription: footer(MusicCopy.noSubscriptionFooter)
-    case .couldNotBeChecked: footer(MusicCopy.couldNotBeCheckedFooter)
+    // The same words Settings shows, from the same function, so the two surfaces
+    // cannot drift into describing one state differently.
+    case .denied, .restricted, .noSubscription, .couldNotBeChecked:
+      footer(MusicCopy.settingsFooter(for: availability))
     case .ready, .notAsked:
       if playbackDidNotStart {
         footer(MusicCopy.playbackFailedFooter)

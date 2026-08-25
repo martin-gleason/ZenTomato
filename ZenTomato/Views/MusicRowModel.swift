@@ -213,6 +213,47 @@ enum MusicCopy {
     """
 
   /// The permission or the subscription could not be established at all.
+  /// The one word or phrase Settings shows beside "Apple Music".
+  ///
+  /// **A trailing value, exactly as the Todoist row has one.** It answers the
+  /// question somebody opens Settings with — *can this app play my music?* —
+  /// before they read anything else, and it never editorialises: "Not available"
+  /// is a fact, "Unavailable!" would be a verdict.
+  static func settingsStatus(for availability: MusicAvailability) -> String {
+    switch availability {
+    case .ready: "Ready"
+    case .notAsked: "Not set up"
+    case .denied: "Permission off"
+    case .restricted: "Restricted"
+    case .noSubscription: "No subscription"
+    case .couldNotBeChecked: "Couldn't be checked"
+    }
+  }
+
+  /// The sentence under it, which is the one that was buried.
+  ///
+  /// These are the same words the music picker shows in its footer. They are not
+  /// duplicated: the picker calls this too, so the two surfaces cannot drift into
+  /// saying different things about the same state.
+  static func settingsFooter(for availability: MusicAvailability) -> String {
+    switch availability {
+    case .denied: deniedFooter
+    case .restricted: restrictedFooter
+    case .noSubscription: noSubscriptionFooter
+    case .couldNotBeChecked: couldNotBeCheckedFooter
+    case .ready, .notAsked: readyFooter
+    }
+  }
+
+  /// What Settings says when nothing is wrong.
+  ///
+  /// The picker's equivalent is a hint about the toggle, which would be a
+  /// non-sequitur here — the toggle is not on this screen.
+  static let readyFooter = """
+    ZenTomato plays a playlist or song from your library during focus blocks and pauses it \
+    during breaks. It only reads your library and never changes anything in it.
+    """
+
   static let couldNotBeCheckedFooter = """
     ZenTomato couldn't tell whether it's able to play your music, so it hasn't tried.
 
