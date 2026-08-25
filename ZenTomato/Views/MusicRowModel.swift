@@ -212,7 +212,6 @@ enum MusicCopy {
     The timer works exactly the same without music.
     """
 
-  /// The permission or the subscription could not be established at all.
   /// The one word or phrase Settings shows beside "Apple Music".
   ///
   /// **A trailing value, exactly as the Todoist row has one.** It answers the
@@ -241,9 +240,23 @@ enum MusicCopy {
     case .restricted: restrictedFooter
     case .noSubscription: noSubscriptionFooter
     case .couldNotBeChecked: couldNotBeCheckedFooter
-    case .ready, .notAsked: readyFooter
+    case .ready: readyFooter
+    case .notAsked: notAskedFooter
     }
   }
+
+  /// What Settings says before anybody has switched music on.
+  ///
+  /// **Separate from `readyFooter` because the two are not the same situation.**
+  /// Permission is asked for at the moment somebody first switches music on and
+  /// never at launch, so "Not set up" is the state every install begins in and is
+  /// not a fault. Describing music playing during focus blocks — which is what
+  /// `readyFooter` does — would read as a description of what the app is
+  /// currently doing, when it is doing none of it.
+  static let notAskedFooter = """
+    Music is switched off. Turning it on from the timer screen asks for permission to read your \
+    Apple Music library, and nothing is read until you do.
+    """
 
   /// What Settings says when nothing is wrong.
   ///
@@ -254,6 +267,7 @@ enum MusicCopy {
     during breaks. It only reads your library and never changes anything in it.
     """
 
+  /// The permission or the subscription could not be established at all.
   static let couldNotBeCheckedFooter = """
     ZenTomato couldn't tell whether it's able to play your music, so it hasn't tried.
 

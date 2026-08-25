@@ -27,11 +27,16 @@ struct MusicStatusInSettingsTests {
 
   /// `everyStateHasAWordAndASentence` — including the states nobody plans for.
   ///
-  /// `MusicAvailability` is `CaseIterable`, so this is exhaustive **by
-  /// construction rather than by diligence**: a seventh case added next year
-  /// fails here on the day it is added, instead of shipping as an empty row.
-  /// That is the failure this whole change is about — a state with nothing
-  /// legible attached to it.
+  /// **This is the weakest test here and it is worth being straight about why.**
+  /// An earlier draft claimed it catches a seventh `MusicAvailability` case
+  /// shipping with no words attached. It does not: both switches in `MusicCopy`
+  /// are exhaustive over a non-frozen local enum, so a seventh case is a compile
+  /// error and the compiler gets there first.
+  ///
+  /// What is left is the part the compiler cannot check — that the words are
+  /// non-empty, short enough to be a value in a row rather than a paragraph that
+  /// has drifted into the wrong slot, and punctuated like a value. Thin, but not
+  /// nothing, and stated honestly rather than oversold.
   @Test("everyStateHasAWordAndASentence")
   func everyStateHasAWordAndASentence() {
     for state in MusicAvailability.allCases {
@@ -55,6 +60,14 @@ struct MusicStatusInSettingsTests {
   func theSixStatusesAreDistinct() {
     let statuses = MusicAvailability.allCases.map { MusicCopy.settingsStatus(for: $0) }
     #expect(Set(statuses).count == statuses.count, "Two states read the same: \(statuses)")
+
+    // `.ready` and `.notAsked` are the two that most invite being collapsed, and
+    // an earlier draft did collapse them. "Not set up" above a sentence
+    // describing music playing during focus blocks reads as a description of
+    // what the app is doing right now, when it is doing none of it.
+    #expect(
+      MusicCopy.settingsFooter(for: .notAsked) != MusicCopy.settingsFooter(for: .ready),
+      "Music switched off and music working are being explained with the same words.")
   }
 
   /// `nothingHereSoundsLikeAnError` — the rule the music row already follows.
@@ -104,20 +117,62 @@ struct MusicStatusInSettingsTests {
 
   // MARK: That it is actually on the screen
 
-  /// `settingsShowsTheState` — the route, which is the entire point.
+  /// `settingsShowsTheState` — the section is **in the form**, not merely written.
   ///
-  /// A `View` body cannot be asserted on without a snapshot harness this project
-  /// does not have and does not want. What can be checked is that the screen
-  /// takes the state in and renders the shared copy — which is exactly the fact
-  /// that was missing before, and the fact that would silently stop being true
-  /// if somebody tidied the section away.
+  /// **The first version of this test was the bug it was written to prevent.** It
+  /// searched the whole file for `MusicCopy.settingsStatus` and passed as long as
+  /// the string appeared anywhere in it — so deleting `music` from the `Form`
+  /// body would have left the section orphaned, unreachable, and all seven tests
+  /// green. Copy that exists, is correct, is tested, and cannot be reached: the
+  /// exact defect F4c was opened to fix, reproduced inside the fix. Caught in
+  /// adversarial review, not by the suite.
+  ///
+  /// So this reads the `Form` body specifically. A `View` cannot be asserted on
+  /// without a snapshot harness this project does not have, but the difference
+  /// between "rendered" and "merely declared" is one line in the form, and that
+  /// line is checkable.
   @Test("settingsShowsTheState")
   func settingsShowsTheState() throws {
     let settings = try Self.source("ZenTomato/Views/SettingsView.swift")
+    let form = try #require(Self.formBody(of: settings), "The Settings form is gone.")
 
-    #expect(settings.contains("musicAvailability"), "Settings cannot see the music state.")
+    #expect(
+      form.contains(where: { $0 == "music" }),
+      """
+      The music section is declared but not placed in the Settings form, so nobody \
+      can reach it. The form renders: \(form.joined(separator: ", "))
+      """)
+    // The neighbours, so that a form emptied wholesale cannot pass the line above
+    // by coincidence, and so the ordering decision is written down: music sits
+    // beside Todoist because both are this app's outside services.
+    #expect(form.contains(where: { $0 == "todoist" }))
+    #expect(
+      form.firstIndex(of: "music") ?? 0 < form.firstIndex(of: "todoist") ?? 0,
+      "Music is meant to sit directly above Todoist.")
+
     #expect(settings.contains("MusicCopy.settingsStatus"), "Settings shows no status.")
     #expect(settings.contains("MusicCopy.settingsFooter"), "Settings shows no explanation.")
+  }
+
+  /// `settingsAsksAgainWhenItOpens` — it must not answer from launch-time memory.
+  ///
+  /// `OPEN.md` now advertises this row as the faster way to answer `O14`, which
+  /// makes staleness a correctness problem rather than a nicety: somebody grants
+  /// permission in iOS Settings, comes straight back, reads the answer from
+  /// launch, and concludes the app is broken. The picker already refreshes on
+  /// appear; this asserts Settings does too, and that it is given the real call
+  /// rather than the no-op preview default.
+  @Test("settingsAsksAgainWhenItOpens")
+  func settingsAsksAgainWhenItOpens() throws {
+    let settings = try Self.source("ZenTomato/Views/SettingsView.swift")
+    let timer = try Self.source("ZenTomato/Views/TimerView.swift")
+
+    #expect(
+      settings.contains(".task { refreshMusicAvailability() }"),
+      "Settings never asks again, so it can report a state stale since launch.")
+    #expect(
+      timer.contains("refreshMusicAvailability: { music.refreshAvailability() }"),
+      "Settings is given the do-nothing default, so its refresh is decorative.")
   }
 
   /// `settingsIsGivenTheRealState` — wired to the coordinator, not to a default.
@@ -149,6 +204,8 @@ struct MusicStatusInSettingsTests {
       Issue.record("The music section is gone.")
       return
     }
+    // Bounded by the next declaration in source order. If the file is ever
+    // reordered this widens rather than narrows, so it cannot silently pass.
     guard let end = settings.range(of: "private var todoist:", range: section.upperBound..<settings.endIndex)
     else {
       Issue.record("Could not find the end of the music section.")
@@ -162,6 +219,17 @@ struct MusicStatusInSettingsTests {
   }
 
   // MARK: Private
+
+  /// The identifiers the Settings `Form` actually renders, in order.
+  private static func formBody(of settings: String) -> [String]? {
+    guard let start = settings.range(of: "    Form {") else { return nil }
+    guard let end = settings.range(of: "\n    }\n", range: start.upperBound..<settings.endIndex)
+    else { return nil }
+    return settings[start.upperBound..<end.lowerBound]
+      .components(separatedBy: "\n")
+      .map { $0.trimmingCharacters(in: .whitespaces) }
+      .filter { $0.isEmpty == false }
+  }
 
   private static func source(_ path: String) throws -> String {
     let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()

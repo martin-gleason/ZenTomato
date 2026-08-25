@@ -95,9 +95,11 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       .sheet(isPresented: $showingSettings, onDismiss: settingsSheetClosed) {
         SettingsView(
           tokens: tokens, cache: cache, plan: plan,
-          // Read at presentation rather than watched: the sheet is opened, read
-          // and closed, and a state that changed underneath somebody mid-read
-          // would be more startling than useful.
+          // `MusicCoordinator` is `@Observable` and this closure is part of this
+          // view's body, so the row follows the state rather than freezing at the
+          // moment the sheet opened. That is what makes the refresh below worth
+          // making: the answer can arrive after the screen is already up.
+          refreshMusicAvailability: { music.refreshAvailability() },
           musicAvailability: music.availability)
       }
       // The toll on the one exit a running block has. Presented rather than
