@@ -49,6 +49,7 @@ struct WatchTimerScreen: View {
 
     if link.state.acceptsTaps {
       captureButtons
+      tally
     }
 
     footnote
@@ -65,6 +66,38 @@ struct WatchTimerScreen: View {
       captureButton(.externalInterruption, letter: "E", label: "External distraction")
     }
     .padding(.top, 2)
+  }
+
+  /// What this block has caught so far — the receipt for a press.
+  ///
+  /// **A tap has to be answered on screen, not only in a haptic.** Before this
+  /// existed the only confirmation was a buzz, and when the send blocked the main
+  /// actor for two seconds there was nothing at all: the owner pressed a button
+  /// that appeared dead, pressed it again, and each press became a real row. A
+  /// count that moves the instant you touch it is what stops that.
+  ///
+  /// It is deliberately about **this block** and resets at every boundary, which
+  /// is the same rule the phone's own count follows. A running total for the day
+  /// would be a score, and `SPEC.md` puts those out of scope.
+  @ViewBuilder
+  private var tally: some View {
+    if link.tapsThisBlock > 0 {
+      Text(DistractionTally.summary(of: kindsThisBlock))
+        .font(.system(size: 11))
+        .foregroundStyle(.secondary)
+        .contentTransition(.numericText())
+        .animation(.snappy, value: link.tapsThisBlock)
+    }
+  }
+
+  /// The kinds caught this block, for `DistractionTally` to phrase.
+  ///
+  /// The watch keeps counts rather than rows, so this rebuilds the shape the
+  /// tally expects. Using the owner's own hand-written summary rather than
+  /// spelling the sentence again here is the point: one phrasing, both devices.
+  private var kindsThisBlock: [DistractionKind] {
+    Array(repeating: .internalInterruption, count: link.internalThisBlock)
+      + Array(repeating: .externalInterruption, count: link.externalThisBlock)
   }
 
   private func captureButton(

@@ -98,6 +98,24 @@ still *ends at the right wall-clock minute*. The design says it must; nobody has
 **Alarm through an active Focus: pass.** The reason D3 chose AlarmKit over a local
 notification, proven on hardware for the first time.
 
+**CarPlay: pass.** The owner: *"the song played through the app and didn't miss a beat."*
+O4 closes — all three interruption paths now exercised.
+
+**A defect the wrist found, and it was costing data.** The owner: *"tapping the app in the
+watch has a long delay — more than 2 seconds — and it led to an excessive number of I and E
+clicks."*
+
+`transferUserInfo` was being called synchronously on the main actor, with the counters
+incremented *after* it returned. So nothing on screen moved for over two seconds and the
+button read as dead — and every extra press was a real tap that became a real row. **A laggy
+button was quietly inflating the one number this app exists to produce.** Fixed: the transfer
+moved off the main actor, the counters raised before it, and a tally now appears the instant a
+button is pressed.
+
+**The taps already made are real rows and are still in the database.** There is no capture
+surface and no editor, by design, so nothing in the app can remove them. Any export covering
+that block will over-report. Worth knowing before O1 is judged.
+
 ## Needs the agent
 
 | # | Item | From | Why it is still open |
