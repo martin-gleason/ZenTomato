@@ -58,6 +58,14 @@ enum StatsMarkdown {
     // saying `0 pomodoros` and a `## Stopped early` section, because a fortnight
     // in which you started four things and finished none is the most worth
     // reading there is.
+    // A REFUSED READ IS NOT AN EMPTY FORTNIGHT, and this order matters: the
+    // check has to come first, because an unreadable period is also an empty one
+    // and would otherwise render as a confident claim that nothing happened —
+    // in a document filed in a paper notebook as a record of what did.
+    guard period.couldNotBeRead == false else {
+      return "\(opening)\n\n\(couldNotBeRead)\n"
+    }
+
     guard period.isEmpty == false else {
       return "\(opening)\n\n\(nothingRecorded)\n"
     }
@@ -80,6 +88,22 @@ enum StatsMarkdown {
   /// Read by `emptyRangeIsReadable`, and by the screen, so that the page and the
   /// glass say the same thing about the same fortnight.
   static let nothingRecorded = "No pomodoros in this range."
+
+  /// What the page says when the database would not answer.
+  ///
+  /// **It reports the failure and then reassures about the data**, in that order,
+  /// because those are the two things a reader needs and the second is the one
+  /// they actually care about. The same shape as F4's
+  /// `exportUnavailable = "The export couldn't be prepared. Your history is fine."`
+  ///
+  /// It must never be mistaken for `nothingRecorded` above. Somebody reading this
+  /// page beside a notebook is deciding what they did with a fortnight; a page
+  /// that says "no pomodoros" when it means "I could not look" would have them
+  /// conclude they had done nothing at all.
+  static let couldNotBeRead = """
+    This range couldn't be read from the database, so nothing below is missing — it just \
+    isn't here. Your history is fine; try exporting again.
+    """
 
   /// The document's own name for a span of days:
   /// `ZenTomato — 2026-08-08 to 2026-08-21`.

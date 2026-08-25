@@ -67,6 +67,9 @@ final class StatsScreenModel {
 
   private(set) var rangePeriod: StatsPeriod?
 
+  /// True when the database refused the range.
+  var couldNotBeRead: Bool { rangePeriod?.couldNotBeRead == true }
+
   private(set) var range: StatsRange
 
   /// Answers today, publishes it, then looks at the range.
@@ -304,42 +307,6 @@ extension StatsScreenModel {
   static let doneLabel = "Done"
 
   static let todayIsAlwaysToday = "Today's count above is always today, whatever range you choose."
-
-  /// What the screen says when the chosen days hold nothing.
-  ///
-  /// **A statement of fact, never a verdict.** Somebody who installed the app
-  /// this morning sees this, and so does somebody with four hundred pomodoros
-  /// who picked last February. It has to be true and unembarrassing for both, so
-  /// it says what *will* be here and where to look for what is not — and never
-  /// says "you have nothing". No exclamation marks, no encouragement, no
-  /// illustration, and no button that starts a timer: the timer is one swipe
-  /// away and this screen does not nag.
-  static func emptyHeading(for range: StatsRange) -> String {
-    range.isSingleDay ? "Nothing on \(StatsWords.date(range.first))" : "Nothing in these days"
-  }
-
-  static let emptyDetail = """
-    Finished pomodoros are counted here — today's first, then by day, project and task.
-    """
-
-  /// The load-bearing line: it answers the question this state provokes — *"I
-  /// did a block this morning, why is it not here?"* — before the reader
-  /// concludes the app is broken.
-  static let emptyOrigin = """
-    The count starts when your first block ends. A block you stop early isn't counted, and it's \
-    kept separately in the export. Widen the range above to look further back.
-    """
-
-  static let exportHint = "Opens the share sheet with a Markdown file."
-  static let rangeHint = "Which days the lists below and the export cover."
-  static let openDayHint = "Shows what interrupted this day."
-  static let todaySpokenLabel = "Pomodoros today"
-
-  /// What the write of the temporary file says when it fails. One plain
-  /// sentence, and the control goes with it: sharing a stale file is worse than
-  /// sharing none, and a share button that does nothing gets tapped four times
-  /// before somebody gives up.
-  static let exportUnavailable = "The export couldn't be prepared. Your history is fine."
 
   // MARK: Private
 

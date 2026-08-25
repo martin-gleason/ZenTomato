@@ -53,7 +53,9 @@ struct StatsQuery {
   func period(_ range: StatsRange) -> StatsPeriod {
     guard let bounds = range.bounds(in: calendar) else { return .empty(for: range) }
 
-    let blocks = fetchBlocks(in: bounds)
+    guard let rows = readEverything(in: bounds) else { return .unreadable(for: range) }
+    let blocks = rows.blocks
+
     var assembly = PeriodAssembly(liveNames: fetchProjectNames())
     var attribution: [UUID: BlockAttribution] = [:]
 
@@ -73,7 +75,7 @@ struct StatsQuery {
       }
     }
 
-    for tap in fetchTaps(around: blocks, within: bounds) {
+    for tap in rows.taps {
       guard let entry = Self.entry(for: tap, attribution: attribution, range: range, in: calendar)
       else { continue }
       // The id travels beside the entry rather than inside it: `StatsDistraction-
@@ -82,7 +84,7 @@ struct StatsQuery {
       assembly.add(entry, projectID: attribution[tap.sessionID]?.projectID)
     }
 
-    for record in fetchCompletions(in: bounds) {
+    for record in rows.records {
       assembly.add(StatsCompletion(
         day: StatsDay.containing(record.completedAt, in: calendar),
         title: record.titleSnapshot,
@@ -120,13 +122,38 @@ struct StatsQuery {
   /// A refused read reads as "nothing recorded". That is visible on the screen
   /// as an empty span rather than being silently mixed into a wrong total, and
   /// it is the same shape every other read in this app takes.
-  private func fetchBlocks(in bounds: StatsRange.Bounds) -> [PomodoroSession] {
+  /// The three reads a period cannot be assembled without, or nothing.
+  ///
+  /// **All three, or none.** Blocks are the counts, taps are the distraction figures,
+  /// completions are their own section — and a period missing any one of them would look
+  /// exactly like a real period that happened not to contain them. That is the shape of a
+  /// lie, and it is why a partial answer is never returned.
+  ///
+  /// The mirror read is deliberately not here: its failure means a project label falls back
+  /// to the name recorded on the row, which is what D22 built the fallback for.
+  private func readEverything(in bounds: StatsRange.Bounds) -> Rows? {
+    guard
+      let blocks = fetchBlocks(in: bounds),
+      let taps = fetchTaps(around: blocks, within: bounds),
+      let records = fetchCompletions(in: bounds)
+    else { return nil }
+    return Rows(blocks: blocks, taps: taps, records: records)
+  }
+
+  /// Everything one period is assembled from, named rather than left as a tuple.
+  private struct Rows {
+    let blocks: [PomodoroSession]
+    let taps: [Distraction]
+    let records: [CompletedTaskRecord]
+  }
+
+  private func fetchBlocks(in bounds: StatsRange.Bounds) -> [PomodoroSession]? {
     let lower = calendar.date(byAdding: .day, value: -1, to: bounds.lower) ?? bounds.lower
     let upper = bounds.upper
     let descriptor = FetchDescriptor<PomodoroSession>(
       predicate: #Predicate { $0.startedAt >= lower && $0.startedAt < upper },
       sortBy: [SortDescriptor(\.startedAt)])
-    return (try? context.fetch(descriptor)) ?? []
+    return try? context.fetch(descriptor)
   }
 
   /// `project id -> name`, as Todoist is mirrored on this device right now.
@@ -141,6 +168,9 @@ struct StatsQuery {
   /// That is not an error: the group falls back to the name recorded on the row,
   /// and the page still reads.
   private func fetchProjectNames() -> [String: String] {
+    // `?? [:]` on purpose, and it is the one read here allowed to fail quietly.
+    // A missing mirror means every group falls back to the name recorded on its
+    // row, which is exactly what D22 built the fallback for.
     let mirrored = (try? context.fetch(FetchDescriptor<CachedProject>())) ?? []
     return Dictionary(mirrored.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
   }
@@ -154,26 +184,26 @@ struct StatsQuery {
   /// under it. The widening is computed from the blocks already in hand, so
   /// this is still one bounded read rather than a scan of the one table in this
   /// app designed to grow for its whole life.
-  private func fetchTaps(around blocks: [PomodoroSession], within bounds: StatsRange.Bounds) -> [Distraction] {
+  private func fetchTaps(around blocks: [PomodoroSession], within bounds: StatsRange.Bounds) -> [Distraction]? {
     let lower = min(bounds.lower, blocks.first?.startedAt ?? bounds.lower)
     let upper = max(bounds.upper, blocks.map(\.endedAt).max() ?? bounds.upper)
     let descriptor = FetchDescriptor<Distraction>(
       predicate: #Predicate { $0.timestamp >= lower && $0.timestamp < upper },
       sortBy: [SortDescriptor(\.timestamp)])
-    return (try? context.fetch(descriptor)) ?? []
+    return try? context.fetch(descriptor)
   }
 
   /// Every task ticked off inside the span.
   ///
   /// A completion belongs to the day it was recorded (D11), independently of any
   /// block. Completing a task is not a pomodoro and is never counted as one.
-  private func fetchCompletions(in bounds: StatsRange.Bounds) -> [CompletedTaskRecord] {
+  private func fetchCompletions(in bounds: StatsRange.Bounds) -> [CompletedTaskRecord]? {
     let lower = bounds.lower
     let upper = bounds.upper
     let descriptor = FetchDescriptor<CompletedTaskRecord>(
       predicate: #Predicate { $0.completedAt >= lower && $0.completedAt < upper },
       sortBy: [SortDescriptor(\.completedAt)])
-    return (try? context.fetch(descriptor)) ?? []
+    return try? context.fetch(descriptor)
   }
 
   /// Places one tap on a day and against a name.
