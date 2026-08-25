@@ -75,17 +75,46 @@ a consequence of having done this right rather than the reason for doing it.
 functionality rather than a rearrangement of what exists, so it wants a spec
 delta argued rather than assumed. Recorded as `O17`.
 
+## Also fixed after adversarial review
+
+- The section had been inserted **inside Todoist's doc comment**, leaving a false
+  description on the new code and none on the old. Same again in `MusicRowModel`.
+- **Settings never asked again**, so it could report a state stale since launch —
+  while `OPEN.md` advertises it as the faster way to answer `O14`. It now
+  refreshes on appear, as the picker already did.
+- **Header said "Music", row said "Apple Music"** — a category over a service,
+  which was the one shape in the diff that read provider-shaped. Both now name
+  the service, as Todoist's section does.
+- `.notAsked` **shared `.ready`'s sentence**, so "Not set up" sat above a
+  description of music playing. It has its own words now.
+
 ## Verification
 
-- `make ci` — swiftlint `--strict` clean, 9 script tests, **466 tests in 70
-  suites passed** (459 before).
-- **Mutation-verified, four ways.** Each named test was made to fail by breaking
-  exactly the thing it claims to protect, then restored:
-  | Mutation | Test that caught it |
-  |---|---|
-  | Settings presented with `.notAsked` instead of the live value | `settingsIsGivenTheRealState` |
-  | The picker reaches past the shared function to its own constants | `thePickerAndSettingsCannotDisagree` |
-  | Two states given the same word | `theSixStatusesAreDistinct` |
-  | A status reading `Error!` | `nothingHereSoundsLikeAnError` |
+```
+check-lint.sh: swiftlint 0.65.1 --strict
+check-lint.sh: OK — no lint violations.
+run-script-tests.sh: 9 passed, 0 failed
+✔ Test run with 467 tests in 70 suites passed after 3.757 seconds.
+```
+
+459 tests before, 467 after. **Mutation-verified nine ways.** Each named test was
+made to fail by breaking exactly the thing it claims to protect, then restored:
+
+| Mutation | Test that caught it |
+|---|---|
+| M1 · Settings presented with `.notAsked` instead of the live value | `settingsIsGivenTheRealState` |
+| M2 · The picker reaches past the shared function to its own constants | `thePickerAndSettingsCannotDisagree` |
+| M3 · Two states given the same word | `theSixStatusesAreDistinct` |
+| M4 · A status reading `Error!` | `nothingHereSoundsLikeAnError` |
+| M5 · The section removed from the `Form` body, leaving it orphaned | `settingsShowsTheState` |
+| M6 · Music placed below Todoist instead of above | `settingsShowsTheState` |
+| M7 · The refresh removed from the section | `settingsAsksAgainWhenItOpens` |
+| M8 · Settings handed the do-nothing preview refresh | `settingsAsksAgainWhenItOpens` |
+| M9 · `.notAsked` reverted to the "ready" sentence | `theSixStatusesAreDistinct` |
+
+**M5 was the reviewer's mutation, not the author's.** The first version of
+`settingsShowsTheState` searched the whole file for a substring and would have
+stayed green with the section unreachable — the exact defect this feature exists
+to fix, reproduced inside the fix. See `docs/reviews/F4c.md`.
 - **Device check outstanding:** open Settings on hardware and read the Music row.
   This is the same question as `O14` and closes with it.
