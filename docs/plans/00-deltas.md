@@ -43,6 +43,7 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D21** | ratified | yes | 956 | A completion records whether the task was recurring |
 | **D21b** | ratified | — | 992 | A task completed during a sprint does not come back into it |
 | **D22** | ratified | — | 1049 | A block records which project it was for, and the export labe… |
+| **D23** | proposed | — | 1132 | The music picker gets a search field; scope was never exceeded |
 
 *24 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
@@ -1126,3 +1127,71 @@ None of the three changes Part 1.
 No user-visible setting. No product found anywhere exposes this choice, and a setting is an admission
 the decision was not made. No `(was: Old Name)` annotation in v0.1 — it was considered and is parked;
 it is a second name on the page and wants a real fortnight's reading before it earns the room.
+
+---
+
+## D23 — The music picker gets a search field. No spec text changes.
+
+**Proposed 2026-08-25 by the owner. Awaiting ratification.**
+
+### Where this came from
+
+`O17`, raised when the owner went looking for the Apple Music licensing note and
+**scrolled for over two minutes** to reach the end of the picker. F4c moved that
+note into Settings, which answered the licensing half. This is the other half:
+the picker itself is unusable on a real library.
+
+The agent filed `O17` saying a search field was "new functionality rather than a
+rearrangement, so it wants a delta argued rather than assumed." The owner argued
+it:
+
+> The app is built to play playlists for concentration. If it takes multiple
+> seconds to find a track, we're likely to get distracted. A search bar for music
+> is a bare minimum here, which is the point of the limited feature set for v1.
+
+### Why this delta proposes **no change to `SPEC.md`**
+
+That argument is not a request to widen the spec — it is a reading of what the
+spec already says, and on inspection the spec agrees.
+
+`SPEC.md` line 25: *"User picks an existing playlist or song from their library."*
+Line 41, F4: *"library playlist/song picker."* **The contract specifies that you
+pick and from what. It says nothing about how the picker is navigated**, because
+navigating a list is not a decision a contract needs to record.
+
+So a search field is not a feature added beside the picker; it is the picker
+meeting the requirement already written down. A picker that takes two minutes to
+find a playlist has not satisfied *"user picks an existing playlist"* in any sense
+the owner can use.
+
+And the harm is specific rather than aesthetic. This app exists to protect
+attention. **A two-minute hunt immediately before a focus block is a distraction
+manufactured by the tool built to prevent it** — the same shape as the watch-tap
+latency in `F7`, which inflated the distraction log it existed to keep.
+
+This delta is therefore recorded for the file rather than to change the contract:
+it exists because `O17` said one was owed, and the answer is that the scope was
+never exceeded. **Spec text: none. No amendment owed, and the backlog stays at
+zero.**
+
+### What is being ratified, then
+
+The classification, and one boundary that follows from it:
+
+**Search filters what is already loaded. It does not query Apple Music.** The
+picker holds the whole library in memory already and pages it into the list on
+scroll — that paging is precisely why the scroll never ended. Filtering rows that
+are already there needs no MusicKit request, no network, no model, and no cache.
+A search that hits the service would be new machinery and is **not** in this.
+
+**Nothing here searches the catalogue.** Only the user's own library, which is all
+`SPEC.md` permits: *"an existing playlist or song from their library."*
+
+### Rejected alternatives
+
+**A–Z index rail.** Cheaper, but sorts one dimension of a problem that is not
+alphabetical — people remember a word from the middle of a playlist name.
+
+**Recently played at the top.** Solves the common case and abandons the rest, and
+"recent" is state this app would have to keep. `D16` says no.
+
