@@ -193,7 +193,31 @@ enum StatsWords {
   /// of an asterisk is noise in a paper notebook, and these are the person's own
   /// words: the page reproduces them, it does not edit them.
   static func clean(_ text: String) -> String {
-    text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+    escaped(text.split(whereSeparator: \.isWhitespace).joined(separator: " "))
+  }
+
+  /// A Todoist title is somebody's prose, and the page is Markdown.
+  ///
+  /// **A task called `**Thesis**` rendered as bold "Thesis" and lost its asterisks**; one
+  /// containing a `|` broke the Days table it landed in. Neither is a crash and neither shows
+  /// up in a test that reads the fixture — the fixture's titles are all well-behaved — but the
+  /// whole bar for this feature is that the page reads without translation, and a title that
+  /// silently changes shape fails it.
+  ///
+  /// **Only the characters that actually do something here.** Markdown has a long list of
+  /// metacharacters and escaping all of them would put backslashes in front of ordinary
+  /// punctuation — an apostrophe or a full stop is far commoner in a task title than an
+  /// asterisk, and `Ch.3 draft` must not become `Ch\.3 draft`. So: emphasis, code, links,
+  /// headings at the start of a line, and the pipe that would break a table.
+  private static func escaped(_ text: String) -> String {
+    var out = ""
+    out.reserveCapacity(text.count)
+    for character in text {
+      if "*_`[]|".contains(character) { out.append("\\") }
+      out.append(character)
+    }
+    // A leading # would make a title into a heading and swallow the line it sits on.
+    return out.hasPrefix("#") ? "\\" + out : out
   }
 
   /// A name for something that has none: `No task`.

@@ -30,7 +30,7 @@ enum StatsExportFile {
   ///   reader as one plain sentence and the share control goes with it —
   ///   sharing a stale file would be worse than sharing none.
   static func write(document: String, filename: String) throws -> URL {
-    let directory = FileManager.default.temporaryDirectory
+    let directory = try launchDirectory()
     sweep(directory)
 
     let url = directory.appending(path: filename)
@@ -54,6 +54,24 @@ enum StatsExportFile {
   /// export because tidying up failed would turn a housekeeping problem into a
   /// lost feature. Nothing is read from these files, so a leftover cannot make
   /// anything wrong — only untidy.
+  /// A directory of this app's own, made once per launch.
+  ///
+  /// **The sweep below used to run over the whole temporary directory**, deleting every
+  /// `ZenTomato-*.md` it found — including one a share extension might still be reading, since
+  /// the share sheet hands over a URL and reads it on its own schedule. Exporting twice while
+  /// the first sheet was open could pull the file out from under it.
+  ///
+  /// A per-launch subdirectory bounds the blast radius to pages this launch wrote, and the
+  /// system clears the temporary directory itself, so nothing accumulates.
+  private static func launchDirectory() throws -> URL {
+    let directory = FileManager.default.temporaryDirectory.appending(path: launchID)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    return directory
+  }
+
+  /// Distinct per launch, so two runs never sweep each other's files.
+  private static let launchID = "export-\(UUID().uuidString.prefix(8))"
+
   private static func sweep(_ directory: URL) {
     guard
       let contents = try? FileManager.default.contentsOfDirectory(
