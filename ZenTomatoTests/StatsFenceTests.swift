@@ -222,21 +222,6 @@ struct StatsFenceTests {
     }
   }
 
-  /// The one write this app can make is unchanged, and this feature adds no
-  /// second one.
-  ///
-  /// The endpoint table itself is asserted by `TodoistEndpointTests`; this checks
-  /// what F6 could plausibly have done — reached for a write while wiring D21.
-  @Test("thisFeatureAddsNoWriteToTodoist")
-  func thisFeatureAddsNoWriteToTodoist() throws {
-    for file in try Self.featureFiles {
-      let code = try Self.code(of: file)
-      for word in ["\\bcreate\\b", "\\bmove\\b", "\\breopen\\b", "POST /tasks"] {
-        #expect(try Self.matches(word, in: code, caseInsensitive: true) == 0, "\(file.lastPathComponent): \(word)")
-      }
-    }
-  }
-
   /// Nothing from Phase 2 crept in, and no Swift hygiene rule was traded away
   /// for a shortcut. D2 moved the watch terms out; `WatchLinkTests` has the rest.
   @Test("nothingOutOfScopeAndNoForcedShortcuts")

@@ -119,4 +119,57 @@ struct TodoistEndpointTests {
       return "\(words[0]) \(words[1])"
     }
   }
+  /// The one write this app can make is unchanged, and this feature adds no
+  /// second one.
+  ///
+  /// **Moved here from `StatsFenceTests` in F6b**, where it had never belonged: it is a
+  /// check about the Todoist rule, not about the stats feature, and it sat in a file that had
+  /// reached the 400-line limit three times. The endpoint table is asserted above; this checks
+  /// the call sites F6 and F7 could plausibly have added a write from.
+  ///
+  /// **`update` and `comment` were missing from this list until F6b (A11), and they are two
+  /// of the four words `CLAUDE.md` names**: *"Never call create, update, or comment
+  /// endpoints."* Nothing was ever exposed — the real gate is the committed allowlist, and it
+  /// is untouched — but a fence whose comment claims more than its code checks is the kind of
+  /// thing that is believed later, when it matters and nobody re-reads it.
+  @Test("thisFeatureAddsNoWriteToTodoist")
+  func thisFeatureAddsNoWriteToTodoist() throws {
+    for file in try Self.appSources() {
+      let code = try String(contentsOf: file, encoding: .utf8)
+      for word in [
+        "\\bcreate\\b", "\\bupdate\\b", "\\bcomment\\b",
+        "\\bmove\\b", "\\breopen\\b", "POST /tasks"
+      ] {
+        #expect(
+          try Self.matches(word, in: code) == 0,
+          "\(file.lastPathComponent) reaches for \(word).")
+      }
+    }
+  }
+
+  // MARK: Private
+
+  /// Every line of shipped Swift, rather than one feature's file list.
+  ///
+  /// The version of this check that lived in `StatsFenceTests` read only the files F6 touched,
+  /// which was right for a feature fence and wrong for a rule that holds everywhere.
+  private static func appSources() throws -> [URL] {
+    let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+    var files: [URL] = []
+    for directory in ["ZenTomato", "ZenTomatoWatch"] {
+      guard let walk = FileManager.default.enumerator(
+        at: root.appending(path: directory), includingPropertiesForKeys: nil) else { continue }
+      for case let url as URL in walk where url.pathExtension == "swift" { files.append(url) }
+    }
+    return files
+  }
+
+  private static func matches(_ pattern: String, in text: String) throws -> Int {
+    let stripped = text.components(separatedBy: "\n")
+      .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+      .joined(separator: "\n")
+    let expression = try NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
+    return expression.numberOfMatches(
+      in: stripped, range: NSRange(stripped.startIndex..<stripped.endIndex, in: stripped))
+  }
 }
