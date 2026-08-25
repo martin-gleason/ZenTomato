@@ -2,6 +2,13 @@
 #
 # check-musickit-entitlement.sh — is the app signed with an App ID that can carry MusicKit?
 #
+# WHAT THIS DOES NOT CHECK, AND WHY THE FIRST VERSION WAS WRONG
+# It does not look for a MusicKit entitlement, because none exists for an iOS app. MusicKit
+# is an App SERVICE on the App ID rather than a Capability, and App Services grant nothing
+# that reaches a provisioning profile. The first version of this script demanded
+# `com.apple.developer.musickit` in the built app and would have reported FAIL for ever on a
+# perfectly configured build.
+#
 # WHY THIS EXISTS
 # The app has been signed with the team wildcard KH6NBQRZBY.* since F1. A wildcard App ID
 # cannot carry a capability, so there is no MusicKit entitlement, so MusicSubscription.current
@@ -76,35 +83,45 @@ case "${profile_id}" in
 esac
 
 say "MusicKit"
-if printf '%s' "${entitlements}" | grep -q "com.apple.developer.musickit"; then
-  echo "  OK — the entitlement is present."
-else
-  echo "  FAIL — no com.apple.developer.musickit entitlement."
-  echo "         MusicSubscription.current cannot succeed, so the music row will always"
-  echo "         read 'couldn't be checked'. Playback is unaffected."
-  failed=1
-fi
+# THERE IS NO MusicKit ENTITLEMENT FOR AN iOS APP, and this script used to assert one.
+#
+# MusicKit is an App SERVICE on the App ID, not a Capability. App Services grant no
+# entitlement and never appear in a provisioning profile — so the original version of this
+# check demanded `com.apple.developer.musickit` in the built app, which no correctly
+# configured build can ever contain. It reported FAIL on a healthy app and sent its reader
+# to the developer portal to fix something that was already right.
+#
+# Xcode said so plainly and it was read past: "This likely is not a valid entitlement and
+# should be removed from your entitlements file."
+#
+# What can be checked is what actually matters: the profile is for an EXPLICIT App ID, which
+# is the thing an App Service attaches to. A wildcard App ID cannot carry one.
+echo "  Nothing to check in the app: MusicKit is an App Service on the App ID and grants"
+echo "  no entitlement, so it never appears here. Whether it is enabled is visible only in"
+echo "  the developer portal — Identifiers > the App ID > App Services."
+echo
+echo "  What matters on this side is the explicit App ID above, which is what an App Service"
+echo "  attaches to. A wildcard cannot carry one."
 
 if [ "${failed}" -ne 0 ]; then
   cat <<'NEXT'
 
 WHAT TO DO — it needs the developer account, so it is yours; see docs/chores/C11.md.
 
-  1. developer.apple.com > Identifiers > + > App IDs > App
-       Bundle ID  : EXPLICIT, com.martingleason.ZenTomato
-       Capability : MusicKit
-  2. Xcode > Settings > Accounts > Download Manual Profiles.
-  3. Both targets > Signing & Capabilities: confirm the Team.
+  1. developer.apple.com > Identifiers > the App ID for com.martingleason.ZenTomato
+     It must be EXPLICIT rather than a wildcard, because an App Service attaches to one.
+  2. Its App SERVICES tab — not Capabilities — must have MusicKit ticked.
+  3. Xcode > Settings > Accounts > Download Manual Profiles.
   4. make device, then run this again.
 
-  IF NOTHING CHANGES, Xcode is preferring a cached wildcard profile. Delete the stale one
-  from ~/Library/Developer/Xcode/UserData/Provisioning Profiles/ and download again — that
-  is what unstuck the watch profile in C8, and it presents identically: a successful build
-  that changes nothing.
+  IF THE PROFILE IS STILL A WILDCARD, Xcode is preferring a cached one. Delete it from
+  ~/Library/Developer/Xcode/UserData/Provisioning Profiles/ and build again — that is what
+  unstuck the watch profile in C8, and it presents identically: a successful build that
+  changes nothing.
 
 NEXT
   exit 1
 fi
 
-say "Signed under an explicit App ID, with MusicKit. Nothing further needed here."
+say "Signed under an explicit App ID, which is what MusicKit attaches to."
 exit 0
