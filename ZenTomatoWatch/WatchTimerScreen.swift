@@ -39,7 +39,7 @@ struct WatchTimerScreen: View {
       .minimumScaleFactor(0.6)
       .lineLimit(1)
 
-    if let title = block.taskTitle {
+    if let title = block.attachmentTitle {
       Text(title)
         .font(.caption2)
         .foregroundStyle(.secondary)
@@ -50,9 +50,27 @@ struct WatchTimerScreen: View {
     if link.state.acceptsTaps {
       captureButtons
       tally
+    } else {
+      resting
     }
 
     footnote
+  }
+
+  /// Where the buttons went, during a break.
+  ///
+  /// **A control that vanishes without a word reads as a fault.** The phone answers this by
+  /// reserving the space (D19); a wrist has no space to reserve, so it answers in a sentence
+  /// instead. `SPEC.md` makes the two buttons *"tappable during a pomodoro"* and a break is
+  /// not one — that is the rule, and this is the rule said out loud to somebody looking at
+  /// their wrist wondering where it went.
+  @ViewBuilder
+  private var resting: some View {
+    Text("Buttons return next block")
+      .font(.system(size: 11))
+      .foregroundStyle(.secondary)
+      .multilineTextAlignment(.center)
+      .padding(.top, 2)
   }
 
   /// Internal and external, side by side, sized to be hit without looking.

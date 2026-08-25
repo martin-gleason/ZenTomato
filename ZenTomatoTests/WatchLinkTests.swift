@@ -100,7 +100,7 @@ struct WatchLinkTests {
   func theStateCarriesAnInstantNotADuration() throws {
     let ends = Date(timeIntervalSince1970: 1_756_001_500)
     let state = WatchBlockState(block: .init(
-      kind: .work, endsAt: ends, taskTitle: "Ch.3 draft", sessionID: UUID()))
+      kind: .work, endsAt: ends, attachmentTitle: "Ch.3 draft", sessionID: UUID()))
 
     let round = try JSONDecoder().decode(
       WatchBlockState.self, from: JSONEncoder().encode(state))
@@ -118,7 +118,7 @@ struct WatchLinkTests {
   func onlyAWorkBlockAcceptsTaps() {
     let ends = Date(timeIntervalSince1970: 1_756_001_500)
     func state(_ kind: BlockKind) -> WatchBlockState {
-      WatchBlockState(block: .init(kind: kind, endsAt: ends, taskTitle: nil, sessionID: UUID()))
+      WatchBlockState(block: .init(kind: kind, endsAt: ends, attachmentTitle: nil, sessionID: UUID()))
     }
 
     #expect(state(.work).acceptsTaps)
@@ -137,5 +137,47 @@ struct WatchLinkTests {
     guard let walk = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)
     else { return [] }
     return walk.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
+  }
+
+  /// `aProjectAttachedBlockStillSaysWhatItIsFor` — the case that showed nothing.
+  ///
+  /// `SPEC.md`: *"A pomodoro is attached to exactly one Todoist task (or, if no task is
+  /// chosen, to a project)."* The wire field was called `taskTitle` and carried only the
+  /// first, so a block attached to a whole project reached the wrist with a countdown and
+  /// nothing to say what it was counting — half the cases the spec allows, silently blank.
+  ///
+  /// The phone resolves it in the order the spec states them, so the watch never has to
+  /// choose and never needs to know a project from a task.
+  @Test("aProjectAttachedBlockStillSaysWhatItIsFor")
+  func aProjectAttachedBlockStillSaysWhatItIsFor() throws {
+    let task = SessionAttachment(
+      taskID: "t1", taskTitle: "Ch.3 draft", projectID: "p1", projectTitle: "Thesis")
+    let project = SessionAttachment(
+      taskID: nil, taskTitle: nil, projectID: "p1", projectTitle: "Thesis")
+    let nothing = SessionAttachment(
+      taskID: nil, taskTitle: nil, projectID: nil, projectTitle: nil)
+
+    // The order SPEC.md states: the task if there is one, otherwise the project.
+    #expect((task.taskTitle ?? task.projectTitle) == "Ch.3 draft")
+    #expect((project.taskTitle ?? project.projectTitle) == "Thesis")
+    #expect((nothing.taskTitle ?? nothing.projectTitle) == nil)
+  }
+
+  /// `aBreakSaysWhereTheButtonsWent` — a control that vanishes without a word reads as a fault.
+  ///
+  /// The phone answers this by reserving the space (D19). A wrist has none to reserve, so it
+  /// answers in a sentence. This pins the rule the sentence describes: a break accepts no
+  /// taps, so the buttons are gone, and something has to say so.
+  @Test("aBreakSaysWhereTheButtonsWent")
+  func aBreakSaysWhereTheButtonsWent() {
+    let ends = Date(timeIntervalSince1970: 1_787_524_200)
+    func state(_ kind: BlockKind) -> WatchBlockState {
+      WatchBlockState(block: .init(
+        kind: kind, endsAt: ends, attachmentTitle: "Ch.3 draft", sessionID: UUID()))
+    }
+
+    #expect(state(.work).acceptsTaps)
+    #expect(state(.shortBreak).acceptsTaps == false)
+    #expect(state(.longBreak).acceptsTaps == false)
   }
 }

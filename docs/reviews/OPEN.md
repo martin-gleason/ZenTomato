@@ -48,6 +48,23 @@ The following should be applied before this is reviewed:
 
 O4 will be scheduled sometime today.
 
+### Found in F6b's closing read, and fixed — 2026-08-24
+
+**A project-attached block showed nothing on the wrist.** `SPEC.md` line 16: *"A pomodoro is
+attached to exactly one Todoist task (or, if no task is chosen, to a project)."* The wire
+field the phone sends the watch was called `taskTitle` and carried only the first of those, so
+a block attached to a whole project arrived with a countdown and **nothing to say what it was
+counting** — half the cases the spec allows, silently blank.
+
+Nobody flagged it: the reviewers read the counting, the scope and the page, and the watch
+came later. It only appears if you plan a project rather than a task and then look at your
+wrist. Fixed by sending whatever the block is attached to, in the order the spec states them.
+
+**And a break now says where the buttons went.** They vanish during a break, correctly —
+`SPEC.md` makes them *"tappable during a pomodoro"* — but a control that disappears without a
+word reads as a fault. The phone answers this by reserving the space (D19); a wrist has none
+to reserve, so it answers in a sentence.
+
 ### Watch item — stopping a block offered nothing to complete
 
 **Reported 2026-08-24, to be retried.** The owner: *"i stopped the pomodoro and couldn't

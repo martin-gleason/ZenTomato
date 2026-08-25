@@ -63,6 +63,12 @@ final class WatchStatePublisher {
     let endsAt: Date?
   }
 
+  /// What this block is for, in the order `SPEC.md` allows it to be attached.
+  private func attachmentTitle() -> String? {
+    guard let attachment = plan.runningBlockAttachment() else { return nil }
+    return attachment.taskTitle ?? attachment.projectTitle
+  }
+
   private func current() -> WatchBlockState {
     guard
       engine.isRunning,
@@ -78,7 +84,11 @@ final class WatchStatePublisher {
       endsAt: endsAt,
       // Resolved to a title here, on the phone. The watch has no cache to look
       // an identifier up against and no business holding Todoist's ids.
-      taskTitle: plan.runningBlockAttachment()?.taskTitle,
+      //
+      // The task if there is one, otherwise the project. A block attached to a
+      // whole project is a case SPEC.md allows and this used to send nothing for
+      // it, leaving the wrist with a countdown and no idea what it was counting.
+      attachmentTitle: attachmentTitle(),
       sessionID: sessionID))
   }
 
