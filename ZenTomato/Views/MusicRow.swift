@@ -75,7 +75,12 @@ struct MusicRow: View {
   let model: MusicRowModel
 
   /// The switch was flipped. Carries the position it was flipped to.
-  var onToggleMusic: (Bool) -> Void = { _ in }
+  /// **`@MainActor` is load-bearing, not decoration.** SwiftUI's `Binding` setter
+  /// is `@isolated(any) @Sendable`, so handing it a plain closure warns that it
+  /// "may introduce data races" — and every one of these closures does main-actor
+  /// work on a main-actor view. Saying so is the honest fix; the alternative was
+  /// a warning nobody saw, because until `C12` nothing ever compiled Release.
+  var onToggleMusic: @Sendable (Bool) -> Void = { _ in }
 
   /// The line was tapped. Only reachable while the timer is idle.
   var onOpenMusic: () -> Void = { }

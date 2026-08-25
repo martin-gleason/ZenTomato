@@ -51,7 +51,7 @@ struct TimerScreen: View {
 
   /// The music switch was flipped, to the position it carries. Only reachable
   /// while the timer is idle — see `MusicRowModel.isTogglable`.
-  var onToggleMusic: (Bool) -> Void = { _ in }
+  var onToggleMusic: @Sendable (Bool) -> Void = { _ in }
 
   /// The music line was tapped. Only reachable while the timer is idle.
   var onOpenMusic: () -> Void = { }

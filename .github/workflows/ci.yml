@@ -148,3 +148,6 @@ jobs:
 
       - name: Test
         run: make test
+
+      - name: Release configuration compiles with no warnings
+        run: make check-release
