@@ -106,6 +106,36 @@ enum MusicCopy {
   static let sheetTitle = "Music"
   static let musicHeader = "Music"
   static let nowChosenHeader = "Now chosen"
+  /// The verb on the search field **reads**. It does not offer to make anything.
+  ///
+  /// The Todoist picker's prompt is "Search your Todoist tasks" and this is the
+  /// same sentence about the other library. `MusicNoCaptureTests` checks the
+  /// vocabulary, because a prompt is a label and a label is where an offer to
+  /// create something would have to appear.
+  static let searchPrompt = "Search your music"
+
+  /// A search that found nothing.
+  ///
+  /// **This is the single most likely place in this feature for the no-capture
+  /// rule to break**, for the reason `PickerScreenModel` gives about the Todoist
+  /// one: an empty result is where every other app on the phone offers to create
+  /// the thing you just typed, and the framework's own empty-state view has a
+  /// slot for exactly that action.
+  ///
+  /// It offers nothing. Not a button, not a disabled button, not a footer, not a
+  /// row. `F4-contract.md` §7 made this the condition on the search field
+  /// existing at all.
+  static let noMatchHeading = "Nothing in your library matches."
+
+  /// The line where every other app puts a create button.
+  ///
+  /// It points back at the place music actually comes from, which is the same
+  /// move the Todoist picker makes: this app reads a library somebody else owns.
+  static func noMatchDetail(for query: String) -> String {
+    "Nothing in your playlists or songs matches “\(query.trimmedQuery)”. "
+      + "Playlists are made in Apple Music."
+  }
+
   static let playlistsHeader = "Playlists"
   static let songsHeader = "Songs"
   static let runningBlockHeader = "A block is running"

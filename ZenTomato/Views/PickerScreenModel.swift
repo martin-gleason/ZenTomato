@@ -200,7 +200,7 @@ struct PickerScreenModel: Sendable {
   /// The query is echoed rather than paraphrased, and the screen truncates it —
   /// arbitrary typed text may not be allowed to set the layout.
   static func noMatchDetail(for query: String) -> String {
-    "Nothing in your projects or tasks matches “\(query.trimmed)”."
+    "Nothing in your projects or tasks matches “\(query.trimmedQuery)”."
   }
 
   // MARK: Lifecycle
@@ -297,7 +297,7 @@ struct PickerScreenModel: Sendable {
   /// An empty or whitespace-only query matches nothing at all rather than
   /// everything — the unfiltered list is what the screen already shows.
   func rows(matching query: String) -> [Row] {
-    let needle = query.trimmed
+    let needle = query.trimmedQuery
     guard needle.isEmpty == false else { return [] }
 
     let matchingTasks = tasks.filter { $0.title.contains(needle, caseAndAccentInsensitively: true) }
@@ -308,21 +308,8 @@ struct PickerScreenModel: Sendable {
 }
 
 // MARK: - String helpers
-
-private extension String {
-  /// Trimmed of the whitespace and newlines a paste tends to arrive with.
-  var trimmed: String {
-    trimmingCharacters(in: .whitespacesAndNewlines)
-  }
-
-  /// A search that ignores capitals and accents.
-  ///
-  /// The parameter exists so the call site says what it is asking for. Written
-  /// out rather than reached for inline, because the option set is the sort of
-  /// thing that gets quietly dropped in a tidy-up and nobody notices until
-  /// somebody's task with an accent in it stops being findable.
-  func contains(_ other: String, caseAndAccentInsensitively: Bool) -> Bool {
-    guard caseAndAccentInsensitively else { return contains(other) }
-    return range(of: other, options: [.caseInsensitive, .diacriticInsensitive]) != nil
-  }
-}
+//
+// `trimmed` and `contains(_:caseAndAccentInsensitively:)` used to live here as a
+// `private extension`. F4e gave the music picker a search field, and rather than
+// write the same rule a second time it moved to `SearchMatching.swift` where both
+// pickers call it. Two copies of a matching rule drift; one cannot.
