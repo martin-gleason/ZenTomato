@@ -367,6 +367,15 @@ struct StatsQueryStoreTests {
   /// gate is a gate people learn to re-run. So the bound here is the one that
   /// catches a real regression — an accidental read per row would be seconds,
   /// not milliseconds — and the number itself is printed for the pull request.
+  ///
+  /// **Tightened from one second to 250 ms in F6b (A9).** The reasoning above
+  /// stands entirely; the number did not follow it. One second is sixty times
+  /// the budget, which is far enough out that a genuine sixtyfold regression
+  /// would still have passed green — and a bound that cannot fail is the same
+  /// defect as a test that cannot fail, which this repository has now found
+  /// four of. 250 ms is still an order of magnitude above the measured 3 ms,
+  /// so a loaded runner is safe, and it is close enough that a real fault has
+  /// nowhere to hide.
   @Test("aFortnightIsCountedQuicklyOverAYearOfRows")
   func aFortnightIsCountedQuicklyOverAYearOfRows() throws {
     let written = StatsStoreFixture.writeYear(
@@ -380,8 +389,8 @@ struct StatsQueryStoreTests {
     print("period(fortnight) over \(written) blocks: \(fortnight)")
     print("period(.day(today)) over \(written) blocks: \(today)")
 
-    #expect(fortnight < .seconds(1))
-    #expect(today < .seconds(1))
+    #expect(fortnight < .milliseconds(250))
+    #expect(today < .milliseconds(250))
     // And the answer is still only the fortnight, not the year.
     #expect(query.period(StatsStoreFixture.fortnightRange).days.count == 10)
   }
