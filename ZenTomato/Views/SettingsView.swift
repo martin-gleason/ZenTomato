@@ -42,6 +42,16 @@ struct SettingsView: View {
   /// The session plan. Emptied by signing out.
   let plan: SessionPlanStore
 
+  /// Asks the world again whether music can be played.
+  ///
+  /// **Settings is now advertised as the fast way to answer `O14`, so it must not
+  /// answer it from memory.** Availability is read at launch and would otherwise
+  /// stay whatever it was then — somebody who grants permission in iOS Settings
+  /// and comes straight back here would read the old answer and conclude the app
+  /// is broken. The music picker already refreshes on appear for exactly this
+  /// reason; this is the same call from the other screen.
+  let refreshMusicAvailability: () -> Void
+
   /// Whether Apple Music can actually be used, read live from the coordinator.
   ///
   /// **Shown here rather than only in the music picker, and that is the whole of
@@ -137,6 +147,7 @@ struct SettingsView: View {
         settings: row,
         isBlockRunning: engine?.isRunning == true,
         musicAvailability: musicAvailability,
+        refreshMusicAvailability: refreshMusicAvailability,
         tokens: tokens,
         cache: cache,
         plan: plan)
@@ -171,6 +182,9 @@ private struct SettingsForm: View {
   /// collaborators below are optional: this screen must be drawable in a preview
   /// with nothing behind it.
   var musicAvailability: MusicAvailability = .notAsked
+
+  /// Defaulted to doing nothing, for the same preview reason.
+  var refreshMusicAvailability: () -> Void = {}
 
   /// The Todoist collaborators. **Optional so that this screen can be looked at
   /// in a preview with nothing behind it**, which is the arrangement the timer
@@ -337,11 +351,6 @@ private struct SettingsForm: View {
     .font(Typography.body)
   }
 
-  /// One row in, and — once connected — one way out.
-  ///
-  /// **The token field is never drawn on this screen.** This file's own doc
-  /// comment says there is no text field here and there never may be; the row
-  /// pushes to the screen that owns the field instead.
   /// Where Apple Music stands, in the place people look for it.
   ///
   /// **It mirrors the Todoist section below deliberately.** This app talks to two
@@ -361,7 +370,7 @@ private struct SettingsForm: View {
   @ViewBuilder
   private var music: some View {
     Section {
-      LabeledContent("Apple Music") {
+      LabeledContent("Status") {
         Text(MusicCopy.settingsStatus(for: musicAvailability))
           .font(Typography.body)
           .foregroundStyle(Color(.textMuted))
@@ -369,13 +378,20 @@ private struct SettingsForm: View {
       .font(Typography.body)
       .accessibilityElement(children: .combine)
     } header: {
-      header("Music")
+      header("Apple Music")
     } footer: {
       footer(MusicCopy.settingsFooter(for: musicAvailability))
     }
     .listRowBackground(Color(.surfaceRaised))
+    // Tied to the section's own lifetime, so closing Settings stops the read.
+    .task { refreshMusicAvailability() }
   }
 
+  /// One row in, and — once connected — one way out.
+  ///
+  /// **The token field is never drawn on this screen.** This file's own doc
+  /// comment says there is no text field here and there never may be; the row
+  /// pushes to the screen that owns the field instead.
   @ViewBuilder
   private var todoist: some View {
     if let tokens {
