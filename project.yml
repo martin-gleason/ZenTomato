@@ -104,7 +104,14 @@ targets:
       # cannot mistake it for a bundled resource.
       path: Support/ZenTomato-Info.plist
       properties:
-        CFBundleDisplayName: ZenTomato
+        # ZenPom, not ZenTomato, and the difference is deliberate. The App
+        # Store name is ZenPom because "ZenTomato" is already registered to a
+        # different account (C9, Step 0), and Apple asks that the name on the
+        # device match the store listing. The BUNDLE ID, this repository and the
+        # whole git history stay ZenTomato: renaming a bundle id would orphan
+        # every provisioning profile and every existing install, and buys
+        # nothing. The two names sit side by side on purpose.
+        CFBundleDisplayName: ZenPom
         # These two must be written here, referring to the build settings
         # below, or they do not reach the app at all. XcodeGen fills an
         # unlisted key with its own default — which for the version is the
@@ -230,7 +237,8 @@ targets:
       # second file — the same arrangement the app target uses.
       path: Support/ZenTomatoActivity-Info.plist
       properties:
-        CFBundleDisplayName: ZenTomato
+        # ZenPom, matching the app. See the app target above for why.
+        CFBundleDisplayName: ZenPom
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # This is the whole of what makes the bundle a widget extension. The
@@ -325,7 +333,8 @@ targets:
     info:
       path: Support/ZenTomatoWatch-Info.plist
       properties:
-        CFBundleDisplayName: ZenTomato
+        # ZenPom, matching the app. See the app target above for why.
+        CFBundleDisplayName: ZenPom
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # A single-target watch app — the modern shape, with no separate
