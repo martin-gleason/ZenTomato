@@ -105,6 +105,30 @@ final class TodoistCacheStore {
   /// It removes this app's copy of somebody else's data and nothing else. The
   /// record of what this app itself completed is deliberately untouched: that is
   /// its own history, not a copy of Todoist's.
+  /// Drops one task from the mirror, because Todoist has just said it is not there.
+  ///
+  /// **Not a Todoist write and not a guess.** `TaskCompletion` reports `.alreadyGone` when the
+  /// close request comes back saying the task was already finished or deleted somewhere else —
+  /// so the mirror is out of date, and this is the mirror catching up. Nothing is sent
+  /// anywhere; the app's one permitted write is unchanged.
+  ///
+  /// **Why not add it to D21b's set instead**, which would also hide it from the picker: D21b
+  /// means *"you completed this during this sprint"*, and this task was completed somewhere
+  /// else, possibly weeks ago. Widening that rule to cover it would change its meaning from
+  /// *completed* to *believed gone*, and the two want different lifetimes — D21b's set clears
+  /// at the end of a sprint, and a task deleted in Todoist should not come back then.
+  ///
+  /// Silent when the row is not there. A task the mirror never held is already forgotten.
+  func forget(taskID: String) {
+    let identity = taskID
+    var descriptor = FetchDescriptor<CachedTask>(
+      predicate: #Predicate<CachedTask> { $0.id == identity })
+    descriptor.fetchLimit = 1
+    guard let row = (try? context.fetch(descriptor))?.first else { return }
+    context.delete(row)
+    try? context.save()
+  }
+
   func clear() throws {
     try context.delete(model: CachedProject.self)
     try context.delete(model: CachedSection.self)

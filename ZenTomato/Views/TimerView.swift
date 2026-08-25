@@ -743,6 +743,15 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       }
     case .alreadyGone:
       todoistIsReachable = true
+      // THE MIRROR JUST LEARNED SOMETHING AND SHOULD KEEP IT. Todoist has said
+      // this task was already finished or deleted elsewhere, so the cached row is
+      // stale — and without this the picker goes on offering it until the next
+      // refresh, which may be a whole planning session away.
+      //
+      // Deliberately not D21b's set: that means "you completed this during this
+      // sprint" and clears when the sprint ends, which is the wrong lifetime for
+      // a task that no longer exists at all.
+      cache.forget(taskID: subject.taskID)
     case .offline:
       todoistIsReachable = false
     case .tokenRejected:
