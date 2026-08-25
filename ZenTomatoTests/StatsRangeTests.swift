@@ -126,23 +126,6 @@ struct StatsRangeTests {
     #expect(bounds.upper == StatsStoreFixture.at(2026, 8, 24, 0, 0))
   }
 
-  // MARK: Everything
-
-  /// *Everything* reaches back far enough that no row this app could have
-  /// written falls outside it.
-  @Test("everythingReachesBackBeforeAnythingCouldHaveBeenRecorded")
-  func everythingReachesBackBeforeAnythingCouldHaveBeenRecorded() throws {
-    let today = try #require(Self.day(2026, 8, 23))
-    let range = StatsRange.everything(endingOn: today, in: Self.calendar)
-
-    #expect(range.last == today)
-    #expect(range.first.year == 1970)
-    #expect(range.contains(try #require(Self.day(2020, 1, 1))))
-    #expect(range.contains(try #require(Self.day(2026, 8, 23))))
-    // Tomorrow is not in it. A range is inclusive at both ends and no further.
-    #expect(range.contains(try #require(Self.day(2026, 8, 24))) == false)
-  }
-
   // MARK: The day itself
 
   /// A day knows which day of the week it is, and does not lose it on the way

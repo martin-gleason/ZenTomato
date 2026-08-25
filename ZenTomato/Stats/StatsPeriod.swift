@@ -27,7 +27,11 @@ struct StatsPeriod: Sendable, Equatable {
   /// The span of days this covers — as asked for, not as narrowed to the data.
   ///
   /// It stays as asked so that an empty fortnight can still say *which*
-  /// fortnight was empty. `recordedSpan` is the other question.
+  /// fortnight was empty. `recordedSpan` is the other question — and it is used
+  /// only by tests now that `StatsRange.everything` has gone. It is kept because
+  /// it answers a real question cheaply from rows already in hand, and because an
+  /// all-time export is a plausible next ask; if that ask never comes, this
+  /// should go the same way.
   let range: StatsRange
 
   // MARK: What was found

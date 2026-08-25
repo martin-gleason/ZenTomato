@@ -31,9 +31,16 @@ struct StatsRange: Sendable, Hashable {
   /// The two are put in order rather than trusted. A range whose end came
   /// before its start would silently count nothing, and a document that is
   /// empty for a reason nobody can see is the worst outcome available here.
-  /// There is no way for the screen to produce one — it offers a closed list of
-  /// five spans and no free-form date pickers — so this costs one comparison and
-  /// removes a whole class of failure.
+  /// **The screen can produce one, which is why this is not merely defensive.**
+  /// `StatsRangeControl` ships two free-form date pickers — its own header says
+  /// *"Two pickers and a reset. No presets."* — so a reader can move the end
+  /// before the start with two taps. Each picker bounds itself against the other,
+  /// so it should not happen; this is what makes "should not" into "cannot".
+  ///
+  /// *(This comment previously claimed the opposite — a closed list of five spans
+  /// and no free-form pickers — describing a control that was never built. In a
+  /// codebase reviewed by reading, a comment asserting the inverse of the code is
+  /// a defect, and this one had already misled once.)*
   init(first: StatsDay, last: StatsDay) {
     self.first = min(first, last)
     self.last = max(first, last)
@@ -56,22 +63,6 @@ struct StatsRange: Sendable, Hashable {
       return .day(last)
     }
     return StatsRange(first: first, last: last)
-  }
-
-  /// Everything ever recorded, up to and including the given day.
-  ///
-  /// There is no way to ask the database "what is the earliest row" without
-  /// counting something, and this feature has exactly one thing that counts. So
-  /// *everything* is expressed as a range that starts before the app could
-  /// possibly have any data, and the period that comes back reports the span it
-  /// actually found through `StatsPeriod.recordedSpan` — which is derived from
-  /// the day rows rather than from a second query.
-  ///
-  /// The floor is the start of 1970, the zero point of the clock this phone
-  /// keeps. A row older than that would need a clock set wrong by half a
-  /// century.
-  static func everything(endingOn last: StatsDay, in calendar: Calendar) -> StatsRange {
-    StatsRange(first: StatsDay.containing(Date(timeIntervalSince1970: 0), in: calendar), last: last)
   }
 
   // MARK: Reading one
