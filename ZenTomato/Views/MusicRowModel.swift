@@ -214,14 +214,20 @@ enum MusicCopy {
 
   /// The one word or phrase Settings shows beside "Apple Music".
   ///
-  /// **A trailing value, exactly as the Todoist row has one.** It answers the
-  /// question somebody opens Settings with — *can this app play my music?* —
-  /// before they read anything else, and it never editorialises: "Not available"
-  /// is a fact, "Unavailable!" would be a verdict.
+  /// **The vocabulary is Todoist's, borrowed rather than invented.** That row
+  /// says `Connected` / `Not connected` / `Couldn't sign out`, and an earlier
+  /// version of this one said `Ready` / `Not set up` — two screens describing the
+  /// same kind of thing, a service this app talks to, in two different dialects.
+  /// The owner caught it on the device. Consistency was the entire argument for
+  /// putting this section here, so failing to carry it into the words undercut
+  /// the reason for the section.
+  ///
+  /// It never editorialises: "No subscription" is a fact, "Unavailable!" would be
+  /// a verdict.
   static func settingsStatus(for availability: MusicAvailability) -> String {
     switch availability {
-    case .ready: "Ready"
-    case .notAsked: "Not set up"
+    case .ready: "Connected"
+    case .notAsked: "Not connected"
     case .denied: "Permission off"
     case .restricted: "Restricted"
     case .noSubscription: "No subscription"
@@ -258,13 +264,24 @@ enum MusicCopy {
     Apple Music library, and nothing is read until you do.
     """
 
-  /// What Settings says when nothing is wrong.
+  /// What Settings says when nothing is wrong — **including the way out.**
   ///
-  /// The picker's equivalent is a hint about the toggle, which would be a
-  /// non-sequitur here — the toggle is not on this screen.
+  /// **The app knew this path and only volunteered it once permission was already
+  /// gone.** `deniedFooter` names Privacy & Security › Media & Apple Music, so a
+  /// person who had refused was told where to change their mind, and a person who
+  /// had agreed was told nothing at all. The owner went looking for how to undo it
+  /// and found no answer.
+  ///
+  /// Todoist's section has a way out on it — a sign-out button — and MusicKit
+  /// permission cannot be revoked from inside an app, so the honest equivalent is
+  /// naming the one place it can be. A sentence is the whole fix; a button that
+  /// deep-links elsewhere would be new machinery for something iOS already owns.
   static let readyFooter = """
     ZenTomato plays a playlist or song from your library during focus blocks and pauses it \
     during breaks. It only reads your library and never changes anything in it.
+
+    To take that permission back, use the Settings app, under Privacy & Security › \
+    Media & Apple Music.
     """
 
   /// The permission or the subscription could not be established at all.

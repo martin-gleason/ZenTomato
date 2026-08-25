@@ -87,6 +87,62 @@ struct MusicStatusInSettingsTests {
     }
   }
 
+  /// `theVocabularyIsTodoistS` — borrowed from the row above, not invented.
+  ///
+  /// **This is the finding, not the fix.** The section was argued for on
+  /// consistency — Settings already holds Todoist's state, so music belongs
+  /// beside it — and then described the same kind of thing in a different
+  /// dialect: `Ready` / `Not set up` against Todoist's `Connected` /
+  /// `Not connected`. The owner caught it on the device, at a glance, which is
+  /// how long it takes.
+  ///
+  /// Reading the words out of `SettingsView` rather than hard-coding them here
+  /// means the two rows cannot drift apart later either: rename Todoist's and
+  /// this fails until music's is renamed too.
+  @Test("theVocabularyIsTodoistS")
+  func theVocabularyIsTodoistS() throws {
+    let settings = try Self.source("ZenTomato/Views/SettingsView.swift")
+    guard let line = settings
+      .components(separatedBy: "\n")
+      .first(where: { $0.contains("hasToken ?") }) else {
+      Issue.record("Todoist's trailing value is no longer where this test reads it.")
+      return
+    }
+    let words = line.components(separatedBy: "\"").enumerated()
+      .filter { $0.offset % 2 == 1 }
+      .map(\.element)
+    let connected = try #require(words.first, "Could not read Todoist's connected word.")
+    let notConnected = try #require(words.dropFirst().first, "Could not read the other word.")
+
+    #expect(
+      MusicCopy.settingsStatus(for: .ready) == connected,
+      "Todoist says \(connected); music says \(MusicCopy.settingsStatus(for: .ready)).")
+    #expect(
+      MusicCopy.settingsStatus(for: .notAsked) == notConnected,
+      "Todoist says \(notConnected); music says \(MusicCopy.settingsStatus(for: .notAsked)).")
+  }
+
+  /// `aConnectedServiceSaysHowToDisconnect` — the question the owner actually had.
+  ///
+  /// The app named Privacy & Security › Media & Apple Music **only in the footer
+  /// shown once permission was already refused**. So somebody who had said no was
+  /// told where to change their mind, and somebody who had said yes was told
+  /// nothing — which is the wrong way round, since the second is the one looking
+  /// for a way out. Todoist's section has a sign-out button; MusicKit permission
+  /// cannot be revoked from inside an app, so naming the place is the equivalent.
+  @Test("aConnectedServiceSaysHowToDisconnect")
+  func aConnectedServiceSaysHowToDisconnect() {
+    let connected = MusicCopy.settingsFooter(for: .ready)
+
+    #expect(
+      connected.contains("Media & Apple Music"),
+      "A working music connection offers no way to undo it.")
+    // The same path the denied footer names, so the app cannot end up giving two
+    // different directions to the same switch.
+    #expect(connected.contains("Privacy & Security"))
+    #expect(MusicCopy.deniedFooter.contains("Privacy & Security › Media & Apple Music"))
+  }
+
   // MARK: Agreement between the two screens
 
   /// `thePickerAndSettingsCannotDisagree` — one function, two callers.
