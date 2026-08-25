@@ -80,9 +80,13 @@ reveal counters (`shownPlaylists`, `shownSongs`) are *counts*, so a filter that
 narrows 400 rows to 3 must not leave the list believing it has already revealed
 120. Counters reset when the query changes.
 
-**F4e-T5 — the selected item stays visible.** If something is chosen and the query
-excludes it, the tick must not silently vanish from a list that still claims to be
-the picker. Decide and pin: the chosen row is exempt from the filter.
+**F4e-T5 — the selected item stays visible.** *Needed no code.* The picker already
+draws a **"Now chosen"** section above the library, added in F4 for a different
+reason — an item that has left the library entirely would otherwise vanish with
+nowhere to report it. That section sits outside the filtered lists in the view
+body, so a query cannot reach it. Pinned by a test that reads the body's order,
+because the guarantee is structural: a tidy-up moving that section inside the
+lists would reintroduce the risk silently.
 
 ## One thing the plan did not anticipate
 
@@ -123,6 +127,8 @@ run-script-tests.sh: 9 passed, 0 failed
 | M17 · The paging reset removed from the view | `theViewResetsThePagingWhenTheQueryChanges` |
 | M18 · Matching narrowed to prefix-only | `ignoresCapitalsAndAccents` |
 | M19 · The empty state becomes a `ContentUnavailableView` — a slot for an action | `theEmptyStateHasNoSlotForAnAction` |
+
+484 tests after T5's structural test was added.
 
 ## Done when
 
