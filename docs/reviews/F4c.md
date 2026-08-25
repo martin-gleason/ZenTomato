@@ -70,10 +70,38 @@ full mutation table are in the plan and in the PR.
 | `docs/*-report.md` is broad and could swallow a future report an agent believes it committed. | **Accepted deliberately.** The failure it prevents — a private file committed — is worse than the one it risks. |
 | The `.gitignore` fix is repo hygiene on a feature branch, which conventions class as a `C<N>`. | **Accepted.** It was found while branching for F4c and the file was unprotected in the meantime; delaying it to file a chore would have left it that way longer. |
 
-## Verdict after the repairs
+## Second pass — verdict **MERGE**
 
-Nine mutations, each breaking exactly one thing a named test claims to protect,
-each caught, each restored. `make ci` green at 467 tests.
+The reviewer was re-run against the repairs, and confirmed the four blocking
+findings were fixed rather than worked around — checking the evidence by running
+`make ci` itself rather than reading the author's numbers, and by reading
+`MusicCoordinator` to confirm `notAskedFooter` states something true.
+
+It then found three more, all of which passed before it ran:
+
+| Finding | Disposition |
+|---|---|
+| **The middle link of the wiring had no test.** The reviewer deleted two lines from `SettingsView`'s construction of `SettingsForm` and 467 tests passed, with the row reporting "Not set up" forever and the refresh a no-op. Both tests either side checked only the `TimerView` end of a three-link chain. | **Fixed** — `theMiddleLinkIsWired`, mutation-verified (M10). |
+| **`settingsShowsTheState` trimmed indentation**, so `if false { music }` passed. The realistic regression is a later tidy such as `if musicAvailability != .notAsked { music }`. | **Fixed** — the section must sit at the form's own depth (M11). |
+| **`settingsAsksAgainWhenItOpens` was a whole-file substring grep** — the exact defect the first pass blocked on, reintroduced in the commit that fixed it. | **Fixed** — comments stripped, position checked (M12). |
+| The `.task` on a `Section` inside a `Form`: section lifetime is cell lifetime, so the comment asserted a scoping it did not have. | **Fixed** — moved to the form, matching the picker. |
+| `docs/reviews/F4c.md` claimed the header "matches Todoist's shape". It did not: Todoist is header + row both reading "Todoist"; music was header "Apple Music" + row "Status". | **Fixed** — the row names the service and the header is the category, as Todoist's is. VoiceOver was announcing "Status, Not set up" without the service name; now labelled. |
+
+The `refreshMusicAvailability` closure was checked for retain cycles and Swift 6
+strict-concurrency correctness and is clean. All four accepted dispositions were
+confirmed honest rather than blocking findings relabelled.
+
+**Twelve mutations now**, each breaking exactly one thing a named test claims to
+protect, each caught, each restored. `make ci` green at 468 tests.
+
+### Carried to the owner
+
+The reviewer's process finding had a second half that is not the author's to
+close. `CLAUDE.md` step 1 requires the owner's yes on `docs/plans/F4c.md` before
+the build; the file was committed one second after the code. The owner's
+instruction — *"we should put the licensing in the settings"* — was given in
+chat, but the plan was written after the work rather than before it, and the
+tree cannot distinguish that from no gate at all. Flagged for the owner.
 
 The device check stays open and is not this branch's to close: read Settings →
 Apple Music on hardware and confirm it gives a true answer (`O14`). Search in the

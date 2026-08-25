@@ -77,6 +77,27 @@ delta argued rather than assumed. Recorded as `O17`.
 
 ## Also fixed after adversarial review
 
+### Second pass
+
+- **The middle link of the wiring had no test at all.** `TimerView` →
+  `SettingsView` → `SettingsForm`, with preview defaults on the last of the
+  three, so the middle could be cut and everything stayed green.
+- **`settingsShowsTheState` was blind to indentation**, so a section wrapped in a
+  conditional passed as rendered. The realistic regression is not `if false` but
+  a later tidy such as `if musicAvailability != .notAsked { music }`, which hides
+  the row from exactly the person who needs it.
+- **`settingsAsksAgainWhenItOpens` was a whole-file substring search** — the same
+  defect the first review blocked on, reintroduced in the commit that fixed it.
+  Comments are stripped now, and the refresh's position is checked.
+- **The `.task` moved from the section to the form.** A `Form` is a `List`, so
+  section lifetime is cell lifetime; the old comment claimed a scoping it did not
+  have. This matches the picker's precedent.
+- **The row said "Status" under a header saying "Apple Music"**, which was
+  neither Todoist's shape nor what this plan claimed. It also left VoiceOver
+  announcing "Status, Not set up" without naming the service.
+
+### First pass
+
 - The section had been inserted **inside Todoist's doc comment**, leaving a false
   description on the new code and none on the old. Same again in `MusicRowModel`.
 - **Settings never asked again**, so it could report a state stale since launch —
@@ -94,10 +115,10 @@ delta argued rather than assumed. Recorded as `O17`.
 check-lint.sh: swiftlint 0.65.1 --strict
 check-lint.sh: OK — no lint violations.
 run-script-tests.sh: 9 passed, 0 failed
-✔ Test run with 467 tests in 70 suites passed after 3.757 seconds.
+✔ Test run with 468 tests in 70 suites passed after 4.739 seconds.
 ```
 
-459 tests before, 467 after. **Mutation-verified nine ways.** Each named test was
+459 tests before, 468 after. **Mutation-verified twelve ways.** Each named test was
 made to fail by breaking exactly the thing it claims to protect, then restored:
 
 | Mutation | Test that caught it |
@@ -111,6 +132,14 @@ made to fail by breaking exactly the thing it claims to protect, then restored:
 | M7 · The refresh removed from the section | `settingsAsksAgainWhenItOpens` |
 | M8 · Settings handed the do-nothing preview refresh | `settingsAsksAgainWhenItOpens` |
 | M9 · `.notAsked` reverted to the "ready" sentence | `theSixStatusesAreDistinct` |
+| M10 · The middle link dropped — `SettingsView` stops passing either value on | `theMiddleLinkIsWired` |
+| M11 · The section rendered conditionally, `if musicAvailability != .notAsked` | `settingsShowsTheState` |
+| M12 · The refresh demoted to a comment | `settingsAsksAgainWhenItOpens` |
+
+**M10, M11 and M12 are the second review's, and all three passed before it ran.**
+The reviewer deleted two lines from `SettingsView`'s construction of the form and
+watched 467 tests pass with the row reporting "Not set up" forever — the wiring is
+three links long and both tests either side checked only the `TimerView` end.
 
 **M5 was the reviewer's mutation, not the author's.** The first version of
 `settingsShowsTheState` searched the whole file for a substring and would have
