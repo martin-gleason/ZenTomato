@@ -55,6 +55,33 @@ final class AppleMusicPlayer: MusicPlaying {
     player.state.playbackStatus == .playing
   }
 
+  /// Both readings, taken off the main actor.
+  ///
+  /// **This is the fix for the watchdog kill.** Each of the two properties above
+  /// is a synchronous cross-process call to the media server; on the main thread,
+  /// a wedged media daemon becomes a dead app in ten seconds. Here the wait
+  /// happens on a background executor, where being slow costs a late row rather
+  /// than the process.
+  ///
+  /// `ApplicationMusicPlayer.shared` is reached inside the detached task rather
+  /// than captured, so nothing main-actor-isolated crosses the boundary.
+  /// `MusicPlayer.State` is not main-actor isolated in the SDK — checked in
+  /// `MusicKit.swiftinterface` rather than assumed — so reading it here is
+  /// allowed.
+  ///
+  /// **Order is not this function's problem.** It answers about the moment it is
+  /// asked; `MusicCoordinator` decides whether a late answer is still wanted.
+  nonisolated func playbackSnapshot() async -> PlaybackSnapshot {
+    await Task.detached(priority: .utility) {
+      let shared = ApplicationMusicPlayer.shared
+      let playing = shared.state.playbackStatus == .playing
+      // Same rule as the property: no track name while nothing is playing, or
+      // the row would name a song that is making no sound.
+      let title = playing ? shared.queue.currentEntry?.title : nil
+      return PlaybackSnapshot(isPlaying: playing, nowPlayingTitle: title)
+    }.value
+  }
+
   /// The track the player is on, asked of the player rather than remembered.
   ///
   /// `nil` while nothing is playing, which includes a break: the row says

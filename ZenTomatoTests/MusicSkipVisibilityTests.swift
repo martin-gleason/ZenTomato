@@ -42,6 +42,9 @@ struct MusicSkipVisibilityTests {
     // — that is what makes a late flip reach the screen. Announce a change and
     // the coordinator must re-read rather than keep its first answer.
     player.announceStatusChange()
+    // The reading is off the main actor now, so it lands a turn later. Awaiting
+    // the task itself rather than yielding a guessed number of times.
+    await coordinator.awaitPendingPlaybackRead()
     #expect(coordinator.isPlaying == player.isPlaying,
             "a status change after the call must be re-read, not remembered")
   }
