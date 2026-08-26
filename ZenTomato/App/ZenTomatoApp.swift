@@ -35,6 +35,15 @@ import SwiftUI
 struct ZenTomatoApp: App {
   // MARK: Lifecycle
 
+  /// The flight recorder. Held for the life of the app so it stays subscribed.
+  ///
+  /// **Started before anything else, and it is the cheapest line in this
+  /// initialiser** — `MXMetricManager.add` registers a listener and returns.
+  /// Nothing is sampled, nothing is polled, and no work joins any hot path; iOS
+  /// gathers hangs and crashes itself and delivers them in a batch on a later
+  /// launch. See `HangReporter` for why nothing is ever transmitted.
+  private let hangReporter = HangReporter.start()
+
   init() {
     let result = AppModelContainer.bootstrap().map { container in
       // THE WHOLE TODOIST STACK, BUILT IN ONE PLACE AND HANDED DOWN.

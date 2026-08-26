@@ -83,10 +83,52 @@ final class SpyMusicPlayer: MusicPlaying {
   private(set) var loaded: MusicSelection?
 
   /// Whether sound is coming out, as far as this stand-in is concerned.
-  private(set) var isPlaying = false
+  /// Whether sound is coming out.
+  ///
+  /// **Reading this blocks for `snapshotDelay`, exactly as the real one does.**
+  /// On the device `playbackStatus` is a synchronous call to the media server;
+  /// this stand-in returned instantly, which is why no test could fail on the
+  /// call that got the app killed. Modelling the block is what lets a test tell
+  /// the difference between reading it here and reading it off the main actor.
+  var isPlaying: Bool {
+    blockIfSlow()
+    return isPlayingStorage
+  }
+
+  private(set) var isPlayingStorage = false
+
+  /// Sleeps for `snapshotDelay`, on whatever thread asks. Synchronous on purpose.
+  private func blockIfSlow() {
+    guard snapshotDelay > .zero else { return }
+    Thread.sleep(forTimeInterval: Double(snapshotDelay.components.seconds)
+      + Double(snapshotDelay.components.attoseconds) / 1e18)
+  }
 
   /// What a test says is playing. Set it to check the row draws it.
   var nowPlayingTitle: String?
+
+  /// How long a reading takes, so a test can make the player slow.
+  ///
+  /// **Zero by default, and that default is the reason the watchdog kill shipped.**
+  /// A stand-in that answers instantly can never fail on a call that blocks on the
+  /// device, which is precisely what `playbackStatus` does. Setting this is how a
+  /// test can now say "the media server is wedged" and assert that the main actor
+  /// carries on regardless.
+  var snapshotDelay: Duration = .zero
+
+  /// Both readings together, as the real player returns them.
+  ///
+  /// `nonisolated` to match the protocol, so it can be awaited from off the main
+  /// actor exactly as the real one is.
+  nonisolated func playbackSnapshot() async -> PlaybackSnapshot {
+    let delay = await MainActor.run { self.snapshotDelay }
+    if delay > .zero { try? await Task.sleep(for: delay) }
+    // Reads the storage rather than the property: the delay above already
+    // modelled the wait, and going through `isPlaying` would charge it twice.
+    return await MainActor.run {
+      PlaybackSnapshot(isPlaying: self.isPlayingStorage, nowPlayingTitle: self.nowPlayingTitle)
+    }
+  }
 
   /// When set, loading throws it instead of succeeding.
   var loadError: (any Error)?
@@ -122,11 +164,11 @@ final class SpyMusicPlayer: MusicPlaying {
     }
     if let loadError {
       loaded = nil
-      isPlaying = false
+      isPlayingStorage = false
       throw loadError
     }
     loaded = selection
-    isPlaying = true
+    isPlayingStorage = true
   }
 
   func resume() async throws {
@@ -137,17 +179,17 @@ final class SpyMusicPlayer: MusicPlaying {
     // Exactly the real player's behaviour: resuming with nothing queued is a
     // no-op rather than an error.
     guard loaded != nil else { return }
-    isPlaying = true
+    isPlayingStorage = true
   }
 
   func pause() {
     calls.append(.pause)
-    isPlaying = false
+    isPlayingStorage = false
   }
 
   func stop() {
     calls.append(.stop)
-    isPlaying = false
+    isPlayingStorage = false
     loaded = nil
   }
 

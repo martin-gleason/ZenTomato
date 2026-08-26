@@ -114,8 +114,8 @@ final class MusicCoordinator {
     }
   }
 
-  /// Nothing this object started outlives it. There are five pieces of work it
-  /// can have running and all five are called off here.
+  /// Nothing this object started outlives it. There are six pieces of work it
+  /// can have running and all six are called off here.
   ///
   /// **`isolated deinit` IS LOAD-BEARING AND NOT DECORATION.** Ordinarily the
   /// clean-up that runs when an object is released belongs to no thread, which
@@ -132,6 +132,10 @@ final class MusicCoordinator {
     libraryTask?.cancel()
     soundTask?.cancel()
     skipTask?.cancel()
+    // Added with the playback reading. It is short, but it holds `self` until it
+    // returns, and "short" is exactly the assumption that produced the watchdog
+    // kill this task exists to prevent.
+    playbackReadTask?.cancel()
   }
 
   // MARK: What the screens read
@@ -609,8 +613,35 @@ final class MusicCoordinator {
   /// Called at every moment that could have changed it. See `isPlaying` for why
   /// the answer is stored rather than asked for on the spot.
   private func refreshIsPlaying() {
-    isPlaying = player.isPlaying
-    nowPlayingTitle = player.nowPlayingTitle
+    // **NOTHING IS READ ON THIS THREAD, AND THAT IS THE WHOLE POINT.**
+    //
+    // This method used to read `player.isPlaying` and `player.nowPlayingTitle`
+    // directly. Both are cross-process calls to the media server on the real
+    // player, and this method is reached from seven places — including the
+    // status-changed callback, which fires most often exactly when the media
+    // server is busiest. `docs/crashes/ZenTomato-2026-08-26-134602.ips` is the
+    // result: the watchdog killed the app after ten seconds of wall clock in
+    // which our own code used fifty-three milliseconds of CPU.
+    //
+    // The reading still happens, and is still not cached — `F4-contract.md` §8
+    // was right that a cached value makes the skip button lie. It happens off
+    // this actor, so a wedged media daemon costs a late row instead of the
+    // process.
+    playbackReadGeneration &+= 1
+    let generation = playbackReadGeneration
+    playbackReadTask?.cancel()
+    playbackReadTask = Task { @MainActor [weak self, player] in
+      let snapshot = await player.playbackSnapshot()
+      guard let self, !Task.isCancelled else { return }
+      // **A late answer is discarded rather than applied.** Two reads can be in
+      // flight when a block boundary lands between them, and the older one
+      // finishing second would put a stale row on screen — the same class of
+      // defect the load path's generation counter exists to prevent, arriving
+      // through a different door.
+      guard generation == self.playbackReadGeneration else { return }
+      self.isPlaying = snapshot.isPlaying
+      self.nowPlayingTitle = snapshot.nowPlayingTitle
+    }
     // NO AUTOMATIC UN-SILENCING HERE, AND THAT IS A DELIBERATE LIMIT.
     //
     // It is tempting to clear the silence whenever the player reports playing —
@@ -680,6 +711,36 @@ final class MusicCoordinator {
   /// Bumped by every `apply()`. Work that comes back holding an older number
   /// knows a newer decision has been taken since it began.
   private var generation = 0
+
+  /// Which playback reading is the current one.
+  ///
+  /// Separate from `generation` on purpose. That one tracks decisions about
+  /// whether there should be sound and is bumped by `apply()`; this one tracks
+  /// *readings* of what the player is doing. A skip deliberately does not bump
+  /// `generation`, but it must still supersede an older reading — folding the
+  /// two together would tie a question to a decision that has nothing to do with
+  /// it.
+  private var playbackReadGeneration = 0
+
+  /// The reading in flight, so a newer one can cancel it.
+  private var playbackReadTask: Task<Void, Never>?
+
+  #if DEBUG
+    /// Waits for the reading in flight to land. **Tests only.**
+    ///
+    /// Reading what the player is doing became asynchronous when it stopped being
+    /// done on this thread, and the tests that check it were written against a
+    /// synchronous answer. The alternative was to sprinkle more `Task.yield()`
+    /// calls and hope: that idiom already exists in these tests, it depends on how
+    /// many hops the implementation happens to take, and it turns a real
+    /// regression into an intermittent one the day that number changes.
+    ///
+    /// This waits for the actual task instead, so a test that passes does so for
+    /// the stated reason. `DEBUG` only, so it is not in the shipping binary.
+    func awaitPendingPlaybackRead() async {
+      await playbackReadTask?.value
+    }
+  #endif
 
   private var soundTask: Task<Void, Never>?
   private var skipTask: Task<Void, Never>?

@@ -56,16 +56,19 @@ struct MusicNowPlayingTests {
 
     player.nowPlayingTitle = "Heroes"
     player.announceStatusChange()
+    await coordinator.awaitPendingPlaybackRead()
     #expect(coordinator.nowPlayingTitle == "Heroes")
 
     // The track advances. This is the moment that was silently missed, because
     // the queue announces it and only the state was being listened to.
     player.nowPlayingTitle = "By This River"
     player.announceStatusChange()
+    await coordinator.awaitPendingPlaybackRead()
     #expect(coordinator.nowPlayingTitle == "By This River", "not the previous track")
 
     player.nowPlayingTitle = "Cool It Down"
     player.announceStatusChange()
+    await coordinator.awaitPendingPlaybackRead()
     #expect(coordinator.nowPlayingTitle == "Cool It Down")
   }
 

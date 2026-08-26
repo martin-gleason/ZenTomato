@@ -62,7 +62,7 @@ import Foundation
 /// arrive out of order. `AnyObject` means only a class may implement it — a
 /// player holds state, and a value type would copy it.
 @MainActor
-protocol MusicPlaying: AnyObject {
+protocol MusicPlaying: AnyObject, Sendable {
   /// What is queued right now, or `nil` when nothing is.
   ///
   /// This is what makes resume-rather-than-restart decidable without asking the
@@ -92,6 +92,22 @@ protocol MusicPlaying: AnyObject {
   /// does not widen the skip-and-stop fence: nobody can seek, scrub, shuffle or
   /// go back through a property that only answers a question.
   var nowPlayingTitle: String? { get }
+
+  /// Both of the above, read together and off the main actor.
+  ///
+  /// **The blocking read, moved somewhere it is allowed to be slow.** `isPlaying`
+  /// and `nowPlayingTitle` above are synchronous, and on the real player each one
+  /// is a cross-process call to the media server. Reading them on the main thread
+  /// is what got the app killed by the watchdog — see `PlaybackSnapshot`.
+  ///
+  /// `nonisolated` so a caller on the main actor never waits for it, and `async`
+  /// so the wait happens where waiting is free. Implementations must not touch
+  /// main-actor state.
+  ///
+  /// The two synchronous properties above are kept, because a stand-in in a test
+  /// answers instantly and there is no reason to make tests await a hop. Nothing
+  /// on a screen may use them.
+  nonisolated func playbackSnapshot() async -> PlaybackSnapshot
 
   /// Called when the player's own playback status changes, for any reason.
   ///
