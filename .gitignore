@@ -142,6 +142,13 @@ docs/*-report.md
 # project owns is opted out by default here, and a genuinely wanted file is one
 # `git add -f` away.
 docs/*.zip
+#
+# ONE EXCEPTION, ADDED DELIBERATELY. The v1.5 design handoff is project
+# material rather than working material — icons, a scope README, recreation
+# notes — and it is the input to a version that has not started. Ignored, it
+# lived on exactly one disk and was destroyed twice in one morning by ordinary
+# git operations. Tracked, it survives a clone.
+!docs/ZenTomato redesign scope.zip
 docs/*.pdf
 docs/*.docx
 docs/*.pages
