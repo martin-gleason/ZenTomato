@@ -44,6 +44,8 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D21b** | ratified | — | 992 | A task completed during a sprint does not come back into it |
 | **D22** | ratified | — | 1049 | A block records which project it was for, and the export labe… |
 | **D23** | ratified | — | 1132 | The music picker gets a search field; scope was never exceeded |
+| **D24** | proposed | yes | — | The alarm sound can be chosen; `AppSettings` gains a seventh field |
+| **D25** | proposed | yes | — | Music can be switched on during a break |
 
 *24 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
@@ -1197,3 +1199,126 @@ alphabetical — people remember a word from the middle of a playlist name.
 **Recently played at the top.** Solves the common case and abandons the rest, and
 "recent" is state this app would have to keep. `D16` says no.
 
+---
+
+## D24 — The alarm sound can be chosen. `AppSettings` gains a seventh field.
+
+**Proposed 2026-08-26. Awaiting ratification.**
+
+### Where this came from
+
+The first real sprint on a shipped build. The owner:
+
+> the default alarm sucks, and will be quite jarring to folks using an app with
+> Zen in the name.
+
+The naming argument is the strong one. This app makes exactly one sound, at the
+one moment it speaks, and that sound is currently a klaxon chosen by iOS.
+
+### What the framework allows, checked in the SDK
+
+`AlarmKit` takes `ActivityKit.AlertConfiguration.AlertSound`, which has **exactly
+two members**:
+
+```swift
+public static var `default`: AlertSound
+public static func named(_ name: String) -> AlertSound
+```
+
+`.named(_:)` resolves to **a file in this app's bundle**. iOS's ringtone and
+alert-tone library is not reachable from an app, so *"use the iOS sounds"* is not
+available and a system-sound picker cannot be built.
+
+The mechanism is already proven here: `Silence.caf` ships and works, and is what
+the sound-off setting rests on.
+
+### Spec text
+
+**`SPEC.md` currently says**, in the settings row:
+
+> Sound on/off.
+
+**Proposed:**
+
+> Sound on/off, and which sound. A short list of bundled alert sounds; the
+> default remains the system alert.
+
+### The fence this moves, and why it must move deliberately
+
+`PolishFenceTests` pins `AppSettings` at **six fields**, and that bound was
+mutation-tested with *an alarm-sound picker specifically* as the hypothetical
+seventh. It was put there to stop a settings screen growing one reasonable-looking
+field at a time. Moving it is one line in a diff the owner reads, which is the
+whole design — but it is not a bound to nudge past.
+
+### The part most likely to go wrong quietly: **licensing**
+
+**Apple's system sounds cannot be extracted and redistributed.** They are not
+licensed for it and lifting them from the OS is not an option.
+
+**And "GPL-3.0 sounds" is the wrong search.** The GPL is a *software* licence.
+Applied to audio it is legal but vanishingly rare, and looking for GPL-licensed
+alert tones will return almost nothing. What is actually needed is audio whose
+licence permits redistribution inside a GPL-3.0 repository:
+
+- **CC0 / public domain** — the right default. No attribution burden, no
+  compatibility question, nothing to get wrong later.
+- **CC-BY** — workable, but every sound then owes an attribution line that has to
+  ship with the app and survive every refactor.
+- **Anything non-commercial or no-derivatives** — unusable. The repo is public and
+  the App Store is a commercial channel.
+
+Original sounds commissioned or made for the project are the other clean answer,
+and sidestep the question entirely.
+
+**This is `C10`'s business too**, since it is the first time this repository would
+carry third-party creative work.
+
+---
+
+## D25 — Music can be switched on during a break
+
+**Proposed 2026-08-26. Awaiting ratification.**
+
+### Where this came from
+
+Reported as a regression, and it is not one — both halves of the behaviour date
+from F4's first commit `e107dea` and have never changed. The owner, refining it
+after a second sprint:
+
+> no music during a break is ok, and changing music during a sprint is limited
+> (turn off, fast forward), **I should be able to turn on music during a Short
+> Break**
+
+So the ask is narrow, and narrower than the original report: **not** automatic
+resume, **not** full transport controls during a break. One control, re-enabled,
+in one place.
+
+### The current behaviour, and why tapping does nothing
+
+`MusicRowModel` sets `isTogglable: false` the moment any block is running. The
+switch is therefore *disabled* during a break rather than broken — which is why
+tapping it produces no effect rather than a wrong one.
+
+### Spec text
+
+**`SPEC.md` currently says:**
+
+> | Music during breaks | Pauses. Resumes at the next pomodoro. |
+
+**Proposed:**
+
+> | Music during breaks | Pauses, and can be switched back on by hand. Resumes by
+> itself at the next pomodoro. |
+
+### What stays fixed
+
+The rest of `D19.3` and the row's design are untouched: no skip and no stop during
+a break, because there is nothing to skip when nothing is playing, and the row's
+height is still reserved so nothing moves at a block boundary.
+
+**This delta owes an amendment, and that has a consequence.** The sentence above
+is live spec text, so ratifying `D25` without applying the replacement the same
+day turns `DeltaIntegrityTests` red — the outstanding-amendment baseline is
+pinned at **zero**, and a red test blocks every merge under branch protection.
+Ratify and amend together, or neither.
