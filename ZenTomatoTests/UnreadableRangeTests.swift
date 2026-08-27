@@ -41,7 +41,7 @@ struct UnreadableRangeTests {
   /// `theExportSaysItCouldNotLook` — and does not claim there was nothing to see.
   @Test("theExportSaysItCouldNotLook")
   func theExportSaysItCouldNotLook() {
-    let document = StatsMarkdown.document(for: .unreadable(for: range))
+    let document = StatsMarkdown.document(for: .unreadable(for: range), producedBy: .forGoldens)
 
     #expect(document.contains("couldn't be read"))
     #expect(document.contains("Your history is fine"))
@@ -53,7 +53,7 @@ struct UnreadableRangeTests {
   /// And the ordinary empty range is untouched by the change.
   @Test("anEmptyRangeStillReadsAsEmpty")
   func anEmptyRangeStillReadsAsEmpty() {
-    let document = StatsMarkdown.document(for: .empty(for: range))
+    let document = StatsMarkdown.document(for: .empty(for: range), producedBy: .forGoldens)
 
     #expect(document.contains(StatsMarkdown.nothingRecorded))
     #expect(document.contains("couldn't be read") == false)

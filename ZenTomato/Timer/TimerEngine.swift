@@ -429,10 +429,28 @@ final class TimerEngine {
     lastFailure = nil
     cancelAlarm()
     let completed = clock.now >= state.endsAt
-    // A dismiss arrives from a locked phone, where there is no screen in front
-    // of anybody to present a sheet on. Rows are kept; the prompt is not
-    // offered. Same reasoning as the reconciliation path above.
-    await end(state: state, completed: completed, at: clock.now, mayAutoStart: false, mayPromptForReflection: false)
+    // **THE SHEET IS OFFERED HERE NOW, AND THE OLD REASONING WAS BACKWARDS.**
+    //
+    // It used to refuse, on the grounds that "a dismiss arrives from a locked
+    // phone, where there is no screen in front of anybody to present a sheet
+    // on." But dismissing an alarm is somebody reaching for the phone — it is
+    // the most reliable evidence this engine ever gets that a person is present
+    // and holding it. The old rule refused a prompt at the one moment it was
+    // certain of an audience.
+    //
+    // Combined with the boundary path no longer cancelling the alarm, this is
+    // the owner's ruling in two lines: the alarm always sounds, and the sheet
+    // follows it.
+    //
+    // It still chains into nothing — `mayAutoStart: false` is unchanged, for the
+    // reason above this method: a dismiss can arrive from a locked phone, and
+    // starting a focus block nobody is present for is what auto-start is not
+    // for. Offering a sheet and starting a block are different promises about
+    // the same tap.
+    //
+    // `BlockReflection` refuses to exist without at least one tap, so a block
+    // with nothing to reflect on still shows nothing.
+    await end(state: state, completed: completed, at: clock.now, mayAutoStart: false, mayPromptForReflection: true)
   }
 
   /// The block's deadline arrived and the app was awake to see it. This is the
@@ -470,7 +488,29 @@ final class TimerEngine {
       return await synchronize()
     }
 
-    cancelAlarm()
+    // **THE ALARM IS NOT CANCELLED HERE, AND THAT LINE'S REMOVAL IS THIS FIX.**
+    //
+    // It used to be. `cancelAlarm()` sat on this path with no comment saying
+    // why, and the consequence was that the app went quiet in exactly the case
+    // somebody was present: this task only runs when the app is awake, so
+    // reaching this line meant cancelling the alarm a moment before AlarmKit
+    // made a sound. `docs/chores/C14.md` has the owner's report — one block in
+    // three ever sounded.
+    //
+    // **The audio background mode made it worse rather than rarer.** A sprint
+    // playing music keeps the app alive, so this task fires on time even with
+    // the phone locked and face down — cancelling the alarm while no screen
+    // exists to show a sheet on. Neither the noise nor the prompt.
+    //
+    // The reasoning underneath it was that the app being awake meant somebody
+    // was watching. **It does not.** A phone face down on a desk — which is what
+    // people do to remove distractions, and therefore precisely when the alarm
+    // is the only thing that can reach them — has this app frontmost and awake.
+    //
+    // `SPEC.md` F2 promises the alert sounds through silent mode and an active
+    // Focus. It makes no exception for the app being open, and there is now no
+    // code that invents one.
+    //
     // Ended at the instant it was due to end, not the instant this ran: the
     // task can wake a moment late and the record must not drift with it.
     //
@@ -1059,7 +1099,10 @@ extension TimerEngine {
   /// Calls off whatever alarm this app has outstanding.
   private func cancelAlarm() {
     do {
-      try alarms.cancelOutstanding()
+      // `false`: every caller of this is somebody asking for silence — a stop, a
+      // dismiss, or a block being abandoned — and a ringing alarm is the loudest
+      // thing there is to be asked about.
+      try alarms.cancelOutstanding(sparingAlerting: false)
     } catch {
       lastFailure = .alarmCancellationFailed
     }

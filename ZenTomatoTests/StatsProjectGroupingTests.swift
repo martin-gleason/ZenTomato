@@ -142,7 +142,7 @@ struct StatsProjectGroupingTests {
       projectTitle: "Thesis"))
     try context.save()
 
-    let document = StatsMarkdown.document(for: query.period(.day(day(2026, 8, 19))))
+    let document = StatsMarkdown.document(for: query.period(.day(day(2026, 8, 19))), producedBy: .forGoldens)
 
     #expect(document.contains("Thesis"))
     #expect(document.contains("td-project-distinctive-0001") == false)

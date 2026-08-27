@@ -82,7 +82,7 @@ final class AlarmKitScheduler: AlarmScheduling {
   ///   engine turns that into a visible warning on the timer screen; an alarm
   ///   that silently fails to be set is the worst thing this feature could ship.
   func schedule(_ request: BlockAlarmRequest) async throws {
-    try cancelOutstanding()
+    try cancelOutstanding(sparingAlerting: true)
 
     // THE ONE PLACE AN END TIME BECOMES A LENGTH.
     // The app's record of a block is the wall-clock instant it ends, because
@@ -130,10 +130,27 @@ final class AlarmKitScheduler: AlarmScheduling {
   /// - Throws: the first failure encountered. Every alarm is still attempted
   ///   first: stopping at the first failure would leave the rest outstanding,
   ///   which is the exact situation this method exists to prevent.
-  func cancelOutstanding() throws {
+  func cancelOutstanding(sparingAlerting: Bool) throws {
     var firstFailure: (any Error)?
 
     for alarm in try AlarmManager.shared.alarms {
+      // **AN ALARM THAT IS RINGING IS NOT AN ALARM IN THE WAY.**
+      //
+      // Every schedule clears what is outstanding first, so that a stale alarm
+      // cannot sound four minutes into the block after the one it belonged to.
+      // That is right for an alarm still counting down and catastrophic for one
+      // already making a noise: with auto-start on, the next block is scheduled
+      // the instant the previous one ends — the same instant its alarm fires —
+      // and clearing the way would silence the alarm to make room for the next.
+      //
+      // That is the same defect `boundaryReached()` used to have, arriving
+      // through the door of a different method. `Alarm.State.alerting` is how
+      // iOS distinguishes the two, and it is checked rather than inferred from
+      // the clock.
+      //
+      // An explicit stop or dismiss passes `false` and silences everything,
+      // because being asked for silence is exactly when silence is wanted.
+      if sparingAlerting, alarm.state == .alerting { continue }
       do {
         try AlarmManager.shared.cancel(id: alarm.id)
       } catch {

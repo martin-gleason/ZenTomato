@@ -38,7 +38,7 @@ struct StatsMarkdownGoldenTests {
   @Test("goldenExport")
   func goldenExport() throws {
     let expected = try Self.golden(named: "fortnight.md")
-    let produced = StatsMarkdown.document(for: StatsPeriodFixture.fortnight)
+    let produced = StatsMarkdown.document(for: StatsPeriodFixture.fortnight, producedBy: .forGoldens)
 
     #expect(produced == expected, Comment(rawValue: Self.difference(produced, expected)))
   }
@@ -51,14 +51,27 @@ struct StatsMarkdownGoldenTests {
   @Test("emptyRangeIsReadable")
   func emptyRangeIsReadable() throws {
     let expected = try Self.golden(named: "empty.md")
-    let produced = StatsMarkdown.document(for: StatsPeriodFixture.emptyFortnight)
+    let produced = StatsMarkdown.document(for: StatsPeriodFixture.emptyFortnight, producedBy: .forGoldens)
 
     #expect(produced == expected, Comment(rawValue: Self.difference(produced, expected)))
     // Stated separately from the byte comparison, because the byte comparison
     // would still pass if somebody replaced the sentence *and* the golden.
     #expect(produced.contains("No pomodoros in this range."))
     #expect(produced.contains("##") == false, "An empty range must have no section headings at all.")
-    #expect(produced.split(separator: "\n", omittingEmptySubsequences: false).count <= 4)
+    // **SIX, NOT FOUR — and the two extra lines are provenance, not a skeleton.**
+    //
+    // The number this guards is "a range with nothing in it does not render six
+    // empty headings", and that is still exactly what it guards: the assertion
+    // above it forbids `##` outright. What changed is that every document now
+    // ends with the line naming the app and build that produced it, including
+    // this one.
+    //
+    // **Including this one is the decision.** A page that sometimes says what
+    // made it is worse than one that never does, because then its absence means
+    // something and nobody knows what. An empty fortnight filed in a notebook is
+    // still a page somebody may read in six months.
+    #expect(produced.split(separator: "\n", omittingEmptySubsequences: false).count <= 6)
+    #expect(produced.hasSuffix("*Exported by ZenPom 1.0.0 (1).*\n"))
   }
 
   // MARK: What may never appear on the page
@@ -87,7 +100,7 @@ struct StatsMarkdownGoldenTests {
     let context = container.mainContext
     try StatsStoreFixture.writeFortnight(into: context)
     let query = StatsQuery(context: context, calendar: StatsStoreFixture.calendar)
-    let document = StatsMarkdown.document(for: query.period(StatsStoreFixture.fortnightRange))
+    let document = StatsMarkdown.document(for: query.period(StatsStoreFixture.fortnightRange), producedBy: .forGoldens)
 
     // The page is not empty — otherwise this passes by having nothing to print.
     #expect(document.contains("pomodoro"))
@@ -108,7 +121,7 @@ struct StatsMarkdownGoldenTests {
   /// different when it is read, and cannot use a dialect that needs decoding.
   @Test("nothingOnThePageNeedsTranslating")
   func nothingOnThePageNeedsTranslating() {
-    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight)
+    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight, producedBy: .forGoldens)
 
     for forbidden in ["yesterday", "today", "tomorrow", "ago", "AM", "PM", "GMT", "UTC", "+00:00", "T00:"] {
       #expect(document.contains(forbidden) == false, "The page contains \(forbidden).")
@@ -123,7 +136,7 @@ struct StatsMarkdownGoldenTests {
   /// mystery about whitespace.
   @Test("theWhitespaceIsExactlyTheContract")
   func theWhitespaceIsExactlyTheContract() {
-    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight)
+    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight, producedBy: .forGoldens)
 
     #expect(document.contains("\r") == false, "Line endings must be \\n.")
     #expect(document.hasSuffix("\n"))

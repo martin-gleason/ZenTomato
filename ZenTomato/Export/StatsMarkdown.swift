@@ -46,7 +46,7 @@ enum StatsMarkdown {
   // MARK: The document
 
   /// The whole page, as one string.
-  static func document(for period: StatsPeriod) -> String {
+  static func document(for period: StatsPeriod, producedBy build: AppBuild) -> String {
     let opening = "# \(title(for: period.range))"
 
     // THE SHORT DOCUMENT, AND WHERE ITS BOUNDARY IS.
@@ -63,11 +63,11 @@ enum StatsMarkdown {
     // and would otherwise render as a confident claim that nothing happened —
     // in a document filed in a paper notebook as a record of what did.
     guard period.couldNotBeRead == false else {
-      return "\(opening)\n\n\(couldNotBeRead)\n"
+      return "\(opening)\n\n\(couldNotBeRead)\n\n\(provenance(build))\n"
     }
 
     guard period.isEmpty == false else {
-      return "\(opening)\n\n\(nothingRecorded)\n"
+      return "\(opening)\n\n\(nothingRecorded)\n\n\(provenance(build))\n"
     }
 
     let sections = [
@@ -79,8 +79,25 @@ enum StatsMarkdown {
       StatsMarkdownSections.stoppedEarly(period.stops)
     ]
 
-    let blocks = [opening, summary(for: period)] + sections.compactMap { $0 }
+    let blocks = [opening, summary(for: period)] + sections.compactMap { $0 } + [provenance(build)]
     return "\(blocks.joined(separator: "\n\n"))\n"
+  }
+
+  /// The last line of every page: what made it.
+  ///
+  /// **At the bottom, and italic, because it is not part of the review.** `D15`
+  /// describes the document as an order of questions — how did the fortnight go,
+  /// when did I work, on what, what came of it, what interrupted me, where did I
+  /// give up. Provenance answers none of them. Put in the heading it would
+  /// compete with the content on a page whose entire design goal is that it reads
+  /// in a paper notebook without translation; put at the end it is findable when
+  /// wanted and ignorable when not, which is what provenance is for.
+  ///
+  /// **On every document, including the empty and unreadable ones.** A page that
+  /// sometimes says what produced it is worse than one that never does, because
+  /// then its absence means something and nobody knows what.
+  static func provenance(_ build: AppBuild) -> String {
+    "*Exported by \(build.described).*"
   }
 
   /// The one sentence a range with nothing in it gets.

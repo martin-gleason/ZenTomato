@@ -28,7 +28,7 @@ struct StatsMarkdownSectionTests {
   /// dash renders as a dangling dash, which reads as a rendering bug.
   @Test("skippedNoteRendersMarker")
   func skippedNoteRendersMarker() {
-    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight)
+    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight, producedBy: .forGoldens)
 
     #expect(document.contains("- Sat 8 Aug, 10:14 — **E** — *(no note)*"))
     // And the line it belongs to still ends in something, not in an em dash.
@@ -42,7 +42,7 @@ struct StatsMarkdownSectionTests {
   /// nothing, which is a different and untrue claim.
   @Test("aStopWithNoReasonSaysSo")
   func aStopWithNoReasonSaysSo() {
-    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight)
+    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight, producedBy: .forGoldens)
 
     #expect(document.contains("- Thu 13 Aug, 11:02 — short break — *(no reason recorded)*"))
     #expect(document.contains("\"\"") == false)
@@ -53,7 +53,7 @@ struct StatsMarkdownSectionTests {
   /// escaped into `&#39;` or a backslash.
   @Test("somebodysOwnWordsAreReproducedNotEdited")
   func somebodysOwnWordsAreReproducedNotEdited() {
-    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight)
+    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight, producedBy: .forGoldens)
 
     #expect(document.contains("Reading · notes"))
     #expect(document.contains("Marta's feedback"))
@@ -84,7 +84,7 @@ struct StatsMarkdownSectionTests {
   /// believed.
   @Test("noTaskRowsGroupUnderTheirProjectAndAddUp")
   func noTaskRowsGroupUnderTheirProjectAndAddUp() {
-    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight)
+    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight, producedBy: .forGoldens)
 
     #expect(document.contains("- **Thesis** — 7 pomodoros (I 3 / E 2)"))
     #expect(document.contains("  - No task — 1"))
@@ -134,7 +134,7 @@ struct StatsMarkdownSectionTests {
       projects: [],
       completions: [],
       stops: StatsPeriodFixture.stops)
-    let document = StatsMarkdown.document(for: period)
+    let document = StatsMarkdown.document(for: period, producedBy: .forGoldens)
 
     #expect(document.contains("0 pomodoros · 0 minutes · no distractions"))
     #expect(document.contains("## Stopped early"))
@@ -146,7 +146,7 @@ struct StatsMarkdownSectionTests {
   /// sequence of questions rather than five buckets of data.
   @Test("theSectionsAreInD15sOrder")
   func theSectionsAreInD15sOrder() {
-    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight)
+    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight, producedBy: .forGoldens)
     let headings = document
       .components(separatedBy: "\n")
       .filter { $0.hasPrefix("## ") }
@@ -163,7 +163,7 @@ struct StatsMarkdownSectionTests {
   /// thing you read every fortnight a measure of how often you gave up.
   @Test("theAbandonedRateIsNowhereOnThePage")
   func theAbandonedRateIsNowhereOnThePage() {
-    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight)
+    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight, producedBy: .forGoldens)
 
     for word in ["abandoned", "rate", "%", "average", "streak", "best"] {
       #expect(

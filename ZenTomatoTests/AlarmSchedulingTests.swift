@@ -65,7 +65,20 @@ struct AlarmSchedulingTests {
     clock.advance(by: 25 * 60)
     await engine.boundaryReached()
 
-    #expect(alarms.callLog == ["schedule", "cancelOutstanding", "schedule"])
+    // **THE ENGINE NO LONGER CANCELS BETWEEN BLOCKS, AND THAT IS THE FIX.**
+    //
+    // It used to, and the cancel it issued here landed at the same instant the
+    // finished block's alarm was firing — so with auto-start on, the alarm for
+    // the block that just ended was silenced to make room for the next one. With
+    // auto-start off it was worse still: `boundaryReached()` cancelled whenever
+    // the app was awake, which a phone face down on a desk is.
+    //
+    // The ordering this test was written to protect is unchanged and now lives
+    // where it belongs: `AlarmKitScheduler.schedule()` clears what is outstanding
+    // before setting the next, and spares only an alarm that is actually ringing.
+    // So no stale alarm can survive into a later block, and no ringing one is cut
+    // off. See `AlarmRingsThroughTests`.
+    #expect(alarms.callLog == ["schedule", "schedule"])
     #expect(alarms.outstanding != nil)
     #expect(alarms.outstanding?.kind == .shortBreak)
   }
