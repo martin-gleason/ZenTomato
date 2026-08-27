@@ -245,6 +245,24 @@ So `schedule` now takes `sparing:` and the engine names the alarm of the block
 that just ended. Identity cannot lose a race with itself. The `.alerting` check
 stays as a second line, but nothing depends on it any more.
 
+### The natural experiment that confirmed it
+
+**Sprint 3 ran on build 6 — before the sparing fix** — and produced the cleanest
+evidence of the whole investigation without anyone designing it.
+
+Three breaks. Two ended with the app in front of the owner: **no alarm**. The
+third ended **while the phone was on the lock screen**: **the alarm fired.**
+
+Same build, same settings, same block kind. The only variable was whether the app
+was awake to reach the boundary — which is exactly what the race predicts. Awake,
+the engine chains and cancels the break's alarm before it can sound. Suspended,
+nothing chains, nothing cancels, and iOS rings it.
+
+**A hypothesis that predicts an odd result in advance is worth more than one that
+explains it afterwards**, and this one was written down before the sprint that
+produced it. It also rules out the alternatives: nothing about music, orientation
+or the sound setting changed between those three breaks.
+
 ## Device check
 
 1. **Two focus blocks, ringer on, phone locked — one with music, one without.**
