@@ -112,6 +112,13 @@ Support/ZenTomatoActivity-Info.plist
 # Build products and test results
 DerivedData/
 *.xcresult
+#
+# Xcode writes a default test plan the first time a scheme runs tests, complete
+# with a freshly generated UUID. `project.yml` does not reference it and nothing
+# reads it, so it is a build product wearing a config file's clothes — and it was
+# staged once by a `git add -A`, which is the third time that command has swept up
+# something nobody asked for.
+Config/TestPlan.xctestplan
 
 # Your Canva working file. Kept out of the tree deliberately: it is ~7MB of
 # embedded raster (not vector), it is a derivative of a CC BY-SA photo, and the
