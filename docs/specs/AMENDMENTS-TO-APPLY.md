@@ -210,3 +210,31 @@ under branch protection.
 **The sequence, therefore:** paste the line above, add `D25` to the `## Amendments applied` list at
 the bottom of `SPEC.md`, and tell the agent. The agent then stamps the delta ratified in the same
 commit, and the count never leaves zero.
+
+---
+
+## A9 — D24: the alarm sound can be chosen
+
+**Ratified by the owner 2026-08-27.** Like `A8` and unlike `A1`–`A7`, this describes
+behaviour that does **not** exist yet.
+
+**Line 30**, in the *Locked decisions* table.
+
+Current:
+```
+| Timer customization | Work length, short break, long break, pomodoros-per-sprint, sound on/off, auto-start next block on/off. Nothing else. |
+```
+Replace with:
+```
+| Timer customization | Work length, short break, long break, pomodoros-per-sprint, sound on/off, which alert sound, auto-start next block on/off. Nothing else. |
+```
+
+**`Nothing else.` stays, and that is the point.** Those two words are the fence
+this whole line exists to be — the one that `PolishFenceTests` mirrors by pinning
+`AppSettings` at six fields. The amendment moves the fence by exactly one setting
+and leaves it standing. A replacement that dropped those words would turn a
+closed list into an open one, which is a far larger change than the one being
+ratified.
+
+Same sequence as `A8`: paste, add `D24` to `## Amendments applied`, tell the agent,
+and the delta is stamped in the commit that begins the build.
