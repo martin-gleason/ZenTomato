@@ -116,12 +116,17 @@ printing. This feature would settle it by force. Worth settling **before** it,
 ideally in the v1.1 explainer, which is already the place the app teaches the
 words.
 
-**Version: v1.5, recommended.** Not because it is unwelcome — it is the most
-genuinely useful idea raised since the export. But v1.1 is the release candidate
-and its job is to explain what exists; this adds a screen, a solver, and a change
-to how the engine gets its block lengths. Shipping it into an RC would mean the
-first version anyone else uses is also the first version with an untested engine
-path.
+**Version: v1.1. The agent recommended v1.5 and the owner ruled otherwise**, on
+the grounds that this is *"the feature that makes the app worth using"* — and that
+is a fair reading. A Pomodoro timer that cannot take *"I have two hours"* is
+missing the input people actually arrive with.
+
+**The recommendation is recorded rather than erased, because its reason still
+applies to how this is built.** Today produced four fixes to one behaviour, all of
+them in engine paths nobody had stressed. This feature adds another. So it gets
+its own gate, its own plan, and the same standard of proof the alarm work ended up
+needing: the failure modes enumerated before the code, not discovered by the owner
+on a device four rounds running.
 
 ---
 
