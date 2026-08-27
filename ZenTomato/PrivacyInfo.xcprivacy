@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  ZenPom's privacy manifest.
+
+	  APPLE DOES NOT REQUIRE THIS FILE, AND IT IS HERE ANYWAY.
+	  A manifest is required when an app uses a required-reason API or collects
+	  data. This app does neither — checked rather than assumed: no
+	  required-reason API appears anywhere in the tree, and the only `UserDefaults`
+	  in the repository is a word inside a comment explaining why SwiftData was
+	  chosen instead.
+
+	  So this exists to make a claim CHECKABLE rather than to satisfy a rule.
+	  `SPEC.md` says local only, no analytics. That is prose, and prose is what
+	  this project has repeatedly found to be true in a document and false in the
+	  code. This is the same sentence in a form App Store Connect reads and a test
+	  can hold.
+
+	  Every array below is empty on purpose. An empty array is a statement; a
+	  missing key is a silence.
+	-->
+
+	<!-- No tracking, and no domains to name. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<!--
+	  NOTHING IS COLLECTED. The distraction log, the timer's history and the
+	  Todoist mirror all live in SwiftData on the device and are read by nobody
+	  else. The export leaves the phone only when a person shares it, by their own
+	  action, to a destination they pick.
+
+	  Todoist and MusicKit are network calls, and neither is collection: one reads
+	  a task list the person already owns and ticks one item off, the other plays
+	  their own library. No data about the person is sent anywhere by this app.
+	-->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+
+	<!--
+	  No required-reason APIs. If one is ever added — file timestamps, disk space,
+	  system boot time, active keyboard, or `UserDefaults` — it belongs here with
+	  its reason code, and `PrivacyManifestTests` fails until it is.
+	-->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array/>
+</dict>
+</plist>
