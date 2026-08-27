@@ -343,6 +343,26 @@ run to test exactly this.
 Focus. Until yesterday nobody had checked whether the premise held; it now holds
 twice.
 
+**And the accumulation is gone.** No alert from an earlier block reappeared during
+a later one, and every dismissal reached the alarm that was actually ringing. That
+was the specific failure of the previous DND sprint, and DND is the condition that
+produces it — an alert that is never dismissed stays `.alerting`, which is what
+used to keep stale alarms alive forever.
+
+So the four-fix arc closes here:
+
+| | Broke | Fixed by |
+|---|---|---|
+| 1 | Alarm cancelled whenever the app was awake | Boundary stops cancelling |
+| 2 | Dismissing ended the sprint instead of starting the break | Chain on `completed` |
+| 3 | A stale alarm abandoned the block after it | Ignore a dismiss before the end |
+| 4 | Breaks never sounded; stale alarms accumulated | Spare by identity, not by state |
+
+**Every one was found by the owner on a device, and none by the suite.** Three of
+the four were introduced by the fix before them. The tests added along the way now
+cover each path, but the pattern is the finding: fixing the case in front of you,
+three times, before working the whole state space.
+
 ## Device check
 
 1. **Two focus blocks, ringer on, phone locked — one with music, one without.**
