@@ -427,8 +427,34 @@ final class TimerEngine {
     guard isRunning, let state else { return }
     abandonGeneration &+= 1
     lastFailure = nil
-    cancelAlarm()
     let completed = clock.now >= state.endsAt
+
+    // **A DISMISS FOR A BLOCK THAT HAS NOT ENDED IS A STALE ALARM, NOT AN ABANDON.**
+    //
+    // The owner found this in a compressed sprint: focus ended, the sheet
+    // appeared, the break started — and then *"alarm fired, reset short break."*
+    // The alarm that fired was the **focus block's**, arriving after the break
+    // had begun. It landed here, found a break that had not reached its end, and
+    // abandoned it.
+    //
+    // **It is a hole in the sparing rule, not in the alarm fix.** Scheduling
+    // spares an alarm that is `.alerting` so the next block cannot silence it —
+    // and nothing then cleans that alarm up, so it outlives the block it belonged
+    // to and its dismiss lands on the next one.
+    //
+    // The way out is this file's own invariant, from `DismissBlockIntent`:
+    // *"there is no longer a dismiss button on the running countdown… the only
+    // way to arrive here is a sounding alarm."* The mid-block button was removed.
+    // So there is no legitimate way to dismiss a block that has not ended, and
+    // arriving here with `completed == false` means the alarm belonged to an
+    // earlier block.
+    //
+    // **Nothing is cancelled on the way out.** This ran *because* somebody
+    // dismissed that alarm, so iOS has already ended it — and `cancelAlarm()`
+    // clears everything outstanding, which would take the current block's alarm
+    // with it and leave the break to end in silence.
+    guard completed else { return }
+
     // **THE SHEET IS OFFERED HERE NOW, AND THE OLD REASONING WAS BACKWARDS.**
     //
     // It used to refuse, on the grounds that "a dismiss arrives from a locked
@@ -470,7 +496,7 @@ final class TimerEngine {
     //
     // `BlockReflection` refuses to exist without at least one tap, so a block
     // with nothing to reflect on still shows nothing.
-    await end(state: state, completed: completed, at: clock.now, mayAutoStart: completed, mayPromptForReflection: true)
+    await end(state: state, completed: true, at: clock.now, mayAutoStart: true, mayPromptForReflection: true)
   }
 
   /// The block's deadline arrived and the app was awake to see it. This is the

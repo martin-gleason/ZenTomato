@@ -107,20 +107,41 @@ struct AlarmRingsThroughTests {
     #expect(harness.engine.kind == .shortBreak)
   }
 
-  /// `dismissingEarlyStartsNothing` — the distinction the fix turns on.
+  /// `dismissingBeforeTheEndDoesNothingAtAll` — because it cannot be a person.
   ///
-  /// The same button means two things and the engine decides which. Before the
-  /// end instant it is somebody abandoning a block, and abandoning must chain
-  /// into nothing — otherwise stopping a block would start the next one, which is
-  /// the opposite of what was asked.
-  @Test("dismissingEarlyStartsNothing")
-  func dismissingEarlyStartsNothing() async throws {
+  /// `DismissBlockIntent` records that the mid-block dismiss button **was
+  /// removed**, and that *"the only way to arrive here is a sounding alarm."*
+  /// There is therefore no legitimate way to dismiss a block that has not ended,
+  /// and a dismiss that arrives anyway belongs to an earlier block whose alarm
+  /// outlived it.
+  ///
+  /// The old behaviour — abandon the running block — is what killed the owner's
+  /// short break.
+  @Test("dismissingBeforeTheEndDoesNothingAtAll")
+  func dismissingBeforeTheEndDoesNothingAtAll() async throws {
     let harness = try Harness(autoStart: true)
     await harness.engine.start()
     harness.clock.advance(by: 5 * 60)
     await harness.engine.handleDismiss()
 
-    #expect(harness.engine.isRunning == false, "Abandoning a block started the next one.")
+    #expect(harness.engine.isRunning, "A stale alarm abandoned the block that was running.")
+    #expect(harness.engine.kind == .work)
+  }
+
+  /// `aStaleDismissDoesNotTakeTheCurrentAlarmWithIt` — the tempting wrong fix.
+  ///
+  /// Cleaning up on the way out would mean `cancelAlarm()`, which clears
+  /// *everything* outstanding — including the alarm for the block now running,
+  /// leaving it to end in silence. No cleanup is needed: this path runs because
+  /// somebody dismissed that alarm, so iOS has already ended it.
+  @Test("aStaleDismissDoesNotTakeTheCurrentAlarmWithIt")
+  func aStaleDismissDoesNotTakeTheCurrentAlarmWithIt() async throws {
+    let harness = try Harness(autoStart: true)
+    await harness.engine.start()
+    harness.clock.advance(by: 5 * 60)
+    await harness.engine.handleDismiss()
+
+    #expect(harness.alarms.outstanding != nil, "A stale dismiss cancelled the running block's alarm.")
   }
 
   // MARK: Clearing the way for the next block
@@ -159,6 +180,44 @@ struct AlarmRingsThroughTests {
 
     #expect(harness.alarms.outstanding == nil, "A stop left a ringing alarm going.")
     #expect(harness.alarms.sparedARingingAlarm == false)
+  }
+
+  // MARK: The stale alarm
+
+  /// `aStaleAlarmDoesNotEndTheBlockAfterIt` — the owner's finding, as a test.
+  ///
+  /// **Reported from a compressed sprint (1-minute focus, 2-minute break):** the
+  /// focus block ended, the sheet appeared, the break started — and then *"alarm
+  /// fired, reset short break."*
+  ///
+  /// The alarm that fired was the **focus block's**, arriving after the break had
+  /// begun. Dismissing it runs `handleDismiss()`, which acts on whatever block is
+  /// running *now* — the break — and since the break has not reached its end
+  /// instant, `completed` is false and the break is abandoned.
+  ///
+  /// **This is a hole in the sparing rule I added, not in the alarm fix.**
+  /// Scheduling spares an alarm that is `.alerting` so the next block cannot
+  /// silence it. Nothing then cleans that alarm up, so it outlives the block it
+  /// belonged to and its dismiss lands on the next one.
+  @Test("aStaleAlarmDoesNotEndTheBlockAfterIt")
+  func aStaleAlarmDoesNotEndTheBlockAfterIt() async throws {
+    let harness = try Harness(autoStart: true)
+    await harness.engine.start()
+    harness.clock.advance(by: 25 * 60)
+
+    // The focus block's alarm fires and is dismissed: break begins.
+    await harness.engine.handleDismiss()
+    #expect(harness.engine.kind == .shortBreak)
+    #expect(harness.engine.isRunning)
+
+    // The stale alarm from the finished focus block is dismissed a moment later.
+    harness.clock.advance(by: 10)
+    await harness.engine.handleDismiss()
+
+    #expect(
+      harness.engine.isRunning,
+      "A dismiss belonging to the block BEFORE this one abandoned the break.")
+    #expect(harness.engine.kind == .shortBreak)
   }
 
   // MARK: Private
