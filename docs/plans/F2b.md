@@ -84,7 +84,7 @@ dismissal. **That is a delta, not a fix**, and it is not in here.
 ## Two provenance changes
 
 **The export names what made it.** One italic line at the bottom of every page —
-`*Exported by ZenPom 0.9.0 (4).*` A page filed in a notebook and read six months
+`*Exported by ZenPom 0.9.0 (5).*` A page filed in a notebook and read six months
 later should say what produced it. At the bottom because `D15` describes the
 document as an order of questions and provenance answers none of them; in the
 heading it would compete with the content on a page whose whole design goal is
@@ -99,7 +99,7 @@ sections and their order are untouched. Every golden changed by one line, and th
 is the commit that says which decision changed and why — the standing rule being
 that a golden never changes to make a test pass.
 
-**Settings names the build.** A row reading `ZenPom 0.9.0 (4)`, selectable so it
+**Settings names the build.** A row reading `ZenPom 0.9.0 (5)`, selectable so it
 can be copied into a report rather than transcribed. It exists because a crash
 arrived this week and the only way to learn which code produced it was to read the
 build number off the phone with `devicectl`. A tester cannot do that.
@@ -156,11 +156,42 @@ the alert still appears, the block still ends; the phone simply makes no noise.
 made a sound whatever this change did. The one real question left is whether the
 *alert* appeared in block 1 — because in block 2, with the same setting, it did.
 
+## The regression the first build introduced, and the fix
+
+**Found by the owner within an hour, across eight blocks:** *"it appears stopping
+the alarm cancels the break."*
+
+`handleDismiss()` passed `mayAutoStart: false`. That was written when a dismiss was
+**rare** — before the alarm was allowed to fire, the boundary handled block ends
+and it chained. Letting the alarm through made dismissing the *normal* way a block
+ends, so a rule written for an edge case began governing every block.
+
+`D4` is explicit that it must not: *"The break timer starts running the instant the
+block ends, behind the sheet."*
+
+**`completed` is the honest condition.** A dismiss before the end instant is
+somebody abandoning a block and must chain into nothing; a dismiss after it is
+somebody acknowledging a block that finished, and the break follows.
+
+The original worry — that a dismiss might arrive from a locked phone with nobody
+there — does not survive contact with what a dismiss is: **a deliberate tap on a
+button**. That is the same evidence of presence this method already relies on to
+offer a sheet at all. Refusing to start the break while accepting the tap as proof
+somebody is present would be two opposite readings of one gesture.
+
+Two tests, both directions: `dismissingAFinishedBlockStartsItsBreak` and
+`dismissingEarlyStartsNothing`.
+
+**The lesson is about blast radius rather than about breaks.** Nothing was wrong
+with the old reasoning when it was written. What changed is that a path which ran
+almost never became the path that runs every time — and no test noticed, because
+every test of that path had been written under the old assumption too.
+
 ## Device check
 
 1. **Two focus blocks, ringer on, phone locked — one with music, one without.**
    Both must sound. That is the test the diagnosis predicted and the one that
    proves it.
 2. **Dismiss the alarm** and confirm the sheet appears with the taps on it.
-3. **Settings → About** reads `ZenPom 0.9.0 (4)`.
+3. **Settings → About** reads `ZenPom 0.9.0 (5)`.
 4. **Export** and check the last line names the build.
