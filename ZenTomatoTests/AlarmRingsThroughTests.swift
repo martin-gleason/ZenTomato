@@ -271,6 +271,40 @@ struct AlarmRingsThroughTests {
     }
   }
 
+  // MARK: Stale alarms do not accumulate
+
+  /// `onlyTheLastBlockSAlarmSurvivesAChain` — the cost of sparing too much.
+  ///
+  /// **Reported with Do Not Disturb on:** a break's alert appeared and vanished
+  /// before it could be dismissed, so it stayed `.alerting`; later blocks then
+  /// found alarms from earlier ones still registered, and *"turning off alarm
+  /// turned off the stale alarm"* rather than the current one.
+  ///
+  /// The cause was sparing by **state as well as** identity. An alarm that has
+  /// fired and not been dismissed stays `.alerting` indefinitely, so the state
+  /// check spared it at every later boundary and a sprint accumulated one stale
+  /// alarm per block.
+  ///
+  /// Exactly one alarm may survive a schedule: the block that just ended.
+  @Test("onlyTheLastBlockSAlarmSurvivesAChain")
+  func onlyTheLastBlockSAlarmSurvivesAChain() async throws {
+    let harness = try Harness(autoStart: true)
+    harness.alarms.isAlerting = true
+    await harness.engine.start()
+
+    harness.clock.advance(by: 60 * 60)
+    await harness.engine.boundaryReached()
+    harness.clock.advance(by: 60 * 60)
+    await harness.engine.boundaryReached()
+
+    #expect(
+      harness.alarms.sparedARingingAlarm == false,
+      """
+      A schedule spared an alarm for being noisy rather than for being the one \
+      that just ended, so alarms from finished blocks accumulate across a sprint.
+      """)
+  }
+
   // MARK: Private
 
   private struct Harness {

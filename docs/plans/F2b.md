@@ -84,7 +84,7 @@ dismissal. **That is a delta, not a fix**, and it is not in here.
 ## Two provenance changes
 
 **The export names what made it.** One italic line at the bottom of every page —
-`*Exported by ZenPom 0.9.0 (7).*` A page filed in a notebook and read six months
+`*Exported by ZenPom 0.9.0 (8).*` A page filed in a notebook and read six months
 later should say what produced it. At the bottom because `D15` describes the
 document as an order of questions and provenance answers none of them; in the
 heading it would compete with the content on a page whose whole design goal is
@@ -99,7 +99,7 @@ sections and their order are untouched. Every golden changed by one line, and th
 is the commit that says which decision changed and why — the standing rule being
 that a golden never changes to make a test pass.
 
-**Settings names the build.** A row reading `ZenPom 0.9.0 (7)`, selectable so it
+**Settings names the build.** A row reading `ZenPom 0.9.0 (8)`, selectable so it
 can be copied into a report rather than transcribed. It exists because a crash
 arrived this week and the only way to learn which code produced it was to read the
 build number off the phone with `devicectl`. A tester cannot do that.
@@ -263,11 +263,71 @@ explains it afterwards**, and this one was written down before the sprint that
 produced it. It also rules out the alternatives: nothing about music, orientation
 or the sound setting changed between those three breaks.
 
+## Build 7 verified: two full sprints, sixteen blocks
+
+**2026-08-27, both sprints run to the long break.**
+
+| | Sound on, music on | Sound off, music off |
+|---|---|---|
+| Focus blocks | 4 of 4 alarmed | 4 of 4 alarmed |
+| **Breaks** | **3 of 3 alarmed** | **3 of 3 alarmed** |
+| Sheets | appeared with taps, absent without | same |
+| Chaining | every block, no resets | every block, no resets |
+| Music | paused at each break, resumed at each focus | — |
+
+**The breaks are the result.** Before this fix, not one break alarmed with the app
+in front of the owner; the only one that ever did was the one that ended on the
+lock screen. Six for six now, across both configurations.
+
+Nothing reset, nothing was abandoned, and no stale alarm landed on a later block —
+so the two earlier regressions stay fixed rather than trading places with this one,
+which is what the previous three attempts each did.
+
+**Incidentally the heaviest test the tally has had:** the last focus block carried
+**one internal and twelve external** taps, and all thirteen were recorded and all
+thirteen reached the sheet.
+
+### What this does *not* close
+
+`O6` asks whether the alert sounds **through an active Focus and through silent
+mode**. Neither sprint tested that: "sound off" here is the app's own setting,
+which substitutes `Silence.caf`, and the ringer switch and Focus were never part
+of it. The **defect** is fixed — the alarm now fires at every block end — but the
+question `O6` was actually opened to answer is still open.
+
+## The fourth: stale alarms accumulating, found with Do Not Disturb on
+
+**The most useful sprint yet, because DND changed how the alert behaves.** A
+break's alert appeared and *vanished before it could be dismissed*; later blocks
+then found alarms from earlier ones still registered, and *"turning off alarm
+turned off the stale alarm"* rather than the current one. One alert survived over
+thirty seconds without disappearing.
+
+**Caused by my own fix, one step earlier.** Sparing began as a state check —
+"never cancel an alarm that is `.alerting`" — added before identity sparing
+existed. An alarm that has fired and **not** been dismissed stays `.alerting`
+indefinitely, so the state check spared it at every subsequent boundary. Nothing
+ever cleared it, and a sprint accumulated **one stale alarm per block**.
+
+DND is what exposed it: without a dismissal, alarms stopped being cleaned up, and
+the accumulation became visible within a single sprint instead of never.
+
+**Identity does the whole job.** Exactly one alarm may survive a schedule — the
+block that just ended, whose alarm is ringing or about to. Everything else belongs
+to a block that is over. `sparingAlerting` is now `false` on the scheduling path,
+and the two rules no longer overlap.
+
+**The general shape, since this is the fourth in a row:** each fix was correct
+about the case in front of it and wrong about the case next to it. Cancel
+everything → the ringing alarm dies. Spare what is ringing → the ringing alarm
+never dies. The answer was never a better predicate on *state*; it was to stop
+asking about state at all and name the one alarm that matters.
+
 ## Device check
 
 1. **Two focus blocks, ringer on, phone locked — one with music, one without.**
    Both must sound. That is the test the diagnosis predicted and the one that
    proves it.
 2. **Dismiss the alarm** and confirm the sheet appears with the taps on it.
-3. **Settings → About** reads `ZenPom 0.9.0 (7)`.
+3. **Settings → About** reads `ZenPom 0.9.0 (8)`.
 4. **Export** and check the last line names the build.
