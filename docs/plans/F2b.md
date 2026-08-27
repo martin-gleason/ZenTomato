@@ -287,13 +287,20 @@ which is what the previous three attempts each did.
 **one internal and twelve external** taps, and all thirteen were recorded and all
 thirteen reached the sheet.
 
-### What this does *not* close
+### What this closes, and what it does not
 
-`O6` asks whether the alert sounds **through an active Focus and through silent
-mode**. Neither sprint tested that: "sound off" here is the app's own setting,
-which substitutes `Silence.caf`, and the ringer switch and Focus were never part
-of it. The **defect** is fixed — the alarm now fires at every block end — but the
-question `O6` was actually opened to answer is still open.
+**`O6`'s first half is answered: an active Focus does not stop the alarm.** The
+DND sprint ran with Do Not Disturb on throughout and the alarm fired at every
+block end, including one that arrived on the lock screen.
+
+That is not a footnote. `SPEC.md` F2 chose AlarmKit over a notification *because*
+an alert had to survive a Focus, and until now nobody had ever checked whether the
+premise held. It does.
+
+**The second half is still untested, and not by oversight.** That sprint ran with
+the app's own sound setting **off**, which substitutes `Silence.caf` — so nothing
+could have made a noise whatever the ringer switch was doing. What remains is a
+single block: **sound on, ringer switch off**.
 
 ## The fourth: stale alarms accumulating, found with Do Not Disturb on
 
