@@ -74,13 +74,26 @@ struct TimerEngineTests {
     #expect(engine.remaining(at: clock.now) == .seconds(10 * 60))
   }
 
-  /// Dismissing a block that has not reached its end records it as abandoned
+  /// Abandoning a block that has not reached its end records it as abandoned
   /// and does not count it towards the sprint.
+  ///
+  /// **This used to drive the same invariant through `handleDismiss()`, and that
+  /// path no longer exists.** `DismissBlockIntent` is reachable from exactly one
+  /// place — AlarmKit's stop button — because the mid-block dismiss button was
+  /// removed, and the intent's own documentation says so: *"the only way to
+  /// arrive here is a sounding alarm."* An alarm only sounds at its block's end,
+  /// so a dismiss can no longer mean "abandon this block".
+  ///
+  /// Leaving it pointed at `handleDismiss` was worse than a dead test: it made a
+  /// *stale* alarm — one belonging to a finished block, still registered — look
+  /// like a legitimate abandon, and the owner watched it kill a short break. The
+  /// invariant is real and still worth holding; the path is `stop(reason:)`,
+  /// which is what the stop sheet actually calls.
   @Test("abandonedBlockRecorded")
   func abandonedBlockRecorded() async throws {
     await engine.start()
     clock.advance(by: 60)
-    await engine.handleDismiss()
+    await engine.stop(reason: "abandoned in a test")
 
     let rows = try sessions()
     #expect(rows.count == 1)

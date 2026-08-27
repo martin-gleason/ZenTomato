@@ -84,7 +84,7 @@ dismissal. **That is a delta, not a fix**, and it is not in here.
 ## Two provenance changes
 
 **The export names what made it.** One italic line at the bottom of every page —
-`*Exported by ZenPom 0.9.0 (5).*` A page filed in a notebook and read six months
+`*Exported by ZenPom 0.9.0 (6).*` A page filed in a notebook and read six months
 later should say what produced it. At the bottom because `D15` describes the
 document as an order of questions and provenance answers none of them; in the
 heading it would compete with the content on a page whose whole design goal is
@@ -99,7 +99,7 @@ sections and their order are untouched. Every golden changed by one line, and th
 is the commit that says which decision changed and why — the standing rule being
 that a golden never changes to make a test pass.
 
-**Settings names the build.** A row reading `ZenPom 0.9.0 (5)`, selectable so it
+**Settings names the build.** A row reading `ZenPom 0.9.0 (6)`, selectable so it
 can be copied into a report rather than transcribed. It exists because a crash
 arrived this week and the only way to learn which code produced it was to read the
 build number off the phone with `devicectl`. A tester cannot do that.
@@ -187,11 +187,51 @@ with the old reasoning when it was written. What changed is that a path which ra
 almost never became the path that runs every time — and no test noticed, because
 every test of that path had been written under the old assumption too.
 
+## The second regression: a stale alarm ending the block after it
+
+**Found in a compressed sprint** — 1-minute focus, 2-minute break: focus ended,
+the sheet appeared, the break started, and then *"alarm fired, reset short
+break."*
+
+The alarm that fired was the **focus block's**, arriving after the break had
+begun. It reached `handleDismiss()`, which acts on whatever is running *now* —
+the break — found a block that had not reached its end, and abandoned it.
+
+**A hole in the sparing rule, not in the alarm fix.** Scheduling spares an alarm
+that is `.alerting` so the next block cannot silence it, and nothing then cleans
+that alarm up. It outlives its block and its dismiss lands on the next one.
+
+### The fix comes from the app's own invariant
+
+`DismissBlockIntent` already records it: *"there is no longer a dismiss button on
+the running countdown… the only way to arrive here is a sounding alarm."* Checked
+rather than trusted — `ZenTomatoActivity` contains **no buttons at all**, and the
+intent is referenced in exactly one place, AlarmKit's `stopIntent`.
+
+An alarm only sounds at its own block's end. So **a dismiss arriving while the
+current block has not ended cannot be a person abandoning it** — it belongs to an
+earlier block. The engine now ignores it.
+
+**Nothing is cancelled on the way out**, which is the tempting wrong fix:
+`cancelAlarm()` clears everything outstanding and would take the running block's
+alarm with it, leaving the break to end in silence. No cleanup is needed — this
+path runs *because* somebody dismissed that alarm, so iOS has already ended it.
+
+### A test was encoding the vanished path
+
+`abandonedBlockRecorded` drove its invariant through `handleDismiss()`, from when
+that meant "abandon this block". Left pointed there it was worse than a dead test:
+it made a **stale** alarm look like a legitimate abandon, and would have defended
+the behaviour that killed the owner's break.
+
+The invariant is real and still held — abandoning is `stop(reason:)`, which is
+what the stop sheet calls. The test now drives that.
+
 ## Device check
 
 1. **Two focus blocks, ringer on, phone locked — one with music, one without.**
    Both must sound. That is the test the diagnosis predicted and the one that
    proves it.
 2. **Dismiss the alarm** and confirm the sheet appears with the taps on it.
-3. **Settings → About** reads `ZenPom 0.9.0 (5)`.
+3. **Settings → About** reads `ZenPom 0.9.0 (6)`.
 4. **Export** and check the last line names the build.
