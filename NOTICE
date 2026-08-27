@@ -1,0 +1,32 @@
+ZenPom
+Copyright © 2026 Martin Gleason
+
+WHO HOLDS THE COPYRIGHT, AND WHY IT IS WRITTEN DOWN HERE
+
+All copyright in this work is held by Martin Gleason. Code authored by an AI
+agent working on this project was made for the owner and is the owner's; that
+arrangement is recorded in CLAUDE.md, which is a working instruction rather than
+a statement of ownership, and this file is the statement.
+
+It matters because this project licenses two things two different ways: the
+source under GPL-3.0-or-later, and binaries distributed by the copyright holder
+under the MIT License. Only a sole copyright holder can do that. The arrangement
+lasts exactly as long as that remains true.
+
+CONTRIBUTIONS
+
+See CONTRIBUTING.md. A contribution merged without the grant described there puts
+someone else's copyright in the tree and ends the arrangement above — not as a
+matter of policy, but because nobody can license work they do not own.
+
+LICENCES
+
+  LICENSE          GPL-3.0-or-later, covering the source
+  LICENSE-APP.md   MIT, covering binaries distributed by the copyright holder
+
+THIRD-PARTY MATERIAL
+
+  Silence.caf      Half a second of silence, generated for this project.
+
+Alert sounds added under D24 are listed with their authors, sources and licences
+in docs/sounds/candidates.md, and are reproduced in the app's About screen.

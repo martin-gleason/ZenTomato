@@ -46,7 +46,7 @@ XCODEBUILD_FLAGS := \
 .DEFAULT_GOAL := help
 
 .PHONY: help generate simulator build test device script-tests lint \
-        check-todoist check-secrets check-release checks ci hooks clean
+        check-todoist check-secrets check-licence check-release checks ci hooks clean
 
 # --- Entry points ----------------------------------------------------------
 
@@ -103,13 +103,16 @@ check-todoist: ## Fail if any Todoist endpoint is not on the allowlist
 check-secrets: ## Fail if a credential is in the tree
 	@./scripts/check-secrets.sh
 
+check-licence: ## Fail if the licences are described as alternatives
+	@./scripts/check-licence-wording.sh
+
 device: generate ## Build and install on a connected iPhone (needs DEVELOPMENT_TEAM)
 	@./scripts/install-device.sh
 
 script-tests: ## Run the shell-level tests for the secrets and hook scripts
 	@./scripts/tests/run-script-tests.sh
 
-checks: lint check-todoist check-secrets script-tests ## Run every non-Xcode gate
+checks: lint check-todoist check-secrets check-licence script-tests ## Run every non-Xcode gate
 
 ci: checks test check-release ## Everything continuous integration runs, in the same order
 

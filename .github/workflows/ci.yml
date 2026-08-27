@@ -130,6 +130,9 @@ jobs:
       - name: Secret scan
         run: make check-secrets
 
+      - name: Licences are not described as alternatives
+        run: make check-licence
+
       - name: Todoist allowlist
         run: make check-todoist
 
