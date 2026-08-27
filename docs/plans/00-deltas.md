@@ -44,7 +44,7 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D21b** | ratified | — | 992 | A task completed during a sprint does not come back into it |
 | **D22** | ratified | — | 1049 | A block records which project it was for, and the export labe… |
 | **D23** | ratified | — | 1132 | The music picker gets a search field; scope was never exceeded |
-| **D24** | proposed | yes | — | The alarm sound can be chosen; `AppSettings` gains a seventh field |
+| **D24** | owner said yes; awaiting `A9` paste | yes | — | The alarm sound can be chosen; `AppSettings` gains a seventh field |
 | **D25** | owner said yes; awaiting `A8` paste | yes | — | Music can be switched on during a break |
 
 *24 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
@@ -1203,7 +1203,13 @@ alphabetical — people remember a word from the middle of a playlist name.
 
 ## D24 — The alarm sound can be chosen. `AppSettings` gains a seventh field.
 
-**Proposed 2026-08-26. Awaiting ratification.**
+**Proposed 2026-08-26. The owner said yes on 2026-08-27.** The heading still says
+*proposed* for the reason `D25` gives at length: stamping it before `SPEC.md` line
+30 changes would push the outstanding-amendment count above its baseline of zero
+and block every merge. `A9` in `AMENDMENTS-TO-APPLY.md` is the owner's half.
+
+**The owner is sourcing the candidates.** The agent's job is the mechanism, the
+fence, and the attribution — not the taste.
 
 ### Where this came from
 
@@ -1273,6 +1279,31 @@ and sidestep the question entirely.
 
 **This is `C10`'s business too**, since it is the first time this repository would
 carry third-party creative work.
+
+### Attribution is required, and it is enforceable
+
+The owner's ruling, 2026-08-27: **every alert sound is attributed, with a link.**
+
+That is stricter than the licences demand — CC0 requires no attribution at all —
+and it is the right call regardless: the person who made the sound is credited
+whether or not a licence compels it, and a link is what makes the credit checkable
+rather than decorative.
+
+**It is also the rare licensing obligation a test can hold.** Attribution rots the
+usual way: a sound is swapped, a file is renamed, a refactor moves a list, and the
+credit quietly stops matching the thing it credits. So:
+
+- every bundled sound file has exactly one attribution entry
+- every entry carries a **name** and a **URL**
+- the counts match in both directions — a sound with no credit fails, and a credit
+  with no sound fails
+
+That last one matters more than it looks: a stale entry crediting a sound that was
+removed is a false statement about someone's work.
+
+**Where it is shown** is the About screen, which `C10` gates. Until that exists the
+attribution still ships — a list nobody can reach is not attribution, so if About
+is not ready, the sound picker carries it.
 
 ---
 
