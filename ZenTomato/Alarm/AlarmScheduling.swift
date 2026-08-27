@@ -37,7 +37,20 @@ protocol AlarmScheduling: AnyObject {
   /// it belonged to is the most likely user-visible bug in this feature, and
   /// it is stated here so that any future implementation of this protocol
   /// inherits the obligation rather than rediscovering it.
-  func schedule(_ request: BlockAlarmRequest) async throws
+  /// - Parameter sparing: the alarm that must **not** be cancelled to make room
+  ///   for this one — the block that just ended, whose alarm is due at this very
+  ///   instant.
+  ///
+  ///   **By identity rather than by state, and the difference is a race.**
+  ///   Sparing "whatever is currently `.alerting`" works when a person dismisses
+  ///   an alarm before the next block starts, because by then it has certainly
+  ///   fired. It fails when the app chains automatically: the finished block's
+  ///   alarm is due at the same instant this one is scheduled and may still read
+  ///   `.countdown`, so it is cancelled a moment before it would have sounded.
+  ///
+  ///   That asymmetry is exactly what shipped — focus blocks alarmed because
+  ///   somebody dismissed them, breaks never did because nothing waited.
+  func schedule(_ request: BlockAlarmRequest, sparing: UUID?) async throws
 
   /// Cancels every alarm this app has scheduled.
   ///

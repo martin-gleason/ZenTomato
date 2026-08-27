@@ -57,7 +57,7 @@ final class ReentrantAlarmScheduler: AlarmScheduling {
     authorization
   }
 
-  func schedule(_ request: BlockAlarmRequest) async throws {
+  func schedule(_ request: BlockAlarmRequest, sparing: UUID?) async throws {
     scheduledRequests.append(request)
     // Taken and cleared before it runs, so a closure that itself causes another
     // block to start cannot call itself again for ever.
