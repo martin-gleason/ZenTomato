@@ -330,6 +330,19 @@ everything → the ringing alarm dies. Spare what is ringing → the ringing ala
 never dies. The answer was never a better predicate on *state*; it was to stop
 asking about state at all and name the one alarm that matters.
 
+## Build 8, Do Not Disturb: alarms fire through a Focus
+
+**2026-08-27, second DND sprint.** Alarms fired through Do Not Disturb throughout.
+
+That is the **second independent confirmation** of `O6`'s first half, on a
+different build from the first. The first came from a sprint run to test something
+else entirely — which made it good evidence but accidental evidence. This one was
+run to test exactly this.
+
+`SPEC.md` F2 chose AlarmKit over a notification *because* an alert had to survive a
+Focus. Until yesterday nobody had checked whether the premise held; it now holds
+twice.
+
 ## Device check
 
 1. **Two focus blocks, ringer on, phone locked — one with music, one without.**
