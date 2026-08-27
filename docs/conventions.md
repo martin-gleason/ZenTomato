@@ -71,6 +71,24 @@ Spec authority stays with the owner. The agent proposes deltas; the owner ratifi
 - `docs/reviews/OPEN.md` — every outstanding item from every review, in one table. A *Still open*
   section inside one review is invisible from the next one.
 - `docs/plans/00-deltas.md` — every proposed and ratified change to the contract.
+
+### Directory names are lowercase, and plural unless the word has no plural
+
+Added 2026-08-27, after `docs/Verbiage/` reached `main` as the only capitalised
+directory in the repository.
+
+**macOS is why nobody saw it.** The folder was made lowercase, git recorded it
+capitalised, and a case-insensitive filesystem never disagreed — so it passed a
+review that could not have caught it. A Linux or CI checkout treats
+`docs/Verbiage` and `docs/verbiage` as two different paths, which costs an
+afternoon exactly once.
+
+**Plural, because these are categories of artifact:** `plans/`, `reviews/`,
+`chores/`, `specs/`, `handoffs/`, `learnings/`, `crashes/`, `sounds/`.
+
+**Two singulars are allowed, and both for the same reason** — the word has no
+plural to use. `archive/` is a literal noun; `verbiage/` is a mass noun. Neither
+is an exception to the rule so much as a case the rule does not reach.
 - `CLAUDE.md` — how the agent moves between them. Lean; prune anything the agent wouldn't get wrong without it.
 
 ### Read the plan before you write it
