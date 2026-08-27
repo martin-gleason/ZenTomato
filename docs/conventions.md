@@ -91,6 +91,26 @@ plural to use. `archive/` is a literal noun; `verbiage/` is a mass noun. Neither
 is an exception to the rule so much as a case the rule does not reach.
 - `CLAUDE.md` — how the agent moves between them. Lean; prune anything the agent wouldn't get wrong without it.
 
+### Write the plan before you write the code, and wait
+
+**Reaffirmed 2026-08-27 by the owner, after the agent had been quietly skipping
+it.** The adversarial reviewer caught it on `F4c`: the plan was committed **one
+second after** the code it gates. It was true of most of that day's work too —
+`F2b`'s plan was written alongside the fix rather than before it.
+
+**What the rule is actually for.** A plan written afterwards is a justification.
+It cannot do the one job the gate exists for, which is to give the owner a moment
+to say *"don't build that"* — or *"build the smaller version"* — while saying so
+is still cheap. Every plan written after the code passed that moment silently.
+
+**Defect fixes proceed without a gate**, and that is not a loophole: `D22`
+established it, and the distinction is whether the app is failing to do what the
+contract already says. The alarm work was defect work throughout.
+
+**Everything else waits for a yes.** A new screen, a new setting, a new path
+through the engine, anything owing a delta. The cost is a round trip, which is
+precisely the thing being bought.
+
 ### Read the plan before you write it
 
 A plan for every feature `F1`–`F7` was written at `F1` and committed in `cb2ba1b`. **A file existing
