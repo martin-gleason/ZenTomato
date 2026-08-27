@@ -46,6 +46,23 @@ is the whole design question, and *"first run"* is the answer that most easily
 becomes an onboarding flow nobody wanted. The `no capture surface` rule is not
 threatened by it, but the calm-screen rule is.
 
+### An About screen
+
+**Decided 2026-08-27.** Holds the licensing text, and — once `D24` lands — the
+**attribution and link for every bundled alert sound**, which the owner has ruled
+is required regardless of what the licences demand.
+
+**Blocked, and only partly on effort.** `C10` ruled dual licensing but has not yet
+settled *which* licence the binaries carry. An About screen that names a licence
+before that is answered would state a claim that may then have to be corrected in
+a binary already on people's phones — which is the one kind of mistake a licence
+notice must not make.
+
+**Version and build do not wait for it.** They ship now as a plain Settings row;
+About absorbs them later. Splitting them is deliberate: the useful half is
+unblocked, and the blocked half is blocked for a reason that has nothing to do
+with version numbers.
+
 ### Divide a stretch of time into a plan
 
 **Raised 2026-08-27.** The owner:
