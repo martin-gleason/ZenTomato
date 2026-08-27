@@ -10,7 +10,15 @@ A Pomodoro timer for iPhone, built around three ideas:
 
 ## Licence
 
-GPL-3.0-or-later. The full text is in [`LICENSE`](LICENSE). In short: you may use, study, change and share this software, and anything you distribute that is built from it must be shared on the same terms.
+**The source is GPL-3.0-or-later.** The full text is in [`LICENSE`](LICENSE). In short: you may use, study, change and share this software, and anything you distribute that is built from it must be shared on the same terms.
+
+**Binaries distributed by the copyright holder are MIT.** That covers the app on the App Store and on TestFlight, and its text is in [`LICENSE-APP.md`](LICENSE-APP.md).
+
+These cover two different things. They are not alternatives, and neither is offered in place of the other: taking a copy of the source means taking it under the GPL, whatever licence a compiled app you also hold carries.
+
+The reason for the split is narrow. The GPL forbids adding restrictions beyond its own terms, and App Store distribution adds them — device limits and DRM reach everyone who downloads. That conflict has removed apps before. MIT has no such prohibition, so a binary licensed under it sits inside Apple's rules without contradiction. See [`docs/chores/C18.md`](docs/chores/C18.md).
+
+Copyright is recorded in [`NOTICE`](NOTICE), and the condition on contributions in [`CONTRIBUTING.md`](CONTRIBUTING.md) — there is one, and it exists to keep the arrangement above possible.
 
 ## What you need
 

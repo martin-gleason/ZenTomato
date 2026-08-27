@@ -45,6 +45,10 @@ run_check "lint" ./scripts/check-lint.sh
 # this moment: "is this commit about to add a credential?"
 run_check "Todoist allowlist" ./scripts/check-todoist-writes.sh
 run_check "secret scan" ./scripts/check-secrets.sh --staged
+# Cheap, and it guards the one sentence that would dissolve the copyleft — a
+# sentence somebody ADDS believing it a helpful summary, rather than a file
+# somebody would notice was missing. See scripts/check-licence-wording.sh.
+run_check "licence wording" ./scripts/check-licence-wording.sh
 
 if [[ $failed -ne 0 ]]; then
   cat <<'EOF' >&2
