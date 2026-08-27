@@ -82,7 +82,20 @@ final class AlarmKitScheduler: AlarmScheduling {
   ///   engine turns that into a visible warning on the timer screen; an alarm
   ///   that silently fails to be set is the worst thing this feature could ship.
   func schedule(_ request: BlockAlarmRequest, sparing: UUID?) async throws {
-    try cancelOutstanding(sparingAlerting: true, sparing: sparing)
+    // **`sparingAlerting: false`, and that reversal is the point.**
+    //
+    // Sparing by state was added first, before identity sparing existed, and it
+    // has now done more harm than the problem it solved. An alarm that has fired
+    // and not been dismissed stays `.alerting` — the owner watched one sit for
+    // over thirty seconds — so the state check spared it at every subsequent
+    // boundary. Nothing ever cleared it, and a sprint accumulated one stale alarm
+    // per block: alerts that reappeared during later blocks, and a dismiss that
+    // silenced a stale alarm instead of the current one.
+    //
+    // Identity does the whole job and does it precisely: exactly one alarm needs
+    // to survive a schedule — the block that just ended, whose alarm is ringing or
+    // about to. Everything else is from a block that is over and must go.
+    try cancelOutstanding(sparingAlerting: false, sparing: sparing)
 
     // THE ONE PLACE AN END TIME BECOMES A LENGTH.
     // The app's record of a block is the wall-clock instant it ends, because
