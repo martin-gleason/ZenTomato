@@ -84,7 +84,7 @@ dismissal. **That is a delta, not a fix**, and it is not in here.
 ## Two provenance changes
 
 **The export names what made it.** One italic line at the bottom of every page —
-`*Exported by ZenPom 0.9.0 (6).*` A page filed in a notebook and read six months
+`*Exported by ZenPom 0.9.0 (7).*` A page filed in a notebook and read six months
 later should say what produced it. At the bottom because `D15` describes the
 document as an order of questions and provenance answers none of them; in the
 heading it would compete with the content on a page whose whole design goal is
@@ -99,7 +99,7 @@ sections and their order are untouched. Every golden changed by one line, and th
 is the commit that says which decision changed and why — the standing rule being
 that a golden never changes to make a test pass.
 
-**Settings names the build.** A row reading `ZenPom 0.9.0 (6)`, selectable so it
+**Settings names the build.** A row reading `ZenPom 0.9.0 (7)`, selectable so it
 can be copied into a report rather than transcribed. It exists because a crash
 arrived this week and the only way to learn which code produced it was to read the
 build number off the phone with `devicectl`. A tester cannot do that.
@@ -227,11 +227,29 @@ the behaviour that killed the owner's break.
 The invariant is real and still held — abandoning is `stop(reason:)`, which is
 what the stop sheet calls. The test now drives that.
 
+## The third: breaks never sounded, and the asymmetry was the clue
+
+**Sprint 2, sound on:** every focus block alarmed. **Not one break did.** Four
+focus blocks, three breaks, and a perfectly clean split.
+
+That asymmetry is the whole diagnosis. A focus block ends when somebody
+**dismisses its alarm** — so by the time the next block is scheduled, that alarm
+has certainly fired. A break ends **by itself**, and `begin()` schedules the next
+alarm at the same instant, cancelling everything not yet `.alerting`. The break's
+alarm is due exactly then and often still reads `.countdown`, so it is cancelled a
+moment before it would have sounded.
+
+**Sparing by state was a race, and a human was the only thing winning it.**
+
+So `schedule` now takes `sparing:` and the engine names the alarm of the block
+that just ended. Identity cannot lose a race with itself. The `.alerting` check
+stays as a second line, but nothing depends on it any more.
+
 ## Device check
 
 1. **Two focus blocks, ringer on, phone locked — one with music, one without.**
    Both must sound. That is the test the diagnosis predicted and the one that
    proves it.
 2. **Dismiss the alarm** and confirm the sheet appears with the taps on it.
-3. **Settings → About** reads `ZenPom 0.9.0 (6)`.
+3. **Settings → About** reads `ZenPom 0.9.0 (7)`.
 4. **Export** and check the last line names the build.

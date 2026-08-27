@@ -81,8 +81,8 @@ final class AlarmKitScheduler: AlarmScheduling {
   /// - Throws: whatever iOS reports if the alarm cannot be cancelled or set. The
   ///   engine turns that into a visible warning on the timer screen; an alarm
   ///   that silently fails to be set is the worst thing this feature could ship.
-  func schedule(_ request: BlockAlarmRequest) async throws {
-    try cancelOutstanding(sparingAlerting: true)
+  func schedule(_ request: BlockAlarmRequest, sparing: UUID?) async throws {
+    try cancelOutstanding(sparingAlerting: true, sparing: sparing)
 
     // THE ONE PLACE AN END TIME BECOMES A LENGTH.
     // The app's record of a block is the wall-clock instant it ends, because
@@ -131,6 +131,10 @@ final class AlarmKitScheduler: AlarmScheduling {
   ///   first: stopping at the first failure would leave the rest outstanding,
   ///   which is the exact situation this method exists to prevent.
   func cancelOutstanding(sparingAlerting: Bool) throws {
+    try cancelOutstanding(sparingAlerting: sparingAlerting, sparing: nil)
+  }
+
+  func cancelOutstanding(sparingAlerting: Bool, sparing: UUID?) throws {
     var firstFailure: (any Error)?
 
     for alarm in try AlarmManager.shared.alarms {
@@ -150,6 +154,10 @@ final class AlarmKitScheduler: AlarmScheduling {
       //
       // An explicit stop or dismiss passes `false` and silences everything,
       // because being asked for silence is exactly when silence is wanted.
+      // **Identity first, because state is a race.** The alarm named here is the
+      // one for the block that just ended: it is due at this instant, and asking
+      // whether it has reached `.alerting` yet is asking who won a footrace.
+      if let sparing, alarm.id == sparing { continue }
       if sparingAlerting, alarm.state == .alerting { continue }
       do {
         try AlarmManager.shared.cancel(id: alarm.id)

@@ -220,6 +220,57 @@ struct AlarmRingsThroughTests {
     #expect(harness.engine.kind == .shortBreak)
   }
 
+  // MARK: Chaining does not silence the block it leaves
+
+  /// `chainingSparesTheAlarmOfTheBlockThatJustEnded` — why breaks never sounded.
+  ///
+  /// **The owner's sprint 2, in one line:** every focus block alarmed and every
+  /// break did not. The asymmetry is the tell. A focus block ends when somebody
+  /// **dismisses its alarm**, so by then it has certainly fired. A break ends by
+  /// itself — and `begin()` schedules the next block's alarm at that same
+  /// instant, cancelling everything not yet `.alerting`. The break's alarm is due
+  /// exactly then and often still reads `.countdown`, so it is cancelled a moment
+  /// before it would have sounded.
+  ///
+  /// Sparing by **state** loses that race. Sparing by **identity** cannot: the
+  /// engine knows which block just ended and names its alarm.
+  @Test("chainingSparesTheAlarmOfTheBlockThatJustEnded")
+  func chainingSparesTheAlarmOfTheBlockThatJustEnded() async throws {
+    let harness = try Harness(autoStart: true)
+    await harness.engine.start()
+    let focusAlarm = harness.alarms.outstanding?.id
+
+    harness.clock.advance(by: 25 * 60)
+    await harness.engine.boundaryReached()
+
+    #expect(harness.engine.kind == .shortBreak)
+    #expect(
+      harness.alarms.sparedIDs.last == focusAlarm,
+      """
+      The break was scheduled without sparing the finished block's alarm, so that \
+      alarm is cancelled at the instant it is due and never sounds.
+      """)
+  }
+
+  /// `everyBlockInASprintSparesItsPredecessor` — the pattern, not one boundary.
+  ///
+  /// The owner saw this across a whole sprint: focus, break, focus, break. Each
+  /// chain is a chance to cancel the alarm that is ringing, so the guarantee has
+  /// to hold at every one of them rather than at the first.
+  @Test("everyBlockInASprintSparesItsPredecessor")
+  func everyBlockInASprintSparesItsPredecessor() async throws {
+    let harness = try Harness(autoStart: true)
+    await harness.engine.start()
+
+    for _ in 0 ..< 3 {
+      let ending = harness.alarms.outstanding?.id
+      harness.clock.advance(by: 60 * 60)
+      await harness.engine.boundaryReached()
+      guard harness.engine.isRunning else { break }
+      #expect(harness.alarms.sparedIDs.last == ending)
+    }
+  }
+
   // MARK: Private
 
   private struct Harness {

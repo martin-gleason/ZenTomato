@@ -81,8 +81,9 @@ final class SpyAlarmScheduler: AlarmScheduling {
     return authorization
   }
 
-  func schedule(_ request: BlockAlarmRequest) async throws {
+  func schedule(_ request: BlockAlarmRequest, sparing: UUID?) async throws {
     calls.append(.schedule(request))
+    sparedIDs.append(sparing)
     cancelledAtSchedule.append(Task.isCancelled)
     if let scheduleError {
       throw scheduleError
@@ -98,6 +99,13 @@ final class SpyAlarmScheduler: AlarmScheduling {
   /// ringing would make that branch untestable — which is how the blocking
   /// playback read shipped in `C16`.
   var isAlerting = false
+
+  /// What each `schedule` was told to spare, in order.
+  ///
+  /// Recorded because sparing by identity is the whole fix for breaks never
+  /// sounding, and a stand-in that dropped the argument would let it regress
+  /// silently.
+  private(set) var sparedIDs: [UUID?] = []
 
   /// Whether a cancel was ever asked to spare a ringing alarm, and what it did.
   private(set) var sparedARingingAlarm = false

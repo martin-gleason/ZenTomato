@@ -221,6 +221,15 @@ final class TimerEngine {
   /// feature is held to.
   private var abandonGeneration = 0
 
+  /// The alarm the next `schedule()` must not cancel.
+  ///
+  /// Set when a block ends, read once when the block after it is scheduled.
+  /// Without it, chaining cancels the finished block's alarm at the instant it is
+  /// due — which is why breaks never sounded while focus blocks, dismissed by a
+  /// person, always did: by the time somebody has dismissed an alarm it has
+  /// certainly fired, and nothing waits for a break.
+  private var alarmToSpare: UUID?
+
   // MARK: Initialisation
 
   /// Builds the engine and adopts whatever the database already says, so the
@@ -641,6 +650,9 @@ final class TimerEngine {
     // block's facts, and reading any of them afterwards would describe the
     // block that came next.
     let endedSessionID = state.sessionID
+    // Carried to whatever is scheduled next, so the alarm for the block ending
+    // right now survives being replaced.
+    alarmToSpare = endedSessionID
     let prompts = currentBlockDistractions
     // Frozen with the rest, so that a stop confirmed while `begin()` below is
     // suspended cannot be overtaken by this method resuming. See
@@ -1134,7 +1146,11 @@ extension TimerEngine {
       soundEnabled: state.soundEnabled, completedInSprint: state.completedInSprint,
       pomodorosPerSprint: state.pomodorosPerSprint)
     do {
-      try await alarms.schedule(request)
+      // The block that just ended, whose alarm is ringing or about to. Consumed
+      // here so it cannot leak into a later, unrelated schedule.
+      let spare = alarmToSpare
+      alarmToSpare = nil
+      try await alarms.schedule(request, sparing: spare)
     } catch {
       // The block is running and saved. All that failed is the noise at the end
       // of it, and the screen says so.
