@@ -182,3 +182,31 @@ D1 D2 D3 D4 D17 D18 D20
 
 List only the ones you have actually applied. `DeltaIntegrityTests` reads this section, and the
 backlog count drops as the old text disappears from the file.
+
+---
+
+## A8 — D25: music can be switched on during a break
+
+**Ratified by the owner 2026-08-27.** Unlike `A1`–`A7`, this one is **not yet built** — the
+behaviour it describes does not exist in the app today, and will not until `F4f` lands.
+
+**Line 27**, in the *Locked decisions* table.
+
+Current:
+```
+| Music during breaks | Pauses. Resumes at the next pomodoro. |
+```
+Replace with:
+```
+| Music during breaks | Pauses, and can be switched back on by hand. Resumes by itself at the next pomodoro. |
+```
+
+**Why this one is urgent in a way the others are not.** `DeltaIntegrityTests` counts ratified
+deltas whose replacement text has not reached `SPEC.md`, and fails when that count **grows**. The
+baseline is pinned at zero. So `D25` is deliberately still marked *proposed* in `00-deltas.md`
+until this paste happens — stamping it ratified first would turn CI red and block every merge
+under branch protection.
+
+**The sequence, therefore:** paste the line above, add `D25` to the `## Amendments applied` list at
+the bottom of `SPEC.md`, and tell the agent. The agent then stamps the delta ratified in the same
+commit, and the count never leaves zero.

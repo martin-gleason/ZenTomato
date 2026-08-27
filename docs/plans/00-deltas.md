@@ -45,7 +45,7 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D22** | ratified | — | 1049 | A block records which project it was for, and the export labe… |
 | **D23** | ratified | — | 1132 | The music picker gets a search field; scope was never exceeded |
 | **D24** | proposed | yes | — | The alarm sound can be chosen; `AppSettings` gains a seventh field |
-| **D25** | proposed | yes | — | Music can be switched on during a break |
+| **D25** | owner said yes; awaiting `A8` paste | yes | — | Music can be switched on during a break |
 
 *24 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
@@ -1278,7 +1278,21 @@ carry third-party creative work.
 
 ## D25 — Music can be switched on during a break
 
-**Proposed 2026-08-26. Awaiting ratification.**
+**Proposed 2026-08-26. The owner said yes on 2026-08-27 — but this heading still
+says *proposed*, deliberately, and that is not an oversight.**
+
+`DeltaIntegrityTests` counts deltas whose heading says `Ratified` and whose
+replacement text has not reached `SPEC.md`, and fails when that count grows above
+the baseline of **zero**. Stamping this ratified before the spec line is changed
+would turn the suite red and block every merge under branch protection.
+
+And the agent may not change `SPEC.md`: `conventions.md` says spec authority stays
+with the owner, and `AMENDMENTS-TO-APPLY.md` opens with *"the agent never edits
+the contract — this proposes, you apply."*
+
+So the ratification lands in two steps, and **`A8` in `AMENDMENTS-TO-APPLY.md` is
+the owner's half**. Once the line is pasted, this heading changes in the same
+commit as the build begins.
 
 ### Where this came from
 
