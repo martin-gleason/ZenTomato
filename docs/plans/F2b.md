@@ -124,6 +124,38 @@ Two existing tests changed, both deliberately and both explained in place:
 ordering it guarded now lives in the scheduler) and `sprintEndReturnsToIdle` (an
 alarm whose time has passed is not a leak — it has already fired).
 
+## Device results, 2026-08-27
+
+| Block | App sound | Music | Phone | Alarm | Sheet |
+|---|---|---|---|---|---|
+| 1 | **off** | on | — | did not fire | — |
+| 2 | **off** | off | — | fired | **appeared** |
+| 4 | **on** | on | **upside down** | **fired** | none (no taps) |
+
+**Block 4 is the test, and it passed.** Music playing, phone face down, sound on —
+the exact combination that produced silence before this change, and the one the
+diagnosis predicted would be fixed. The audio background mode keeps the app alive,
+the boundary fires on time, and the alarm now survives it.
+
+**Block 2 proves the second half.** The alert appeared, was dismissed, and the
+sheet followed. That path used to refuse a reflection outright.
+
+**Block 4 showing no sheet is correct, not a miss.** There were no distraction
+taps, and `BlockReflection` refuses to exist without at least one — "no taps, no
+sheet" is enforced by the type rather than by a condition somebody can forget.
+
+### Blocks 1 and 2 were testing a muted alarm
+
+With the app's **sound setting off**, `AlarmKitScheduler` substitutes
+`Silence.caf` — half a second of digital nothing — because **AlarmKit has no
+silent option**: its sound is either the system default or a named file from the
+bundle, and those are the only two things iOS offers. So the alarm still fires,
+the alert still appears, the block still ends; the phone simply makes no noise.
+
+**That is `O7` working as designed**, and it means blocks 1 and 2 could not have
+made a sound whatever this change did. The one real question left is whether the
+*alert* appeared in block 1 — because in block 2, with the same setting, it did.
+
 ## Device check
 
 1. **Two focus blocks, ringer on, phone locked — one with music, one without.**
