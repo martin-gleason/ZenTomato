@@ -255,7 +255,7 @@ extension StatsScreenModel {
   /// The page itself, built from the range's own period.
   var document: String {
     guard let rangePeriod else { return "" }
-    return StatsMarkdown.document(for: rangePeriod)
+    return StatsMarkdown.document(for: rangePeriod, producedBy: .current)
   }
 
   var filename: String {

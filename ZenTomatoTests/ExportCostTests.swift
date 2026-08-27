@@ -69,8 +69,8 @@ struct ExportCostTests {
     let period = query.period(StatsStoreFixture.fortnightRange)
     let clock = ContinuousClock()
 
-    let build = clock.measure { _ = StatsMarkdown.document(for: period) }
-    let document = StatsMarkdown.document(for: period)
+    let build = clock.measure { _ = StatsMarkdown.document(for: period, producedBy: .forGoldens) }
+    let document = StatsMarkdown.document(for: period, producedBy: .forGoldens)
     let write = clock.measure {
       _ = try? StatsExportFile.write(document: document, filename: "ZenTomato-cost.md")
     }
@@ -122,8 +122,8 @@ struct ExportCostTests {
 
     let counted = clock.measure { _ = query.period(wholeYear) }
     let period = query.period(wholeYear)
-    let build = clock.measure { _ = StatsMarkdown.document(for: period) }
-    let document = StatsMarkdown.document(for: period)
+    let build = clock.measure { _ = StatsMarkdown.document(for: period, producedBy: .forGoldens) }
+    let document = StatsMarkdown.document(for: period, producedBy: .forGoldens)
     let write = clock.measure {
       _ = try? StatsExportFile.write(document: document, filename: "ZenTomato-year.md")
     }
@@ -155,7 +155,7 @@ struct ExportCostTests {
 
     let fortnight = query.period(StatsStoreFixture.fortnightRange)
     let clock = ContinuousClock()
-    let cost = clock.measure { _ = StatsMarkdown.document(for: fortnight) }
+    let cost = clock.measure { _ = StatsMarkdown.document(for: fortnight, producedBy: .forGoldens) }
 
     print("  fortnight page from a year of data: \(cost)")
     #expect(cost < .milliseconds(250))

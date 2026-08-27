@@ -70,7 +70,7 @@ final class ReentrantAlarmScheduler: AlarmScheduling {
     await asyncHook?()
   }
 
-  func cancelOutstanding() throws {
+  func cancelOutstanding(sparingAlerting: Bool) throws {
     // Nothing to cancel: this stand-in never holds an alarm. Cancellation order
     // is `SpyAlarmScheduler`'s subject, not this one's.
   }

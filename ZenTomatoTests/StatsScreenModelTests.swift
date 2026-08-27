@@ -75,7 +75,7 @@ struct StatsScreenModelTests {
   @Test("statsScreenMatchesExport")
   func statsScreenMatchesExport() {
     let model = Self.model(for: StatsPeriodFixture.fortnight)
-    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight)
+    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight, producedBy: .forGoldens)
 
     // The page's summary line, verbatim, is built from the same four figures the
     // screen draws — so if either drifts, this line stops matching.
@@ -253,7 +253,7 @@ struct StatsScreenModelTests {
   @Test("daysRunNewestFirstOnScreenAndOldestFirstOnPaper")
   func daysRunNewestFirstOnScreenAndOldestFirstOnPaper() {
     let model = Self.model(for: StatsPeriodFixture.fortnight)
-    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight)
+    let document = StatsMarkdown.document(for: StatsPeriodFixture.fortnight, producedBy: .forGoldens)
 
     #expect(model.dayRows.first?.title == "Thu 20 Aug")
     #expect(model.dayRows.last?.title == "Sat 8 Aug")

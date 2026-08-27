@@ -159,7 +159,16 @@ struct TimerEngineTests {
     // Two blocks ran, so two alarms were set. A third would be the fifth block
     // this test exists to prevent.
     #expect(alarms.scheduledRequests.count == 2)
-    #expect(alarms.outstanding == nil)
+    // **THE LONG BREAK'S ALARM IS STILL REGISTERED, AND THAT IS DELIBERATE.**
+    //
+    // This used to assert `nil`, because the engine cancelled the alarm the
+    // moment a block ended — including the one that was ringing to say so. An
+    // alarm whose time has passed is not a leak waiting to fire; it has already
+    // fired, and the next `schedule()` clears it before setting anything new.
+    //
+    // What must never be outstanding is an alarm that has NOT yet fired, and
+    // nothing here can produce one: going idle schedules nothing.
+    #expect(alarms.outstanding?.kind == .longBreak)
   }
 
   /// With auto-start switched ON, blocks inside a sprint chain without a tap.

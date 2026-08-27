@@ -47,5 +47,13 @@ protocol AlarmScheduling: AnyObject {
   /// would leave a stale alarm behind with no way to reach it. Cancelling
   /// everything is the only self-healing answer, and this app never has more
   /// than one block running at a time, so nothing is lost by it.
-  func cancelOutstanding() throws
+  /// Calls off this app's alarms.
+  ///
+  /// - Parameter sparingAlerting: when `true`, an alarm that is **currently
+  ///   ringing** is left alone. Scheduling passes `true`: clearing the way for
+  ///   the next block must never silence the alarm for the one that just ended,
+  ///   which with auto-start on happen at the same instant. An explicit stop or
+  ///   dismiss passes `false`, because being asked for silence is when silence
+  ///   is wanted.
+  func cancelOutstanding(sparingAlerting: Bool) throws
 }

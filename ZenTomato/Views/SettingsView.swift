@@ -203,6 +203,7 @@ private struct SettingsForm: View {
       whenABlockEnds
       music
       todoist
+      build
     }
     // Tied to the whole screen's lifetime rather than the music section's. A
     // `Form` is a `List`, so a section's lifetime is cell lifetime and would fire
@@ -391,6 +392,44 @@ private struct SettingsForm: View {
       header("Music")
     } footer: {
       footer(MusicCopy.settingsFooter(for: musicAvailability))
+    }
+    .listRowBackground(Color(.surfaceRaised))
+  }
+
+  /// Which build this is.
+  ///
+  /// **It exists because a crash report arrived and nobody could say which code
+  /// produced it.** The build number had to be read off the phone with
+  /// `devicectl`; a tester cannot do that, and "the latest one" is not an answer
+  /// anybody can act on.
+  ///
+  /// **Not a setting, and `AppSettings` still holds six values.** It reports and
+  /// cannot be tapped, changed or navigated from — the same shape as the music
+  /// row above, for the same reason.
+  ///
+  /// **No About screen yet, deliberately.** That is where this will eventually
+  /// live, alongside the licence and — once `D24` lands — the attribution and
+  /// link for every bundled sound. It is blocked on `C10` settling which licence
+  /// the binaries carry, and a screen naming a licence before that is answered
+  /// would state a claim that might need correcting in a binary already on
+  /// somebody's phone. A version row waits for none of that.
+  @ViewBuilder
+  private var build: some View {
+    Section {
+      LabeledContent("Version") {
+        Text(AppBuild.current.described)
+          .font(Typography.body)
+          .foregroundStyle(Color(.textMuted))
+      }
+      .font(Typography.body)
+      .accessibilityElement(children: .combine)
+      .accessibilityLabel("Version")
+      .accessibilityValue(AppBuild.current.described)
+      // Selectable so a tester can copy it into a bug report rather than
+      // transcribing it, which is where the digits get mistyped.
+      .textSelection(.enabled)
+    } header: {
+      header("About")
     }
     .listRowBackground(Color(.surfaceRaised))
   }

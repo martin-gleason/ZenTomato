@@ -90,11 +90,28 @@ final class SpyAlarmScheduler: AlarmScheduling {
     outstanding = request
   }
 
-  func cancelOutstanding() throws {
+  /// Whether the outstanding alarm is currently making a noise.
+  ///
+  /// **The spy models this because the real scheduler now depends on it.**
+  /// `AlarmKitScheduler` skips an alarm whose `Alarm.State` is `.alerting` when
+  /// clearing the way for the next block, and a stand-in that could not be
+  /// ringing would make that branch untestable — which is how the blocking
+  /// playback read shipped in `C16`.
+  var isAlerting = false
+
+  /// Whether a cancel was ever asked to spare a ringing alarm, and what it did.
+  private(set) var sparedARingingAlarm = false
+
+  func cancelOutstanding(sparingAlerting: Bool) throws {
     calls.append(.cancelOutstanding)
     if let cancelError {
       throw cancelError
     }
+    if sparingAlerting, isAlerting {
+      sparedARingingAlarm = true
+      return
+    }
     outstanding = nil
+    isAlerting = false
   }
 }
