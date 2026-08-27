@@ -84,19 +84,43 @@ struct AlarmRingsThroughTests {
     #expect(reflection?.prompts.count == 1)
   }
 
-  /// `dismissingStillStartsNothing` — offering a sheet is not starting a block.
+  /// `dismissingAFinishedBlockStartsItsBreak` — the regression, as a test.
   ///
-  /// A dismiss can arrive from a locked phone. Showing a prompt to somebody who
-  /// reached for it and starting a focus block nobody is present for are different
-  /// promises about the same tap, and only the first is being made.
-  @Test("dismissingStillStartsNothing")
-  func dismissingStillStartsNothing() async throws {
-    let harness = try Harness()
+  /// **This is the bug the owner found within an hour of the first build.** The
+  /// dismiss path refused to chain, on reasoning written when a dismiss was rare:
+  /// before the alarm was allowed to fire, the boundary handled block ends and it
+  /// chained. Letting the alarm through made dismissing the *normal* way a block
+  /// ends, so a rule written for an edge case began governing every block —
+  /// *"it appears stopping the alarm cancels the break."* Eight blocks in a row,
+  /// none of them rolling into its break.
+  ///
+  /// `D4` is explicit: *"the break timer starts running the instant the block
+  /// ends, behind the sheet."*
+  @Test("dismissingAFinishedBlockStartsItsBreak")
+  func dismissingAFinishedBlockStartsItsBreak() async throws {
+    let harness = try Harness(autoStart: true)
     await harness.engine.start()
     harness.clock.advance(by: 25 * 60)
     await harness.engine.handleDismiss()
 
-    #expect(harness.engine.isRunning == false)
+    #expect(harness.engine.isRunning, "Dismissing the alarm ended the sprint instead of starting the break.")
+    #expect(harness.engine.kind == .shortBreak)
+  }
+
+  /// `dismissingEarlyStartsNothing` — the distinction the fix turns on.
+  ///
+  /// The same button means two things and the engine decides which. Before the
+  /// end instant it is somebody abandoning a block, and abandoning must chain
+  /// into nothing — otherwise stopping a block would start the next one, which is
+  /// the opposite of what was asked.
+  @Test("dismissingEarlyStartsNothing")
+  func dismissingEarlyStartsNothing() async throws {
+    let harness = try Harness(autoStart: true)
+    await harness.engine.start()
+    harness.clock.advance(by: 5 * 60)
+    await harness.engine.handleDismiss()
+
+    #expect(harness.engine.isRunning == false, "Abandoning a block started the next one.")
   }
 
   // MARK: Clearing the way for the next block

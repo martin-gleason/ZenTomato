@@ -442,15 +442,35 @@ final class TimerEngine {
     // the owner's ruling in two lines: the alarm always sounds, and the sheet
     // follows it.
     //
-    // It still chains into nothing — `mayAutoStart: false` is unchanged, for the
-    // reason above this method: a dismiss can arrive from a locked phone, and
-    // starting a focus block nobody is present for is what auto-start is not
-    // for. Offering a sheet and starting a block are different promises about
-    // the same tap.
+    // **AND IT CHAINS, WHICH IT DID NOT AT FIRST — THAT WAS A REGRESSION.**
+    //
+    // This passed `mayAutoStart: false`, on the reasoning that "a dismiss can
+    // arrive from a locked phone, and starting a focus block nobody is present
+    // for is what auto-start is not for."
+    //
+    // That reasoning was written when a dismiss was **rare**. Before the alarm
+    // was allowed to fire, this path ran almost never — the boundary handled
+    // block ends, and it chained. Letting the alarm through made dismissing the
+    // normal way a block ends, so a rule written for an edge case started
+    // governing every block. The owner found it within an hour: *"it appears
+    // stopping the alarm cancels the break."* Eight blocks, and not one of them
+    // rolled into its break.
+    //
+    // **`completed` is the honest condition.** A dismiss before the end instant
+    // is somebody abandoning a block and must chain into nothing; a dismiss
+    // after it is somebody acknowledging a block that finished, and `D4` is
+    // explicit that the break follows — *"the break timer starts running the
+    // instant the block ends, behind the sheet."*
+    //
+    // And the original worry does not survive contact with what a dismiss is: it
+    // is a **deliberate tap on a button**. That is the same evidence of presence
+    // this method now relies on to offer a sheet at all. Refusing to start the
+    // next block while accepting the tap as proof somebody is there would be two
+    // opposite readings of one gesture.
     //
     // `BlockReflection` refuses to exist without at least one tap, so a block
     // with nothing to reflect on still shows nothing.
-    await end(state: state, completed: completed, at: clock.now, mayAutoStart: false, mayPromptForReflection: true)
+    await end(state: state, completed: completed, at: clock.now, mayAutoStart: completed, mayPromptForReflection: true)
   }
 
   /// The block's deadline arrived and the app was awake to see it. This is the
