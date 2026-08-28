@@ -300,6 +300,23 @@ private struct SettingsForm: View {
         // heading before every row, so it gets the whole phrase.
         .accessibilityLabel(Text("Sound when a block ends"))
 
+      // BELOW the switch, and disabled when the switch is off. The screen
+      // should read the way the code decides: sound off means no noise, so a
+      // sound choice under it is not a live control and must not look like one.
+      // Hidden, not shown-with-one-option, when the bundle holds no alternative.
+      // A picker whose list has a single entry is a control that does nothing.
+      if AlertSound.playable.count > 1 {
+        Picker("Alert sound", selection: $settings.alertSound) {
+          ForEach(AlertSound.playable, id: \.self) { sound in
+            Text(sound.name).tag(sound)
+          }
+        }
+        .pickerStyle(.navigationLink)
+        .font(Typography.body)
+        .disabled(settings.soundEnabled == false)
+        .accessibilityLabel(Text("Alert sound when a block ends"))
+      }
+
       Toggle("Start the next block automatically", isOn: $settings.autoStartNextBlock)
         .tint(Color(.action))
         .accessibilityHint(
@@ -307,16 +324,38 @@ private struct SettingsForm: View {
     } header: {
       header("When a block ends")
     } footer: {
-      footer(
-        """
-        With Sound off the block still ends on time and the alert still appears — \
-        the phone just doesn't make a noise.
-
-        Auto-start carries you through a sprint, not into the next one. When the \
-        long break ends the timer stops and waits for you.
-        """)
+      footer(Self.whenABlockEndsFooter)
     }
     .listRowBackground(Color(.surfaceRaised))
+  }
+
+  /// The footer under "When a block ends", which has a paragraph the screen only
+  /// sometimes earns.
+  ///
+  /// **Copy that describes a control the person cannot see is worse than no copy
+  /// at all** — it tells them to go looking for something that is not there. The
+  /// sound-choice sentence appears exactly when the picker does, on the same
+  /// condition, so the two cannot drift.
+  private static var whenABlockEndsFooter: String {
+    let sound = AlertSound.playable.count > 1
+      ? """
+        With Sound off the block still ends on time and the alert still appears — \
+        the phone just doesn't make a noise, whichever alert sound is chosen.
+
+        A block keeps the sound it started with, so changing this mid-block takes \
+        effect at the next one.
+        """
+      : """
+        With Sound off the block still ends on time and the alert still appears — \
+        the phone just doesn't make a noise.
+        """
+
+    return """
+      \(sound)
+
+      Auto-start carries you through a sprint, not into the next one. When the \
+      long break ends the timer stops and waits for you.
+      """
   }
 
   /// One duration row: a label, the current value, and a chevron that opens a
