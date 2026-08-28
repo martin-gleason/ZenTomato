@@ -116,7 +116,7 @@ reserved-space design, and a preview depicting a screen the app cannot produce.
 
 ## Pass five
 
-**Eight blocking, and six of them one class:** comments, docs and a delta
+**Eight blocking, and five of them one class:** comments, docs and a delta
 describing behaviour the code no longer has. `synchronize()`'s comment still
 refused the prompt `D29` had just made it offer; `boundaryReached()` still claimed
 to be *"the only place a reflection sheet is ever offered"* when two other paths
@@ -141,8 +141,8 @@ covered button for a lost prompt.
 See `docs/plans/F2d.md` for the `make ci` output of the merged tree. The device
 check is `O29`, and it is **half answered**: with the app open the owner reported
 *"silence button was amazing. all tests fired."* With the screen locked everything
-fired except the reflection sheet, which is `D29` — a different decision, proposed
-and not ratified.
+fired except the reflection sheet, which is `D29` — a different decision, since
+ratified and built.
 
 `O31` — the watch alert's button reads Stop where this app sets Done — is recorded
 and explicitly not guessed at.

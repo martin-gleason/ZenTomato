@@ -170,7 +170,8 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       // THE PROMPT IS TAKEN, NOT WATCHED.
       //
       // The engine offers a reflection at most once, at the end of a work block
-      // it was awake to see end. Consuming it hands it over and clears it in the
+      // it was awake to see end, or that `D29` judged recent enough. Consuming it
+      // hands it over and clears it in the
       // same call, so it cannot be read twice and therefore cannot be presented
       // twice — which is the defect D14 exists to prevent, arriving by a
       // different door.

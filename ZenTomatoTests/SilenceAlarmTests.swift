@@ -190,6 +190,49 @@ struct SilenceAlarmTests {
     #expect(engine.lastFailure == nil)
   }
 
+  /// **The failure message goes away when the alarm does.**
+  ///
+  /// *"Use the alert on the Lock Screen"* is advice about a noise. Somebody who
+  /// takes it — and stops the alarm from that alert — used to be left reading the
+  /// instruction they had just followed, until the next Start, because nothing
+  /// cleared it.
+  @Test("theSilenceComplaintGoesAwayWithTheAlarm")
+  func theSilenceComplaintGoesAwayWithTheAlarm() async throws {
+    let id = try await runToTheAlarm()
+    alarms.stopAlertingError = SpyAlarmScheduler.Failure()
+    await engine.silenceAlarm()
+    #expect(engine.lastFailure == .alarmSilenceFailed)
+
+    // The alarm stops by some other means — the Lock Screen alert.
+    alarms.stopAlertingError = nil
+    alarms.ring(nil)
+    for _ in 0..<20 where engine.lastFailure != nil { await Task.yield() }
+
+    #expect(engine.lastFailure == nil, "The instruction outlived the noise it was about.")
+    #expect(id != nil)
+  }
+
+  /// **And it is never written about an alarm that has already stopped.**
+  ///
+  /// `silenceAlarm()` writes the message after `await handleDismiss()`, which
+  /// really suspends. If the alarm goes quiet inside that window there is nothing
+  /// left to advise about — and the update stream will not yield `nil` twice, so
+  /// a message written then would never be withdrawn.
+  @Test("noComplaintAboutAnAlarmThatHasStopped")
+  func noComplaintAboutAnAlarmThatHasStopped() async throws {
+    _ = try await runToTheAlarm()
+    alarms.stopAlertingError = SpyAlarmScheduler.Failure()
+    // The read now reports silence: the bell stopped by itself.
+    alarms.ring(nil)
+
+    await engine.silenceAlarm()
+
+    #expect(engine.ringingAlarmID == nil)
+    #expect(
+      engine.lastFailure != .alarmSilenceFailed,
+      "A stale instruction was written about an alarm that had already stopped.")
+  }
+
   /// **"Could not ask" is not "nothing is ringing".**
   ///
   /// The failure branch re-reads the alarm system so as not to hide a button for

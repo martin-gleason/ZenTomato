@@ -635,8 +635,9 @@ struct TimerScreen: View {
     .preferredColorScheme(.dark)
 }
 
-/// The two ringing states. Compare either against "Focus running" or "Idle,
-/// light": the button changes, and nothing else moves.
+/// The two ringing states. Compare them against "Idle, light" and "Short break
+/// running" — the models they are derived from — and the only difference should
+/// be the button.
 #Preview("Alarm ringing, waiting") {
   TimerScreen(model: .previewAlarmRingingIdle)
     .preferredColorScheme(.light)
@@ -842,50 +843,46 @@ private extension TimerScreenModel {
     music: .previewPlaying,
     controls: .running)
 
-  /// `D26` — the alarm is ringing. **The state that had no preview**, which the
-  /// third adversarial pass pointed out while the placement was still a reserved
-  /// blank strip on every screen.
+  /// `D26` — the alarm is ringing.
   ///
-  /// Two of them, at the two ends of the boundary: one where the block has ended
-  /// and the timer is waiting, and one where auto-start has already begun the
-  /// break. The Silence button occupies the primary control's slot in both, so
-  /// these are also the check that nothing moved.
-  /// **The fields agree with each other, which the first version of this preview
-  /// did not.** `TimerView.screenModel` derives `blockName`, `kicker` and the
-  /// Start label from the same block, and the idle numeral is that block's whole
-  /// length — so "Focus block" beside "Start short break" beside "00:00" was a
-  /// screen the app cannot produce. A preview of an impossible state is worse
-  /// than none: it is the thing a reader checks the layout against.
-  static let previewAlarmRingingIdle = TimerScreenModel(
-    blockName: "Short break",
-    kicker: "Break",
-    numeral: "05:00",
-    spokenNumeral: "5 minutes",
-    progress: Progress(completed: 3, total: 4),
-    // **`nil`, and this is the field the previous correction missed.**
-    // `Capture.forBlock` is `guard isRunning, kind == .work else { return nil }`,
-    // so an idle screen has no capture pair and a break has none either — this
-    // literal violated both while carrying a count of 1. The first version of
-    // this preview was rejected for depicting an impossible state; the fix
-    // changed four fields and did not read the fifth.
-    capture: nil,
-    music: .previewPlaying,
-    controls: .start(isEnabled: true, spokenLabel: "Start short break, 5 minutes"),
-    alarmIsRinging: true)
+  /// **DERIVED FROM MODELS THAT ARE ALREADY CORRECT, NOT WRITTEN BY HAND.**
+  /// Three separate passes rejected hand-written versions of these two, each time
+  /// for a different field: a capture pair on a break, then a `kicker` no
+  /// `BlockKind` produces, then a music row a break cannot show. Each correction
+  /// read the fields it was told about and not the next one.
+  ///
+  /// `ringingAlarm()` copies every field from a model the app demonstrably
+  /// produces and flips one flag, so the only way these can be wrong now is if
+  /// their sources are — and their sources are used by other previews.
+  ///
+  /// Two states, at the two ends of a boundary: the timer waiting for the next
+  /// block, and auto-start having already begun the break. The Silence button
+  /// takes the primary control's slot in both, so these are also the check that
+  /// nothing moved.
+  static let previewAlarmRingingIdle = previewIdle.ringingAlarm()
 
-  static let previewAlarmRingingDuringNextBlock = TimerScreenModel(
-    blockName: "Short break",
-    kicker: "Break",
-    numeral: "04:59",
-    spokenNumeral: "4 minutes remaining",
-    progress: Progress(completed: 3, total: 4),
-    // A running break has no capture pair either — `TimerScreenModel` puts it
-    // plainly: "a break running has no capture buttons but must still leave
-    // their space."
-    capture: nil,
-    music: .previewPlaying,
-    controls: .running,
-    alarmIsRinging: true)
+  static let previewAlarmRingingDuringNextBlock = previewShortBreakRunning.ringingAlarm()
+
+  /// The same screen with the alarm going off.
+  ///
+  /// Every field is taken from `self`; only `alarmIsRinging` changes. Written once
+  /// so that no future preview of this state can contradict the app.
+  func ringingAlarm() -> TimerScreenModel {
+    TimerScreenModel(
+      blockName: blockName,
+      kicker: kicker,
+      numeral: numeral,
+      numeralIsAReading: numeralIsAReading,
+      spokenNumeral: spokenNumeral,
+      progress: progress,
+      completionNote: completionNote,
+      failureNote: failureNote,
+      capture: capture,
+      attachment: attachment,
+      music: music,
+      controls: controls,
+      alarmIsRinging: true)
+  }
 
   /// The state the receipt exists for: a block that has already been
   /// interrupted, with a count under each word.

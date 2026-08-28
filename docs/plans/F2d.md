@@ -156,8 +156,10 @@ Three previews were added with it, including one at `.accessibility5`.
 
 ## Evidence
 
-**Re-run for the tree as merged**, after the fourth adversarial pass and
-`D29`.
+**Regenerated after the sixth adversarial pass, from that run and no other.**
+The block that stood here was a `555/84` run of an earlier tree — the third time
+on this branch that committed evidence described something other than the tree
+being merged. It is pasted from the log rather than retyped.
 
 ```
 $ make ci
@@ -168,13 +170,14 @@ check-licence-wording.sh: OK — no disjunctive licence wording.
 check-open-register.sh: OK — the register renders as tables.
 run-script-tests.sh: 15 passed, 0 failed
 check-release-build.sh: OK — Release compiles with no warnings of ours.
-✔ Test run with 555 tests in 84 suites passed
+✔ Test run with 559 tests in 85 suites passed
 ```
 
 
 
 
-Fourteen tests across `SilenceAlarmTests` and `SilenceControlFenceTests`. **One found a real bug before any device did**:
+
+Nineteen tests across `SilenceAlarmTests`, `SilenceDismissAgreementTests` and `SilenceControlFenceTests`. **One found a real bug before any device did**:
 `handleDismiss()` clears `lastFailure` as its first act — correctly, so a new
 block does not inherit the last one's complaint — which meant a failure to
 silence was being written and then wiped a line later. Somebody would have been
@@ -190,17 +193,16 @@ system intent nobody watches.
 
 ## Still to check on the device — `O29`
 
-Nothing here has been seen on a phone. Two runs:
+**Half answered.** With the app in the foreground the owner reported *"silence
+button was amazing. all tests fired."* What remains is the second run:
 
-1. Let a block end with **the app in the foreground** and silence the alarm from
-   inside ZenPom without touching the system alert.
-2. Let one end with the app closed, dismiss from the system alert as usual, and
-   confirm the two paths do not fight — no double advance, no stuck button.
+Let a block end with the app **closed**, dismiss from the system alert as usual,
+and confirm the two paths do not fight — no double advance, no stuck button.
 
 
 ## What the adversarial review changed
 
-**Verdict: DO NOT MERGE, seven blocking findings.** The two worth naming here:
+**Pass one: DO NOT MERGE, seven blocking findings.** Five more passes followed; `docs/reviews/F2d.md` logs them all. The two worth naming here:
 
 **Silencing inside the auto-start window swallowed the reflection prompt.**
 `handleDismiss()` bumped `abandonGeneration` as its *first* line, above the
@@ -227,9 +229,11 @@ refused stop changes no AlarmKit state, so the id is never yielded again and the
 Silence button is gone for the rest of the session while the bell is still
 audible.
 
-What shipped is `ringingAlarmID = silenceFailed ? alarms.alertingAlarmID : nil` —
-the truth asked for rather than assumed — and the dead screen solved where it
-belonged, in the placement above, so nothing is disabled at all.
+That re-read was itself defective — `alertingAlarmID` swallows a throw as `nil`,
+and the moment iOS is most likely to refuse a *read* is the moment it has just
+refused a *stop*. **What shipped is the throwing `currentAlertingAlarmID()`**,
+with "could not ask" keeping the id it already had; and the dead screen solved
+where it belonged, in the placement above, so nothing is disabled at all.
 
 Also taken: the drift test **could not fail for the reason it was written** — it
 called `handleDismiss()` directly rather than the intent's real route through

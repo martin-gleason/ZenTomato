@@ -11,7 +11,8 @@ import Foundation
 /// re-derive the block from the finished-block row when it needs to.
 ///
 /// WHAT THIS IS FOR
-/// When a work block ends and the app was awake to see it end, the engine puts
+/// When a work block ends and somebody could plausibly still be in it — the app
+/// was awake to see it end, or `D29`'s prompt-wake test passes — the engine puts
 /// one of these on `TimerEngine.pendingReflection`. The timer screen notices,
 /// takes it, and presents the sheet. **The break is already running by then** —
 /// the engine finishes the whole transition before it publishes this, so
