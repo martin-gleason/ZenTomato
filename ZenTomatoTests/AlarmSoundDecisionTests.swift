@@ -47,12 +47,44 @@ struct AlarmSoundDecisionTests {
   /// sound this one does not. Either way the alarm must make a noise.
   @Test("anUnplayableChoiceStillMakesANoise")
   func anUnplayableChoiceStillMakesANoise() {
-    for choice in AlertSound.allCases where choice.isPlayable == false {
-      #expect(AlarmSoundDecision.decide(soundEnabled: true, choice: choice) == .systemDefault)
-    }
-    // And never silence — silence is reserved for the person having asked for it.
+    // **THE BUNDLE STATE IS HANDED IN, NOT WAITED FOR.** Every sound in the
+    // catalogue ships a file today, so `for … where isPlayable == false` runs
+    // zero times and asserts nothing while still counting as a passing test.
+    // This is the path the picker's whole design rests on, so it is exercised on
+    // a day when nothing is missing.
     for choice in AlertSound.allCases {
+      #expect(
+        AlarmSoundDecision.decide(soundEnabled: true, choice: choice, isPlayable: false)
+          == .systemDefault,
+        "\(choice.rawValue) resolved to a file this build cannot play, which is silence.")
+    }
+
+    // And never silence — that is reserved for the person having asked for it.
+    for choice in AlertSound.allCases {
+      #expect(AlarmSoundDecision.decide(soundEnabled: true, choice: choice, isPlayable: false) != .silent)
       #expect(AlarmSoundDecision.decide(soundEnabled: true, choice: choice) != .silent)
+    }
+
+    // Sound off still wins, even over a sound that would have played.
+    for choice in AlertSound.allCases {
+      #expect(
+        AlarmSoundDecision.decide(soundEnabled: false, choice: choice, isPlayable: true) == .silent)
+    }
+  }
+
+  /// The two-argument form is the three-argument form asking the bundle.
+  ///
+  /// Stated so the seam cannot drift into a second implementation of the rule,
+  /// which is the usual way a testability seam stops describing the code.
+  @Test("theSeamAndTheRealCallAgree")
+  func theSeamAndTheRealCallAgree() {
+    for choice in AlertSound.allCases {
+      for soundEnabled in [true, false] {
+        #expect(
+          AlarmSoundDecision.decide(soundEnabled: soundEnabled, choice: choice)
+            == AlarmSoundDecision.decide(
+              soundEnabled: soundEnabled, choice: choice, isPlayable: choice.isPlayable))
+      }
     }
   }
 }

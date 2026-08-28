@@ -193,11 +193,11 @@ struct AlertSoundTests {
       #expect(text.contains(attribution.licence))
       #expect(text.contains(attribution.source), "\(sound.name)'s link is not on screen.")
     }
-    // Nobody unplayable is credited on screen — that would name an author whose
-    // work this build does not actually play.
-    for sound in AlertSound.allCases where sound.isPlayable == false {
-      #expect(text.contains(sound.name) == false)
-    }
+    // Every playable sound with a credit is on screen and every credit on screen
+    // belongs to one — stated as a count, because the "nobody unplayable is
+    // credited" loop this replaced ran zero times: all three sounds ship files.
+    // A vacuous loop passes while asserting nothing, and the suite counts it.
+    #expect(text.components(separatedBy: "https://").count - 1 == borrowed.count)
   }
 
   /// The sound files this app ships, read from the source tree.
@@ -213,10 +213,27 @@ struct AlertSoundTests {
       .appending(path: "ZenTomato")
       .appending(path: "Resources")
 
-    let contents = try FileManager.default.contentsOfDirectory(
-      at: resources, includingPropertiesForKeys: nil)
-    return Set(contents.map(\.lastPathComponent).filter { $0.hasSuffix(".caf") })
+    // **RECURSIVE, AND EVERY AUDIO EXTENSION — THE SAME BLINDNESS TWICE.**
+    //
+    // The first version of this fence compared two `switch` statements and could
+    // not see a sound added to the target. Its replacement read one directory for
+    // `.caf` only, and could not see `Resources/Sub/Hidden.caf` or
+    // `Resources/Uncredited.aiff` — either of which `project.yml`'s `- path:
+    // ZenTomato` glob bundles just as readily. Demonstrated, not argued: with
+    // both files planted, the suite reported 527 passed.
+    //
+    // So walk everything below the directory, and match the extensions AlarmKit
+    // will play rather than the one we happen to use today.
+    let found = FileManager.default.enumerator(at: resources, includingPropertiesForKeys: nil)
+    let names = ((found?.allObjects as? [URL]) ?? []).map(\.lastPathComponent)
+    return Set(names.filter { name in soundExtensions.contains { name.hasSuffix(".\($0)") } })
   }
+
+  /// The audio file extensions iOS will play as an alert sound.
+  ///
+  /// Wider than what ships, deliberately: a fence listing only the extension in
+  /// use is one a different extension walks straight past.
+  private static let soundExtensions = ["caf", "aiff", "aif", "wav", "m4a", "mp3"]
 
   /// Sound files this app made rather than borrowed, and therefore has nobody to
   /// credit.
