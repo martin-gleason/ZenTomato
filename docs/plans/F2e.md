@@ -180,9 +180,9 @@ feature built so nobody has to choose a sound blind.
 
 ## Evidence
 
-**Re-run after the second adversarial pass.** The block that stood here was
-from a run that predated the fix commit, which touched eight source and test
-files — evidence for a tree that was not the tree being merged.
+**Re-run for the tree as merged.** Earlier blocks here were from runs that
+predated a fix commit — evidence for a tree that was not the one being merged,
+which the second adversarial pass called out.
 
 ```
 $ make ci
@@ -193,8 +193,9 @@ check-licence-wording.sh: OK — no disjunctive licence wording.
 check-open-register.sh: OK — the register renders as tables.
 run-script-tests.sh: 15 passed, 0 failed
 check-release-build.sh: OK — Release compiles with no warnings of ours.
-✔ Test run with 551 tests in 82 suites passed
+✔ Test run with 552 tests in 83 suites passed
 ```
+
 
 
 Seven new tests. They are **fences over source rather than view tests**, and that

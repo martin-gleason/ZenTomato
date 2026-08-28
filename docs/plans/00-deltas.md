@@ -49,6 +49,7 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D26** | ratified | yes, applied | — | A ringing alarm can be silenced from inside the app |
 | **D27** | ratified | yes, applied | — | Settings are read-only while a block is running |
 | **D28** | ratified | yes, applied | — | The alert sound can be previewed from Settings |
+| **D29** | proposed | yes, pending | — | A locked phone is somebody being there |
 
 *24 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
@@ -1503,3 +1504,69 @@ Add to the *Timer customization* row:
 **Scope note.** Preview plays the bundled file. It cannot preview `Default`, which
 is iOS's own alert sound and is not a file this app holds — that row previews
 nothing and the screen has to say so rather than appear broken.
+
+## D29 — A locked phone is somebody being there
+
+**Proposed 2026-08-28. Not ratified.**
+
+**What was reported**, running `O29` on build `202608281343`:
+
+> with the screen locked, all fired except the sheet. ther were 3 external
+> breaks and i was unable to capture it.
+
+**This is not a bug in the mechanical sense. It is a decision, and the decision is
+wrong about the owner.** `TimerEngine.reconcile()` ends a block that finished
+while the app was away and passes `mayPromptForReflection: false`, with this
+reasoning:
+
+> Still no reflection prompt, whatever the gap: the taps are recorded and stay
+> recorded, and what is refused is a sheet nobody was there to fill in.
+
+**Nobody was there is the assumption, and a locked phone is the counter-example.**
+The ordinary way to run a pomodoro is to put the phone face down or in a pocket
+and work. The alarm fires, the person picks it up — they were present for the
+whole block, they were interrupted three times, and the app has their three taps
+and never asks about them. `SPEC.md` says the app *"prompts for one sentence per
+tap"*, and in the most common way of using it, it does not.
+
+**The taps are not lost.** They are recorded and appear in the export and the
+stats. What is lost is the sentence, which is the part the log exists for.
+
+### What the code already knows
+
+`reconcile()` computes `wakeWasPrompt` — whether the gap since the block ended is
+inside the block's own length — and already uses it to decide auto-start. That is
+the same question this needs: *did somebody come back to this promptly, or did the
+phone sit overnight?* A fourteen-hour gap is nobody being there; two minutes is
+somebody picking up a ringing phone.
+
+### Proposed spec text
+
+**Currently:** *At the end of that pomodoro the app prompts for one sentence per
+tap (skippable).*
+
+Replace with:
+
+> At the end of that pomodoro the app prompts for one sentence per tap
+> (skippable). If the phone was locked or the app was away, the prompt waits and
+> appears when it is next opened — unless so long has passed that nobody could
+> still be in that block, in which case the taps stay recorded and the prompt is
+> dropped.
+
+### The part that needs deciding, not assuming
+
+**`pendingReflection` is in memory only.** If the app was terminated rather than
+suspended, there is nothing to wait. Making the prompt survive that means
+persisting it, which is a schema change — a `@Model`, or a field on the session —
+and that is a bigger decision than the threshold. **Two versions of this delta are
+possible and the owner should pick:**
+
+- **The small one.** Offer the prompt on reconciliation when `wakeWasPrompt`. Works
+  whenever the app was suspended, which is the common case. Nothing persisted, no
+  schema change.
+- **The larger one.** Persist the pending prompt so it survives a relaunch. Costs a
+  migration, and `O2` has only just been answered once.
+
+**No code either way until this is ratified.** It reverses a decision that is
+written down with reasons, and reversing those quietly is how a plan stops being a
+contract.

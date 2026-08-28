@@ -78,8 +78,6 @@ struct TimerScreen: View {
     VStack(spacing: Spacing.none) {
       centreColumn
 
-      silenceControl
-
       controls
         .accessibilitySortPriority(1)
     }
@@ -461,46 +459,48 @@ struct TimerScreen: View {
   /// ringing alarm belonged to iOS, so an alert that was missed — the app already
   /// open, the phone in a pocket — left the sound with no off switch here.
   ///
-  /// WHY IT IS NOT IN THE START/STOP POSITION, WHICH IS THE DECISION
-  /// That position changes identity on `isRunning`, and `isRunning` goes false at
-  /// the exact instant an alarm begins. A control appearing *there* at *that*
-  /// moment lands under a finger already travelling toward something else — which
-  /// is how the report arrived in the first place. So it gets its own place above
-  /// the primary control, and the primary control is disabled while it is
-  /// showing: the thing that moves is inert, so a mis-tap does nothing rather
-  /// than doing the wrong thing.
+  /// PLACEMENT, ARRIVED AT BY REJECTING TWO OTHER ANSWERS
+  /// It **takes the primary control's place** while the alarm rings rather than
+  /// sitting above it. Both button styles carry `minHeight: Spacing.controlHeight`,
+  /// so this is a swap with no layout change at all: nothing moves, nothing needs
+  /// disabling, and no other state gains dead space.
+  ///
+  /// The first attempt put it above and **disabled** Start and Stop, arguing that
+  /// a control which shifts under a finger must not do anything. That produced a
+  /// screen with three controls and nothing pressable when iOS refused to stop the
+  /// alarm. The second reserved the space permanently to stop the shift — sixty
+  /// points of blank page in *every* state, added outside `centreColumn`'s
+  /// ScrollView, which exists precisely because this screen's content already does
+  /// not fit at the largest accessibility sizes, and moving the numeral's optical
+  /// centre that `column`'s own doc argues for.
+  ///
+  /// **The position does change identity at the instant the alarm rings — and it
+  /// already did.** `isRunning` flips at that moment, so Stop was becoming Start
+  /// here regardless. What changes is what a mis-aimed tap hits: `Silence`, which
+  /// is what somebody reaching for a ringing phone wants, rather than `Stop`, which
+  /// ends the sprint and demands a written reason.
   ///
   /// Filled and loud, unlike everything else on this screen. The one piece of
   /// colour here is normally the word above the number, and that restraint is
   /// deliberate — but a button somebody is hunting for while a bell rings is the
   /// one case where being quiet is the wrong answer.
-  @ViewBuilder
-  private var silenceControl: some View {
-    Button("Silence") { onSilenceAlarm() }
-      .buttonStyle(StartButtonStyle())
-      .padding(.bottom, Spacing.md)
-      .accessibilityLabel(Text("Silence the alarm"))
-      .accessibilityHint(Text("Stops the sound and moves on to the next block."))
-      .accessibilitySortPriority(2)
-      // **THE SPACE IS RESERVED, THE BUTTON IS NOT.**
-      //
-      // Drawn always and hidden when there is nothing to silence, so the primary
-      // control below never moves. That is what lets Start and Stop stay *live*
-      // while an alarm rings: the first version disabled them, because a control
-      // that shifts under a finger must not do anything — and that produced a
-      // screen with three controls and nothing pressable when iOS refused to
-      // stop the alarm. Nothing moves now, so nothing needs disabling, and the
-      // dead screen cannot happen.
-      //
-      // `.hidden()` rather than an `if`, because the point is the layout.
-      .opacity(model.alarmIsRinging ? 1 : 0)
-      .disabled(model.alarmIsRinging == false)
-      .accessibilityHidden(model.alarmIsRinging == false)
-  }
 
   /// One or two buttons, depending on whether a block is running.
   @ViewBuilder
   private var controls: some View {
+    if model.alarmIsRinging {
+      Button("Silence") { onSilenceAlarm() }
+        .buttonStyle(StartButtonStyle())
+        .accessibilityLabel(Text("Silence the alarm"))
+        .accessibilityHint(Text("Stops the sound and moves on to the next block."))
+    } else {
+      primaryControl
+    }
+  }
+
+  /// Start, or Stop.
+  @ViewBuilder
+  private var primaryControl: some View {
     switch model.controls {
     case .start(let isEnabled, let spokenLabel):
       Button("Start") { onStart() }
@@ -632,6 +632,25 @@ struct TimerScreen: View {
 #Preview("Idle, dark") {
   TimerScreen(model: .previewIdle)
     .preferredColorScheme(.dark)
+}
+
+/// The two ringing states. Compare either against "Focus running" or "Idle,
+/// light": the button changes, and nothing else moves.
+#Preview("Alarm ringing, waiting") {
+  TimerScreen(model: .previewAlarmRingingIdle)
+    .preferredColorScheme(.light)
+}
+
+#Preview("Alarm ringing, break already started") {
+  TimerScreen(model: .previewAlarmRingingDuringNextBlock)
+    .preferredColorScheme(.light)
+}
+
+/// The size the screen's own comments say the content stops fitting at. The
+/// reserved-space design this replaced added sixty fixed points here.
+#Preview("Alarm ringing, largest text") {
+  TimerScreen(model: .previewAlarmRingingIdle)
+    .environment(\.dynamicTypeSize, .accessibility5)
 }
 
 #Preview("Focus running") {
@@ -821,6 +840,36 @@ private extension TimerScreenModel {
     capture: Capture(internalCount: 0, externalCount: 0),
     music: .previewPlaying,
     controls: .running)
+
+  /// `D26` — the alarm is ringing. **The state that had no preview**, which the
+  /// third adversarial pass pointed out while the placement was still a reserved
+  /// blank strip on every screen.
+  ///
+  /// Two of them, at the two ends of the boundary: one where the block has ended
+  /// and the timer is waiting, and one where auto-start has already begun the
+  /// break. The Silence button occupies the primary control's slot in both, so
+  /// these are also the check that nothing moved.
+  static let previewAlarmRingingIdle = TimerScreenModel(
+    blockName: "Focus block",
+    kicker: "Focus",
+    numeral: "00:00",
+    spokenNumeral: "No time remaining",
+    progress: Progress(completed: 3, total: 4),
+    capture: Capture(internalCount: 1, externalCount: 0),
+    music: .previewPlaying,
+    controls: .start(isEnabled: true, spokenLabel: "Start short break, 5 minutes"),
+    alarmIsRinging: true)
+
+  static let previewAlarmRingingDuringNextBlock = TimerScreenModel(
+    blockName: "Short break",
+    kicker: "Break",
+    numeral: "04:59",
+    spokenNumeral: "4 minutes remaining",
+    progress: Progress(completed: 3, total: 4),
+    capture: Capture(internalCount: 0, externalCount: 0),
+    music: .previewPlaying,
+    controls: .running,
+    alarmIsRinging: true)
 
   /// The state the receipt exists for: a block that has already been
   /// interrupted, with a count under each word.
