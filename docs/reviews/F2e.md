@@ -3,7 +3,8 @@
 **Branch:** `F2d/silence-the-alarm` · **Plan:** `docs/plans/F2e.md` ·
 **Deltas:** `D27`, `D28`
 
-Reviewed alongside `F2d` across three passes. **The branch carries two features,
+Reviewed alongside `F2d` across **five passes**, every one returning DO NOT MERGE.
+(This line said "three" until the fifth caught it.) **The branch carries two features,
 which `conventions.md` says it should not** — one feature branch, one feature. It
 was raised in pass three and accepted rather than fixed: splitting a branch whose
 two halves had already been reviewed together three times would have meant

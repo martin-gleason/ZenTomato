@@ -484,10 +484,9 @@ struct TimerScreen: View {
   /// colour here is normally the word above the number, and that restraint is
   /// deliberate — but a button somebody is hunting for while a bell rings is the
   /// one case where being quiet is the wrong answer.
-
-  /// One button: Silence while the alarm rings, otherwise Start or Stop.
   ///
-  /// The placement argument for Silence is the block immediately above.
+  /// One button: Silence while the alarm rings, otherwise Start or Stop.
+  /// The placement argument for Silence is the block above this one.
   @ViewBuilder
   private var controls: some View {
     if model.alarmIsRinging {
@@ -863,7 +862,13 @@ private extension TimerScreenModel {
     numeral: "05:00",
     spokenNumeral: "5 minutes",
     progress: Progress(completed: 3, total: 4),
-    capture: Capture(internalCount: 1, externalCount: 0),
+    // **`nil`, and this is the field the previous correction missed.**
+    // `Capture.forBlock` is `guard isRunning, kind == .work else { return nil }`,
+    // so an idle screen has no capture pair and a break has none either — this
+    // literal violated both while carrying a count of 1. The first version of
+    // this preview was rejected for depicting an impossible state; the fix
+    // changed four fields and did not read the fifth.
+    capture: nil,
     music: .previewPlaying,
     controls: .start(isEnabled: true, spokenLabel: "Start short break, 5 minutes"),
     alarmIsRinging: true)
@@ -874,7 +879,10 @@ private extension TimerScreenModel {
     numeral: "04:59",
     spokenNumeral: "4 minutes remaining",
     progress: Progress(completed: 3, total: 4),
-    capture: Capture(internalCount: 0, externalCount: 0),
+    // A running break has no capture pair either — `TimerScreenModel` puts it
+    // plainly: "a break running has no capture buttons but must still leave
+    // their space."
+    capture: nil,
     music: .previewPlaying,
     controls: .running,
     alarmIsRinging: true)

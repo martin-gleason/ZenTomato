@@ -1513,9 +1513,25 @@ ratified"*** — and `A13` applied to `SPEC.md` the same day, on the `D24`/`A9`
 precedent, so the amendment ratchet never leaves zero.
 
 **The small version, explicitly.** The prompt is offered on reconciliation when
-the wake was prompt. `pendingReflection` stays in memory, so a prompt does not
-survive the app being *terminated* rather than suspended — the larger version,
-persisting it across a relaunch, was not taken and would cost a migration.
+the wake was prompt. Nothing is persisted and no schema changes.
+
+**A correction to this delta's own scope, 2026-08-28.** The paragraph here first
+said a prompt "does not survive the app being *terminated* rather than
+suspended". **That is not what the code does, and this branch's own test
+disproves it**: `LockedPhoneReflectionTests` builds a *fresh* `TimerEngine` on a
+fresh `ModelContext` — a relaunch — and the prompt is offered. It works because
+`TimerEngine.init` calls `rehydrateDistractions()`, rebuilding the taps from the
+store, and `synchronize()` then publishes from the rebuilt list. The taps were
+always persisted; the offer is derived from them rather than held in memory.
+
+The case that genuinely is not covered is narrower: **termination after the block
+has already been reconciled and the offer published**. Then the block is finished
+in the store, `synchronize()` has nothing left to reconcile, and the prompt is
+gone.
+
+Recorded as a correction rather than an edit, because a ratified delta making a
+false statement about its own scope is the same failure this branch has now
+written five times.
 
 **What was reported**, running `O29` on build `202608281343`:
 
