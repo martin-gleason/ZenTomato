@@ -283,7 +283,8 @@ why this feature edits that file rather than adding `TimerEngine+Distractions.sw
 /// `init` and in `synchronize()`, which is what proves that claim.
 private(set) var currentBlockDistractions: [DistractionPrompt] = []
 
-/// Set once, at the end of a work block the app was awake to see end, when that
+/// Set once, at the end of a work block somebody could still be in — the app was
+/// awake to see it end, or `D29`'s prompt-wake test passed — when that
 /// block had at least one tap. The screen consumes it and clears it.
 private(set) var pendingReflection: BlockReflection?
 ```

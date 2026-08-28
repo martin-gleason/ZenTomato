@@ -1386,13 +1386,23 @@ extension TimerEngine {
     // erase a warning about the block that follows — the same defect as the one
     // above, pointing the other way.
     if silenceFailed {
-      // **ONLY IF WE STILL BELIEVE IT IS RINGING.** The message says "use the
-      // alert on the Lock Screen", which is advice about a noise. If the alarm
-      // went quiet during the dismiss above — somebody used that very alert —
-      // then writing it now would put a stale instruction on screen with nothing
-      // left to act on, and the stream will not yield `nil` a second time to take
-      // it away.
-      if ringingAlarmID != nil { lastFailure = .alarmSilenceFailed }
+      // **AND ONLY INTO AN EMPTY SLOT.** The paragraph above got half of this
+      // right and applied it to the wrong branch: not clobbering somebody else's
+      // message was written into the *clearing* side while the *writing* side
+      // stayed a blind overwrite. `handleDismiss()` chains into the next block,
+      // and a framework unwell enough to refuse a stop is exactly the one likely
+      // to refuse that block's schedule — so this could replace "this block won't
+      // sound an alarm when it ends" with advice about the previous one. The
+      // running block having no alarm is the more serious of the two.
+      //
+      // **A `nil` read does NOT suppress this**, and an earlier version of this
+      // line made it do so. `currentAlertingAlarmID()` returning "nothing is
+      // alerting" right after iOS refused to stop something is the disagreement
+      // `AlarmScheduling` calls load-bearing: the bell may well still be audible.
+      // Suppressing then leaves no button *and* no explanation, which is a worse
+      // trade than a message that outlives its alarm — and the withdrawal in
+      // `watchForAlarms()` takes that one away at the next quiet moment.
+      if lastFailure == nil { lastFailure = .alarmSilenceFailed }
     } else if lastFailure == .alarmSilenceFailed {
       lastFailure = nil
     }

@@ -212,25 +212,58 @@ struct SilenceAlarmTests {
     #expect(id != nil)
   }
 
-  /// **And it is never written about an alarm that has already stopped.**
+  /// **A refused silence is reported even when the read says all quiet.**
   ///
-  /// `silenceAlarm()` writes the message after `await handleDismiss()`, which
-  /// really suspends. If the alarm goes quiet inside that window there is nothing
-  /// left to advise about — and the update stream will not yield `nil` twice, so
-  /// a message written then would never be withdrawn.
-  @Test("noComplaintAboutAnAlarmThatHasStopped")
-  func noComplaintAboutAnAlarmThatHasStopped() async throws {
+  /// This test asserted the opposite for one commit, and the seventh adversarial
+  /// pass called that a fix paid for with a silent failure. `currentAlertingAlarmID()`
+  /// answering "nothing is alerting" immediately after iOS refused to *stop*
+  /// something is the disagreement `AlarmScheduling` calls load-bearing — the bell
+  /// may still be audible. Suppressing the message then leaves no button and no
+  /// explanation. A message that outlives its alarm is the better trade, and
+  /// `watchForAlarms()` withdraws it at the next quiet moment.
+  @Test("aRefusedSilenceIsReportedEvenIfTheReadSaysQuiet")
+  func aRefusedSilenceIsReportedEvenIfTheReadSaysQuiet() async throws {
     _ = try await runToTheAlarm()
     alarms.stopAlertingError = SpyAlarmScheduler.Failure()
-    // The read now reports silence: the bell stopped by itself.
+    // The read now claims silence — which may or may not be the truth.
     alarms.ring(nil)
+    try requireQuietReadWhileStillTesting()
 
     await engine.silenceAlarm()
 
-    #expect(engine.ringingAlarmID == nil)
     #expect(
-      engine.lastFailure != .alarmSilenceFailed,
-      "A stale instruction was written about an alarm that had already stopped.")
+      engine.lastFailure == .alarmSilenceFailed,
+      "A refused silence reported nothing, leaving no button and no explanation.")
+  }
+
+  /// The watcher is still running and has taken the `nil`, so the guard under
+  /// test is genuinely the one being exercised rather than the early return in
+  /// `silenceAlarm()`.
+  private func requireQuietReadWhileStillTesting() throws {
+    _ = try #require(
+      engine.ringingAlarmID,
+      "The watcher consumed the quiet read first, so silenceAlarm() would return at its own guard and prove nothing.")
+  }
+
+  /// **Silencing must not overwrite a warning about the block that follows.**
+  ///
+  /// `handleDismiss()` chains into the next block, and a framework unwell enough
+  /// to refuse a stop is exactly the one likely to refuse that block's schedule.
+  /// Replacing "this block won't sound an alarm when it ends" with advice about
+  /// the previous one hides the more serious of the two.
+  @Test("aRefusedSilenceDoesNotHideTheNextBlocksWarning")
+  func aRefusedSilenceDoesNotHideTheNextBlocksWarning() async throws {
+    let settings = try #require(try context.fetch(FetchDescriptor<AppSettings>()).first)
+    settings.autoStartNextBlock = true
+    _ = try await runToTheAlarm()
+    alarms.stopAlertingError = SpyAlarmScheduler.Failure()
+    alarms.scheduleError = SpyAlarmScheduler.Failure()
+
+    await engine.silenceAlarm()
+
+    #expect(
+      engine.lastFailure == .alarmSchedulingFailed,
+      "The next block having no alarm was hidden behind advice about the last one.")
   }
 
   /// **"Could not ask" is not "nothing is ringing".**
