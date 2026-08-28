@@ -22,6 +22,14 @@ struct BlockAlarmRequest: Equatable, Sendable {
   /// Whether the alert should make a noise.
   let soundEnabled: Bool
 
+  /// Which sound to make, when a sound is to be made at all.
+  ///
+  /// Carried on the request rather than read by the scheduler, for the reason
+  /// every other field here is: the request is a snapshot of what the block was
+  /// decided with, and a scheduler that reached for current settings could set an
+  /// alarm describing a block that no longer exists.
+  let alertSound: AlertSound
+
   /// How many focus blocks are already complete in this sprint.
   ///
   /// WHY A SPRINT COUNT IS TRAVELLING WITH AN ALARM

@@ -54,7 +54,17 @@ struct PolishFenceTests {
   func noNewStoredShape() throws {
     #expect(try Self.countAcrossApp("^@Model") == 12)
     // Six fields, unchanged since F1. SPEC.md: "Nothing else."
-    #expect(try Self.count("^  var [a-z]", in: "ZenTomato/Models/AppSettings.swift") == 6)
+    // **SEVEN SINCE `D24`, AND THE MOVE IS THE POINT OF THE FENCE.**
+    //
+    // This was six, and the bound was mutation-tested with *an alarm-sound
+    // picker specifically* as the hypothetical seventh — so this is the exact
+    // change it was watching for, arriving as a ratified amendment to
+    // `SPEC.md` line 30 rather than as a quiet extra field.
+    //
+    // It counts **stored** properties: `alertSound`, the computed accessor, lives
+    // in `AppSettingsAlertSound.swift` so that it cannot inflate a number whose
+    // subject is the schema.
+    #expect(try Self.count("^  var [a-z]", in: "ZenTomato/Models/AppSettings.swift") == 7)
   }
 
   /// `noNewProtocol` — because a protocol is the shape of "swappable later".

@@ -16,6 +16,7 @@ struct TimerCycleTests {
     longBreakMinutes: 15,
     pomodorosPerSprint: 4,
     soundEnabled: true,
+    alertSound: .systemDefault,
     autoStartNextBlock: false)
 
   /// A sprint of one, the off-by-one edge: every focus block earns the long
@@ -26,6 +27,7 @@ struct TimerCycleTests {
     longBreakMinutes: 15,
     pomodorosPerSprint: 1,
     soundEnabled: true,
+    alertSound: .systemDefault,
     autoStartNextBlock: false)
 
   /// Walks a whole sprint, completing every block, and records what was run.

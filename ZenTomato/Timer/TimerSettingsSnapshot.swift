@@ -28,6 +28,13 @@ struct TimerSettingsSnapshot: Equatable, Sendable {
   let pomodorosPerSprint: Int
   /// Whether the alarm makes a noise when the block ends.
   let soundEnabled: Bool
+
+  /// Which sound the alarm makes, frozen with everything else.
+  ///
+  /// **Snapshotted rather than read when the alarm fires**, for the reason the
+  /// whole type exists: a block runs under the settings it started with, so
+  /// changing a setting mid-block cannot rewrite what that block was.
+  let alertSound: AlertSound
   /// Whether the next block begins by itself when this one ends.
   let autoStartNextBlock: Bool
 
@@ -44,6 +51,7 @@ struct TimerSettingsSnapshot: Equatable, Sendable {
     longBreakMinutes: Int,
     pomodorosPerSprint: Int,
     soundEnabled: Bool,
+    alertSound: AlertSound,
     autoStartNextBlock: Bool
   ) {
     self.workMinutes = SettingsBounds.minutes.clamping(workMinutes)
@@ -51,6 +59,7 @@ struct TimerSettingsSnapshot: Equatable, Sendable {
     self.longBreakMinutes = SettingsBounds.minutes.clamping(longBreakMinutes)
     self.pomodorosPerSprint = SettingsBounds.pomodorosPerSprint.clamping(pomodorosPerSprint)
     self.soundEnabled = soundEnabled
+    self.alertSound = alertSound
     self.autoStartNextBlock = autoStartNextBlock
   }
 
@@ -70,6 +79,7 @@ struct TimerSettingsSnapshot: Equatable, Sendable {
       longBreakMinutes: settings.longBreakMinutes,
       pomodorosPerSprint: settings.pomodorosPerSprint,
       soundEnabled: settings.soundEnabled,
+      alertSound: settings.alertSound,
       autoStartNextBlock: settings.autoStartNextBlock)
   }
 
