@@ -128,3 +128,34 @@ coordinator-level tests now cover it, and the mutation fails two of them.
 |---|---|
 | M22 · a break plays whenever music is switched on | `aBreakIsSilentEvenWithMusicSwitchedOn` |
 | M23 · the request is never cleared at a boundary | `theRequestDiesWithTheBreakItWasAbout`, `aSecondBreakStartsSilent` |
+
+---
+
+## Verified on the device, 2026-08-28
+
+| # | Check | Result |
+|---|---|---|
+| 1 | A short break starts silent, **even with music on** | ✅ |
+| 2 | The switch turns music on during the break | ✅ |
+| 3 | It stops at the boundary and the next pomodoro plays normally | ✅ |
+| 4 | A second break does **not** inherit the first one's request | ✅ |
+| 5 | No skip or stop during a break | ✅ |
+
+The owner's words on the one that was in doubt: *"Music was on for FB, off
+immediately for SB. The switch can turn it back on."*
+
+**All three obligations of `SPEC.md` line 27 hold on hardware**, which is the only
+place they were ever going to be settled.
+
+### The scare was worth having
+
+Check 4 was reported as *"it appears to be inherited"* before being retested, and
+chasing it found a real hole in the tests rather than in the app: every test of
+the request's lifetime went break → work → break, and **the app does not do that**
+with auto-start off. It goes break → *idle* → work, because somebody has to press
+Start. `BlockPhaseObserver` delivers a phase for that middle state and the suite
+had never run it.
+
+The flag turned out to be cleared there too — but nothing had checked, and it
+would have been found by the owner rather than by the suite. That transition is
+now covered and mutation-verified.
