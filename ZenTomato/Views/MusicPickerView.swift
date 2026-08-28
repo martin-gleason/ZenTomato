@@ -89,6 +89,15 @@ struct MusicPickerView: View {
   /// owner's call and is logged as open in `docs/reviews/F4.md`.
   let isBlockRunning: Bool
 
+  /// Whether the running block is a break.
+  ///
+  /// `D25` re-opened the switch during a break, and this is what tells the two
+  /// surfaces apart from each other's point of view: the timer row derives it
+  /// from `kind`, and this sheet has no `kind`. Defaulted to `false` so every
+  /// preview keeps the pre-`D25` behaviour, which is the safe one — a locked
+  /// switch is never wrong, only unhelpful.
+  var isBreak: Bool = false
+
   /// What is chosen, or `nil`.
   let chosen: MusicSelection?
 
@@ -205,7 +214,10 @@ struct MusicPickerView: View {
       Toggle(MusicCopy.toggleLabel, isOn: Binding(get: { isEnabled && isAvailable }, set: onToggleMusic))
         .font(Typography.body)
         .tint(Color(.action))
-        .disabled(isBlockRunning || !isAvailable)
+        // Locked during a work block only. A break may still be switched — the
+        // same relaxation as the timer row, so the two surfaces cannot disagree
+        // about whether the control works. See `D25`.
+        .disabled((isBlockRunning && !isBreak) || !isAvailable)
         // Three answers, not two. This switch is dimmed for two different
         // reasons and used to speak only one of them, so somebody who had been
         // refused the permission was told to stop a timer that was not running.
@@ -601,6 +613,10 @@ struct MusicPickerSheet: View {
         isEnabled: music.isEnabled,
         availability: music.availability,
         isBlockRunning: isBlockRunning,
+        // Read from the coordinator rather than passed down from the timer
+        // screen: this sheet is presented from two places, and a fact derived
+        // twice is a fact that can disagree with itself.
+        isBreak: music.isBreak,
         chosen: music.selection,
         // Reported by the coordinator, which is the only thing that knows
         // whether the last attempt to make a sound worked.

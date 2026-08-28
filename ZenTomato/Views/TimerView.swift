@@ -610,7 +610,8 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       libraryIsEmpty: musicLibraryIsEmpty,
       playback: playback,
       nowPlayingTitle: music.nowPlayingTitle,
-      isSilenced: music.isSilencedForThisBlock)
+      isSilenced: music.isSilencedForThisBlock,
+      breakSoundWasRequested: music.breakSoundWasRequested)
   }
 
   /// What the player is doing, as far as anybody can honestly tell.

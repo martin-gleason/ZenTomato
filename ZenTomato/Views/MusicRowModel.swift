@@ -530,7 +530,11 @@ struct MusicRowModel: Equatable {
     libraryIsEmpty: Bool = false,
     playback: Playback = .silent,
     nowPlayingTitle: String? = nil,
-    isSilenced: Bool = false
+    isSilenced: Bool = false,
+    /// Whether somebody asked for sound during this break. Defaulted so every
+    /// existing caller and preview keeps compiling with a silent break, which is
+    /// the correct default under `SPEC.md` line 27.
+    breakSoundWasRequested: Bool = false
   ) -> MusicRowModel {
     let isAvailable = availability == .ready || availability == .notAsked
     let isOn = isEnabled && isAvailable
@@ -556,6 +560,20 @@ struct MusicRowModel: Equatable {
         stopIsResume: false)
     }
 
+    // **DURING A BREAK THE SWITCH BELONGS TO THE BREAK (`D25`).**
+    //
+    // `isOn` above is the standing intention, and during a break that reads
+    // "on" while nothing is playing — so there would be nothing to switch back
+    // on, which is what `SPEC.md` line 27 now promises. Inside a break the
+    // switch therefore shows and sets *this break*: it goes off when the break
+    // pauses the music, and putting it back on plays for this block only.
+    //
+    // **The switch changing state at a boundary is the point, not a glitch.**
+    // It mirrors what the music did — paused — and the row's own line says so in
+    // words beside it.
+    let isBreak = kind != .work
+    let isOnNow = isBreak ? breakSoundWasRequested : isOn
+
     // Both transport controls answer the same question — is there sound to act
     // on — so they are one decision rather than two that could drift apart.
     let transportIsLive = kind == .work
@@ -565,8 +583,11 @@ struct MusicRowModel: Equatable {
       && playback == .playing
 
     return MusicRowModel(
-      isOn: isOn,
-      isTogglable: false,
+      isOn: isOnNow,
+      // Usable in a break, locked in a work block. The lock is `D19`'s: the
+      // music decision belongs before a sprint, and a switch that can be flipped
+      // mid-focus is a decision surface inside the thing being protected.
+      isTogglable: isBreak && isAvailable && selection != nil,
       line: runningLine(
         kind: kind,
         isEnabled: isEnabled,
