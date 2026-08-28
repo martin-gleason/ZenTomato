@@ -207,6 +207,59 @@ struct MusicInABreakTests {
       "A work block accepted a break request, so the switch is live mid-focus.")
   }
 
+  /// `theRequestDiesAcrossTheIdleStepToo` — the sequence auto-start-off emits.
+  ///
+  /// **The tests above skip a step the app does not.** With auto-start off a
+  /// sprint does not go break → work; it goes break → *idle* → work, because
+  /// somebody has to press Start. `BlockPhaseObserver` delivers a phase for that
+  /// middle state, and it is the transition a test written from the happy path
+  /// forgets.
+  ///
+  /// Written because the owner reported the request looking inherited on a
+  /// device. This is the first place to look, being the transition the suite had
+  /// never run.
+  @Test("theRequestDiesAcrossTheIdleStepToo")
+  @MainActor
+  func theRequestDiesAcrossTheIdleStepToo() async {
+    let harness = Harness()
+    harness.coordinator.blockChanged(to: .shortBreak, isRunning: true)
+    await harness.coordinator.setEnabled(true)
+    #expect(harness.coordinator.breakSoundWasRequested)
+
+    // The break ends and nothing auto-starts: the engine sits at rest with the
+    // next work block queued.
+    harness.coordinator.blockChanged(to: .work, isRunning: false)
+    #expect(
+      harness.coordinator.breakSoundWasRequested == false,
+      "The request survived the block ending, so it can reach whatever comes next.")
+
+    harness.coordinator.blockChanged(to: .work, isRunning: true)
+    harness.coordinator.blockChanged(to: .shortBreak, isRunning: true)
+    #expect(
+      harness.coordinator.breakSoundWasRequested == false,
+      "The next break inherited a request from the one before it.")
+  }
+
+  /// `aRepeatedObservationDoesNotCutSoundOff` — the mirror of the defect above.
+  ///
+  /// `BlockPhaseObserver` delivers only when the phase changes, and the
+  /// coordinator clears only when kind or running-ness moves. A repeated
+  /// observation of the *same* break must not clear a request somebody is still
+  /// listening to — which is why the clear is conditional rather than
+  /// unconditional, and is the lesson `D20`'s silence flag paid for.
+  @Test("aRepeatedObservationDoesNotCutSoundOff")
+  @MainActor
+  func aRepeatedObservationDoesNotCutSoundOff() async {
+    let harness = Harness()
+    harness.coordinator.blockChanged(to: .shortBreak, isRunning: true)
+    await harness.coordinator.setEnabled(true)
+
+    harness.coordinator.blockChanged(to: .shortBreak, isRunning: true)
+    #expect(
+      harness.coordinator.breakSoundWasRequested,
+      "A repeated observation of the same break cut off sound the person asked for.")
+  }
+
   // MARK: Private
 
   @MainActor
