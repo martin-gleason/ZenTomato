@@ -476,14 +476,26 @@ struct TimerScreen: View {
   /// one case where being quiet is the wrong answer.
   @ViewBuilder
   private var silenceControl: some View {
-    if model.alarmIsRinging {
-      Button("Silence") { onSilenceAlarm() }
-        .buttonStyle(StartButtonStyle())
-        .padding(.bottom, Spacing.md)
-        .accessibilityLabel(Text("Silence the alarm"))
-        .accessibilityHint(Text("Stops the sound and moves on to the next block."))
-        .accessibilitySortPriority(2)
-    }
+    Button("Silence") { onSilenceAlarm() }
+      .buttonStyle(StartButtonStyle())
+      .padding(.bottom, Spacing.md)
+      .accessibilityLabel(Text("Silence the alarm"))
+      .accessibilityHint(Text("Stops the sound and moves on to the next block."))
+      .accessibilitySortPriority(2)
+      // **THE SPACE IS RESERVED, THE BUTTON IS NOT.**
+      //
+      // Drawn always and hidden when there is nothing to silence, so the primary
+      // control below never moves. That is what lets Start and Stop stay *live*
+      // while an alarm rings: the first version disabled them, because a control
+      // that shifts under a finger must not do anything — and that produced a
+      // screen with three controls and nothing pressable when iOS refused to
+      // stop the alarm. Nothing moves now, so nothing needs disabling, and the
+      // dead screen cannot happen.
+      //
+      // `.hidden()` rather than an `if`, because the point is the layout.
+      .opacity(model.alarmIsRinging ? 1 : 0)
+      .disabled(model.alarmIsRinging == false)
+      .accessibilityHidden(model.alarmIsRinging == false)
   }
 
   /// One or two buttons, depending on whether a block is running.
@@ -493,10 +505,7 @@ struct TimerScreen: View {
     case .start(let isEnabled, let spokenLabel):
       Button("Start") { onStart() }
         .buttonStyle(StartButtonStyle())
-        // Inert while the alarm rings — see `silenceControl`. The Silence button
-        // above shifts this one downward, and a control that moves under a
-        // finger must not be one that does something.
-        .disabled(!isEnabled || model.alarmIsRinging)
+        .disabled(!isEnabled)
         .accessibilityLabel(Text(spokenLabel))
 
     case .running:
@@ -519,7 +528,6 @@ struct TimerScreen: View {
       // as an encouraged thing to do, sixty times an hour, for the whole block.
       Button("Stop") { onStop() }
         .buttonStyle(SecondaryButtonStyle(emphasis: .quiet))
-        .disabled(model.alarmIsRinging)
         .accessibilityLabel(Text("Stop the timer"))
         .accessibilityHint(Text("Asks why, then ends the block and the sprint."))
     }

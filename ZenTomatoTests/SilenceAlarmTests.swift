@@ -50,6 +50,7 @@ struct SilenceAlarmTests {
     startWatching()
     alarms.ring(id)
     await settle()
+    try requireRinging()
     return id
   }
 
@@ -66,8 +67,25 @@ struct SilenceAlarmTests {
     }
   }
 
+  /// The watcher really did pick the alarm up.
+  ///
+  /// **A bounded wait that is never asserted is a test that passes having done
+  /// nothing** — `silenceAlarm()` returns at its own first guard when no alarm is
+  /// ringing, so every assertion after it would hold vacuously. This suite has
+  /// already shipped that mistake once.
+  private func requireRinging() throws {
+    #expect(engine.ringingAlarmID != nil, "The watcher never saw the alarm; the test would prove nothing.")
+  }
+
+  /// Holds the watcher so every test can end it without each one remembering to.
+  ///
+  /// **`deinit` cancels**, because nine tests leaked a suspended task each — every
+  /// one retaining an engine, a stand-in and a `ModelContainer` for the life of
+  /// the run. Main-actor confined in practice: the box is created and read only
+  /// from the `@MainActor` suite.
   private final class WatcherBox: @unchecked Sendable {
     var task: Task<Void, Never>?
+    deinit { task?.cancel() }
   }
 
   private var watcher: Task<Void, Never>? {
@@ -202,6 +220,35 @@ struct SilenceAlarmTests {
     #expect(try #require(sessions().first).wasAbandoned == false)
   }
 
+  /// **A REFUSED STOP MUST NOT MAKE THE BUTTON DISAPPEAR FOR THE SESSION.**
+  ///
+  /// The second attempt at the dead-screen fix cleared the flag on both branches,
+  /// reasoning that the stream would re-raise it. It would not: `alertingUpdates()`
+  /// de-duplicates against its last value and a refused stop changes no AlarmKit
+  /// state, so the same id is never yielded again and the button is gone for the
+  /// rest of the session — while the alarm is still audibly ringing. That is the
+  /// reported defect back, through the branch added to fix it.
+  ///
+  /// So a failure re-reads the truth. The alarm is still ringing, so the offer
+  /// stands.
+  @Test("aRefusedStopLeavesTheButtonReachable")
+  func aRefusedStopLeavesTheButtonReachable() async throws {
+    let id = try await runToTheAlarm()
+    alarms.stopAlertingError = SpyAlarmScheduler.Failure()
+
+    await engine.silenceAlarm()
+
+    #expect(
+      engine.ringingAlarmID == id,
+      "The Silence button vanished while the alarm was still ringing.")
+
+    // And it works on the second press, once iOS stops refusing.
+    alarms.stopAlertingError = nil
+    await engine.silenceAlarm()
+    #expect(alarms.silenced == [id])
+    #expect(engine.ringingAlarmID == nil)
+  }
+
   // MARK: The drift test
 
   /// **The app's button and the system alert must land on the same engine call.**
@@ -330,6 +377,9 @@ struct SilenceAlarmTests {
     reentrant.duringScheduleAsync = {
       reentrant.ring(focusID)
       for _ in 0..<20 where engine.ringingAlarmID == nil { await Task.yield() }
+      // Asserted, not assumed: a bounded wait that times out would make every
+      // line below it vacuous.
+      #expect(engine.ringingAlarmID != nil, "The watcher never saw the alarm.")
       await engine.silenceAlarm()
     }
     await engine.boundaryReached()

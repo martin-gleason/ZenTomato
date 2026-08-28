@@ -595,9 +595,12 @@ extension SettingsForm {
         // screen with a play glyph on every row: more surface, more to draw,
         // and a second way to do the same thing.
         //
-        // The pushed list stays up while it plays, so a person can keep tapping
-        // until they like one. That is what "before it is chosen" means in
-        // practice: nothing is committed until they leave.
+        // **Whether the pushed list stays up on selection is iOS's decision, not
+        // ours, and it is not asserted anywhere.** A `.navigationLink` picker may
+        // well pop straight back. Either way the sound is heard at the moment it
+        // is chosen and can be changed again immediately, which is what the
+        // contract asks for; the earlier version of this comment claimed the list
+        // stays up as though it were a designed behaviour, and it is not.
         .onChange(of: settings.alertSound) { _, chosen in preview.play(chosen) }
       }
 
