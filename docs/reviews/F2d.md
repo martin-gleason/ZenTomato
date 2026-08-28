@@ -3,7 +3,12 @@
 **Branch:** `F2d/silence-the-alarm` · **Plan:** `docs/plans/F2d.md` ·
 **Delta:** `D26`
 
-Three passes. **DO NOT MERGE**, **DO NOT MERGE**, **DO NOT MERGE**.
+Five passes. **DO NOT MERGE** every time.
+
+**This file said "three" until the fifth pass caught it**, with passes four and
+five living only in commit messages — which is precisely what `conventions.md`
+says the register exists to prevent: *"a Still open section inside one review is
+invisible from the next."* A whole pass being invisible is worse.
 
 ## The shape of this one
 
@@ -86,6 +91,50 @@ carries that correction in its own header rather than a quiet rewrite.
 
 `O29` was also left describing the reverted design after `O30` was fixed for
 exactly that in the same commit.
+
+## Pass four
+
+**Six blocking.** The reported defect was still alive in the commonest path: a
+focus block with taps in it, ending with the app in the foreground, presented the
+**reflection sheet over the Silence button** — a modal with no silence control of
+its own, covering the only thing that could stop the noise. The sheet now waits
+and presents when the alarm stops.
+
+`O26` was recreated a *third* time, one layer down: the failure branch re-read
+`alertingAlarmID`, whose `try?` reads "could not ask" as "nothing is ringing" —
+and the moment iOS is most likely to refuse a read is the moment it has just
+refused a stop. There is now a throwing `currentAlertingAlarmID()`.
+
+**The stand-in could not model that**, so the test written to catch it passed
+against the exact code it was written to catch. Fixed, and the test then fails
+without the fix — confirmed by the fifth pass independently.
+
+`lastFailure` was a blind overwrite: clearing it on a successful silence wiped
+whatever `handleDismiss()` had legitimately just set — the *next* block failing to
+schedule or to save. Also: two stale comments still describing the reverted
+reserved-space design, and a preview depicting a screen the app cannot produce.
+
+## Pass five
+
+**Eight blocking, and six of them one class:** comments, docs and a delta
+describing behaviour the code no longer has. `synchronize()`'s comment still
+refused the prompt `D29` had just made it offer; `boundaryReached()` still claimed
+to be *"the only place a reflection sheet is ever offered"* when two other paths
+now do; `end()`'s parameter doc said *"True only from `boundaryReached()`"*; a
+deleted test's doc comment was left dangling above its neighbour asserting the
+reversed rule; and **the ratified `D29` made a false statement about its own
+scope** — it claimed a prompt does not survive termination, which this branch's
+own test disproves, because the taps are rehydrated from the store and the offer
+is derived from them.
+
+**The preview fix left both previews impossible**, for a field the correction did
+not read: `Capture.forBlock` is `guard isRunning, kind == .work`, so neither an
+idle screen nor a break has a capture pair, and both literals carried one.
+
+**And the headline fix of pass four had no test at all.**
+`ReflectionWaitsForAlarmFenceTests` now holds both halves — the sheet waits, and
+something retries when the alarm stops, because waiting without a retry trades a
+covered button for a lost prompt.
 
 ## Verdict and evidence
 

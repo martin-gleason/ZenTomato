@@ -218,15 +218,6 @@ struct DistractionReflectionTests {
     #expect(engine.pendingReflection != nil)
   }
 
-  /// A block that ended while the app was closed records nothing new and
-  /// prompts for nothing.
-  ///
-  /// The taps were written down when they happened, so they are all still
-  /// there. What is refused is the *question*: nobody was present when the
-  /// block ended, and a sentence written the next morning is not the
-  /// in-the-moment self-knowledge the spec asks for. It is also why there is no
-  /// backlog of prompts waiting on the next launch.
-
   /// Stopping never puts a second sheet in front of somebody who has just
   /// decided to quit.
   ///
