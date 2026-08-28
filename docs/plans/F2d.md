@@ -123,29 +123,42 @@ from inside the app means nothing has been silenced yet — dismissing alone wou
 have advanced the sprint and left the alarm ringing, which is the reported defect
 with an extra step.
 
-### Placement, which is the part for the owner to look at
+### Placement, which took three attempts
 
-The plan refused to settle this in prose and said it would come back. What is
-built: **a filled "Silence" button in its own place above the primary control,
-and the primary control disabled while it shows.**
+The plan refused to settle this in prose and said it would come back. It came back
+twice more.
 
-The Start/Stop position changes identity on `isRunning`, and `isRunning` goes
-false at the exact instant an alarm begins — a control appearing *there* at *that*
-moment lands under a finger already travelling toward something else, which is how
-this report arrived. So the new button does not take that position. It does push
-the primary control down, and the answer to that is to make the thing that moves
-inert: while the alarm rings, Start and Stop are both disabled, so a mis-tap does
-nothing rather than the wrong thing.
+**What shipped: the Silence button takes the primary control's slot.** Both button
+styles carry `minHeight: Spacing.controlHeight`, so it is a swap with no layout
+change anywhere — nothing moves, nothing is disabled, and no other state gains
+dead space.
 
-It is filled and loud, against this screen's general restraint. The one piece of
-colour here is normally the word above the number. A button somebody is hunting
-for while a bell rings is the one case where quiet is the wrong answer.
+**First attempt: above the primary control, with Start and Stop disabled.** The
+argument was that a control which shifts under a finger must not do anything. It
+produced a screen with three controls and **nothing pressable** when iOS refused
+to stop the alarm.
+
+**Second attempt: reserve the space permanently so nothing shifts.** That put
+sixty fixed points of blank page into *every* state of the main screen, outside
+`centreColumn`'s ScrollView — which exists precisely because this screen's content
+already does not fit at the largest accessibility sizes — and moved the numeral's
+optical centre that `column`'s own doc argues for. It was also unpreviewed: none
+of the twenty-four `#Preview` blocks covered a ringing alarm.
+
+**The objection that started all this was weaker than it looked.** The position
+changes identity at the instant the alarm rings — but `isRunning` flips at that
+same instant, so Stop was becoming Start there anyway. What actually changes is
+what a mis-aimed tap hits: `Silence`, which is what somebody reaching for a
+ringing phone wants, instead of `Stop`, which ends the sprint and demands a
+written reason.
+
+Three previews were added with it, including one at `.accessibility5`.
 
 ## Evidence
 
-**Re-run after the second adversarial pass.** The block that stood here was
-from a run that predated the fix commit, which touched eight source and test
-files — evidence for a tree that was not the tree being merged.
+**Re-run for the tree as merged.** Earlier blocks here were from runs that
+predated a fix commit — evidence for a tree that was not the one being merged,
+which the second adversarial pass called out.
 
 ```
 $ make ci
@@ -156,8 +169,9 @@ check-licence-wording.sh: OK — no disjunctive licence wording.
 check-open-register.sh: OK — the register renders as tables.
 run-script-tests.sh: 15 passed, 0 failed
 check-release-build.sh: OK — Release compiles with no warnings of ours.
-✔ Test run with 551 tests in 82 suites passed
+✔ Test run with 552 tests in 83 suites passed
 ```
+
 
 
 Fourteen tests across `SilenceAlarmTests` and `SilenceControlFenceTests`. **One found a real bug before any device did**:
@@ -204,11 +218,18 @@ it never rang an alarm, so `silenceAlarm()` returned at its first guard and the
 window was never entered. Corrected, it fails with the bug and passes with the
 fix, both confirmed by putting the bug back.
 
-**A refusal from iOS left a dead screen.** `ringingAlarmID` was cleared only on
-the success branch, and Start and Stop are both disabled while it is set — so a
-throw from `stopAlerting` left three controls on screen and nothing that could be
-pressed, with no way out but relaunching. Cleared on both branches now, and
-`watchForAlarms()` clears it on every exit including cancellation.
+**A refusal from iOS left a dead screen, and the first two fixes for it were both
+wrong.** `ringingAlarmID` was cleared only on success, and Start and Stop were
+disabled while it was set — three controls, nothing pressable, no way out but
+relaunching. Clearing it on *both* branches fixed that and **recreated the
+original defect**: `alertingUpdates()` de-duplicates against its last value and a
+refused stop changes no AlarmKit state, so the id is never yielded again and the
+Silence button is gone for the rest of the session while the bell is still
+audible.
+
+What shipped is `ringingAlarmID = silenceFailed ? alarms.alertingAlarmID : nil` —
+the truth asked for rather than assumed — and the dead screen solved where it
+belonged, in the placement above, so nothing is disabled at all.
 
 Also taken: the drift test **could not fail for the reason it was written** — it
 called `handleDismiss()` directly rather than the intent's real route through

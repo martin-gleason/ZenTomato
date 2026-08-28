@@ -6,92 +6,28 @@ import Testing
 
 /// `D26` — the alarm can be silenced from inside the app, and doing so moves the
 /// sprint on exactly as the system alert's own Dismiss does.
+///
+/// Setup lives in `SilenceHarness`, shared with `SilenceDismissAgreementTests`.
 @MainActor
 struct SilenceAlarmTests {
-  private let container: ModelContainer
-  private let clock: TestClock
-  private let alarms: SpyAlarmScheduler
-  private let engine: TimerEngine
+  private let harness: SilenceHarness
 
+  /// A throwing `init` rather than a force-try. The store can fail to open, and a
+  /// crash in setup reads as a crashed test rather than a failed one.
   init() throws {
-    let clock = TestClock()
-    let alarms = SpyAlarmScheduler()
-    let container = try TestStore.inMemoryContainer()
-    self.clock = clock
-    self.alarms = alarms
-    self.container = container
-    engine = TimerEngine(context: container.mainContext, clock: clock, alarms: alarms)
+    harness = try SilenceHarness()
   }
+  private var engine: TimerEngine { harness.engine }
+  private var alarms: SpyAlarmScheduler { harness.alarms }
+  private var clock: TestClock { harness.clock }
+  private var container: ModelContainer { harness.container }
+  private var context: ModelContext { harness.context }
+  private var watcher: Task<Void, Never>? { harness.watcher }
 
-  private var context: ModelContext { container.mainContext }
-
-  private let watcherBox = WatcherBox()
-
-  private func sessions() throws -> [PomodoroSession] {
-    try context.fetch(FetchDescriptor<PomodoroSession>())
-  }
-
-  /// Runs the block to its end and makes its alarm ring, the way a phone does,
-  /// **with the watcher still running** — because that is the only state in
-  /// which the button exists.
-  ///
-  /// The watcher is a live task rather than an awaited call. `watchForAlarms()`
-  /// clears its flag when the stream ends, correctly: the flag means *an alarm
-  /// is ringing right now*, and a screen that has stopped listening does not
-  /// know that any more. A stand-in whose stream finished immediately made every
-  /// assertion here vacuous, so the stream stays open and the test cancels it.
-  private func runToTheAlarm() async throws -> UUID {
-    await engine.start()
-    // The identity the engine handed the alarm system, which is the block's
-    // session id. Read from the stand-in rather than from the engine, whose
-    // state is private — and this is the same identity a phone would ring with.
-    let id = try #require(alarms.outstanding?.id)
-    clock.advance(by: 25 * 60)
-    startWatching()
-    alarms.ring(id)
-    await settle()
-    try requireRinging()
-    return id
-  }
-
-  /// Starts the watcher and remembers it, so a test can end it.
-  private func startWatching() {
-    watcher = Task { await engine.watchForAlarms() }
-  }
-
-  /// Lets the watcher pick up whatever was just pushed.
-  private func settle() async {
-    for _ in 0..<20 {
-      await Task.yield()
-      if engine.ringingAlarmID != nil { return }
-    }
-  }
-
-  /// The watcher really did pick the alarm up.
-  ///
-  /// **A bounded wait that is never asserted is a test that passes having done
-  /// nothing** — `silenceAlarm()` returns at its own first guard when no alarm is
-  /// ringing, so every assertion after it would hold vacuously. This suite has
-  /// already shipped that mistake once.
-  private func requireRinging() throws {
-    #expect(engine.ringingAlarmID != nil, "The watcher never saw the alarm; the test would prove nothing.")
-  }
-
-  /// Holds the watcher so every test can end it without each one remembering to.
-  ///
-  /// **`deinit` cancels**, because nine tests leaked a suspended task each — every
-  /// one retaining an engine, a stand-in and a `ModelContainer` for the life of
-  /// the run. Main-actor confined in practice: the box is created and read only
-  /// from the `@MainActor` suite.
-  private final class WatcherBox: @unchecked Sendable {
-    var task: Task<Void, Never>?
-    deinit { task?.cancel() }
-  }
-
-  private var watcher: Task<Void, Never>? {
-    get { watcherBox.task }
-    nonmutating set { watcherBox.task = newValue }
-  }
+  private func sessions() throws -> [PomodoroSession] { try harness.sessions() }
+  private func runToTheAlarm() async throws -> UUID { try await harness.runToTheAlarm() }
+  private func startWatching() { harness.startWatching() }
+  private func settle() async { await harness.settle() }
 
   // MARK: The button exists exactly when the noise does
 
@@ -247,146 +183,27 @@ struct SilenceAlarmTests {
     await engine.silenceAlarm()
     #expect(alarms.silenced == [id])
     #expect(engine.ringingAlarmID == nil)
+    // **The complaint goes away with the fault.** It used to survive the retry:
+    // `handleDismiss()` returns at its own guard before the line that clears
+    // `lastFailure`, so "use the alert on the Lock Screen" sat there for the
+    // whole break, telling somebody to do a thing they had just done.
+    #expect(engine.lastFailure == nil)
   }
 
-  // MARK: The drift test
-
-  /// **The app's button and the system alert must land on the same engine call.**
+  /// **Two taps inside the suspension advance the sprint once.**
   ///
-  /// The first version of this test called `engine.handleDismiss()` directly for
-  /// the second half, which proved nothing: the intent path is
-  /// `DismissBlockIntent.perform()` → `TimerEngineHolder.dismissRunningBlock()`,
-  /// and that could grow a step tomorrow while this stayed green. Worse, both
-  /// halves were put in the same hand-built state, so both took the same
-  /// `guard` and the comparison was between two methods that differ only by the
-  /// `stopAlerting` call the assertions never looked at. **It could not fail for
-  /// the reason it was written**, which the adversarial review said plainly.
-  ///
-  /// So the second half goes through `TimerEngineHolder`, which is what the
-  /// intent actually calls.
-  @Test("theButtonAndTheSystemAlertAgree")
-  func theButtonAndTheSystemAlertAgree() async throws {
-    _ = try await runToTheAlarm()
-    await engine.silenceAlarm()
-    let viaButton = try sessions().map { ($0.kind, $0.wasAbandoned, $0.abandonReason) }
-    let sprintAfterButton = engine.completedInSprint
-    let reflectionAfterButton = engine.pendingReflection != nil
-
-    let otherAlarms = SpyAlarmScheduler()
-    let otherContainer = try TestStore.inMemoryContainer()
-    let otherClock = TestClock()
-    let other = TimerEngine(
-      context: otherContainer.mainContext, clock: otherClock, alarms: otherAlarms)
-    await other.start()
-    otherClock.advance(by: 25 * 60)
-
-    // The real route the system alert takes.
-    TimerEngineHolder.engine = other
-    await TimerEngineHolder.dismissRunningBlock()
-    TimerEngineHolder.engine = nil
-
-    let viaIntent = try otherContainer.mainContext
-      .fetch(FetchDescriptor<PomodoroSession>())
-      .map { ($0.kind, $0.wasAbandoned, $0.abandonReason) }
-
-    #expect(viaButton.count == viaIntent.count)
-    #expect(viaButton.map(\.0) == viaIntent.map(\.0))
-    #expect(viaButton.map(\.1) == viaIntent.map(\.1))
-    #expect(viaButton.map(\.2) == viaIntent.map(\.2))
-    #expect(sprintAfterButton == other.completedInSprint)
-    // And the reflection offer, which is the thing the app exists for.
-    #expect(reflectionAfterButton == (other.pendingReflection != nil))
-  }
-
-  /// **The button silences, and only the button silences.** The half the old
-  /// drift test never inspected: `handleDismiss()` alone must not call
-  /// `stopAlerting`, because it runs after iOS has already ended the alert.
-  @Test("onlyTheButtonStopsTheAlarmItself")
-  func onlyTheButtonStopsTheAlarmItself() async throws {
-    let id = try await runToTheAlarm()
-
-    await engine.handleDismiss()
-
-    #expect(alarms.silenced.isEmpty, "handleDismiss silenced an alarm iOS had already ended.")
-    #expect(engine.ringingAlarmID == id, "handleDismiss should not clear a flag it does not own.")
-  }
-
-  // MARK: The two the plan promised
-
-  /// **Auto-start is honoured, both ways.** `F2d.md` listed this and the first
-  /// build shipped without it.
-  @Test("silencingHonoursAutoStart")
-  func silencingHonoursAutoStart() async throws {
-    let settings = try #require(try context.fetch(FetchDescriptor<AppSettings>()).first)
-    settings.autoStartNextBlock = true
+  /// `silenceAlarm()` suspends across a real AlarmKit round trip, and the button
+  /// deliberately survives a refusal — so a double tap is reachable, and without
+  /// a guard both calls pass `handleDismiss()`'s guards and both call `end(...)`.
+  /// That is the double advance `O29` asks the owner to watch for.
+  @Test("twoTapsAdvanceOnce")
+  func twoTapsAdvanceOnce() async throws {
     _ = try await runToTheAlarm()
 
-    await engine.silenceAlarm()
+    async let first: Void = engine.silenceAlarm()
+    async let second: Void = engine.silenceAlarm()
+    _ = await (first, second)
 
-    #expect(engine.isRunning, "With auto-start on, the break should have begun.")
-  }
-
-  /// And with it off, the timer waits.
-  @Test("silencingWithAutoStartOffWaits")
-  func silencingWithAutoStartOffWaits() async throws {
-    let settings = try #require(try context.fetch(FetchDescriptor<AppSettings>()).first)
-    settings.autoStartNextBlock = false
-    _ = try await runToTheAlarm()
-
-    await engine.silenceAlarm()
-
-    #expect(engine.isRunning == false, "With auto-start off, the timer should be waiting.")
-  }
-
-  /// **A REFLECTION PROMPT IS NOT SWALLOWED BY SILENCING IN THE AUTO-START
-  /// WINDOW.** The worst defect the adversarial review found, and the one this
-  /// app can least afford: the distraction log is the point.
-  ///
-  /// The sequence: a focus block ends, `end()` chains into `begin()`, which
-  /// suspends awaiting the alarm system — a real AlarmKit round trip — and the
-  /// alarm rings at that instant. A Silence tap then reaches `handleDismiss()`
-  /// with the *new* block running and not yet complete. That path used to bump
-  /// `abandonGeneration` before returning, and `publishReflection` then refused
-  /// to publish the finished block's prompts.
-  ///
-  /// `ReentrantAlarmScheduler` exists to drive exactly that suspension.
-  @Test("silencingInsideTheAutoStartWindowKeepsTheReflection")
-  func silencingInsideTheAutoStartWindowKeepsTheReflection() async throws {
-    let reentrant = ReentrantAlarmScheduler()
-    let container = try TestStore.inMemoryContainer()
-    let clock = TestClock()
-    let engine = TimerEngine(context: container.mainContext, clock: clock, alarms: reentrant)
-
-    let settings = try #require(try container.mainContext.fetch(FetchDescriptor<AppSettings>()).first)
-    settings.autoStartNextBlock = true
-
-    await engine.start()
-    _ = engine.recordDistraction(.internalInterruption)
-    let focusID = try #require(reentrant.scheduledRequests.first?.id)
-    clock.advance(by: 25 * 60)
-
-    // The screen is watching, as it is whenever the app is in the foreground —
-    // which is the only situation `D26` is about.
-    let watcher = Task { await engine.watchForAlarms() }
-    await Task.yield()
-
-    // The focus block's alarm rings at the instant the *next* block is being
-    // scheduled, and Silence is tapped then. That is the window: `begin()` is
-    // suspended awaiting the alarm system, and `handleDismiss()` therefore sees
-    // a block that has not completed.
-    reentrant.duringScheduleAsync = {
-      reentrant.ring(focusID)
-      for _ in 0..<20 where engine.ringingAlarmID == nil { await Task.yield() }
-      // Asserted, not assumed: a bounded wait that times out would make every
-      // line below it vacuous.
-      #expect(engine.ringingAlarmID != nil, "The watcher never saw the alarm.")
-      await engine.silenceAlarm()
-    }
-    await engine.boundaryReached()
-    watcher.cancel()
-
-    #expect(
-      engine.pendingReflection != nil,
-      "The finished block's reflection prompt was swallowed by a Silence tap.")
+    #expect(try sessions().count == 1, "The sprint advanced twice on one alarm.")
   }
 }

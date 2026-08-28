@@ -426,6 +426,12 @@ final class TimerEngine {
 
   // MARK: Silencing a ringing alarm
 
+  /// Whether a silence is already in flight. `D26`.
+  ///
+  /// See `silenceAlarm()`: the call suspends across an AlarmKit round trip, and
+  /// two taps inside that window would advance the sprint twice.
+  private var isSilencing = false
+
   /// Which block's alarm is making a noise right now, or `nil`. `D26`.
   ///
   /// Stored here rather than in `TimerEngine+Silence.swift` because Swift has no
@@ -1252,6 +1258,16 @@ extension TimerEngine {
   /// left with a ringing alarm *and* a stuck timer.
   func silenceAlarm() async {
     guard let id = ringingAlarmID else { return }
+    // **ONE AT A TIME.** The button survives a refusal on purpose, and the call
+    // below suspends across a real AlarmKit round trip — so two taps inside that
+    // window would both pass `handleDismiss()`'s guards, both bump the
+    // generation, and both call `end(...)`. That is the double advance `O29`
+    // asks the owner to watch for, made more reachable by the very decision that
+    // keeps the button pressable.
+    guard isSilencing == false else { return }
+    isSilencing = true
+    defer { isSilencing = false }
+
     var silenceFailed = false
     do {
       try alarms.stopAlerting(id: id)
@@ -1284,6 +1300,13 @@ extension TimerEngine {
     // failure before calling it therefore wrote a message that was wiped a line
     // later — the person would have been left with a ringing alarm and a screen
     // saying nothing was wrong.
-    if silenceFailed { lastFailure = .alarmSilenceFailed }
+    //
+    // **AND CLEARED ON A SUCCESSFUL RETRY**, which it was not. Press one fails
+    // and writes the message; press two succeeds, but `handleDismiss()` returns
+    // at its own `guard completed` before reaching the line that clears it — so
+    // "The alarm couldn't be switched off. Use the alert on the Lock Screen."
+    // sat there for the whole break, telling somebody to do a thing they had
+    // just done.
+    lastFailure = silenceFailed ? .alarmSilenceFailed : nil
   }
 }
