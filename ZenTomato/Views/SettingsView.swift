@@ -442,16 +442,23 @@ private struct SettingsForm: View {
   /// `devicectl`; a tester cannot do that, and "the latest one" is not an answer
   /// anybody can act on.
   ///
-  /// **Not a setting, and `AppSettings` still holds six values.** It reports and
-  /// cannot be tapped, changed or navigated from — the same shape as the music
-  /// row above, for the same reason.
+  /// **Not a setting.** It reports and cannot be tapped, changed or navigated
+  /// from — the same shape as the music row above, for the same reason. (The
+  /// count of stored values in `AppSettings` used to be quoted here; it is
+  /// asserted by `PolishFenceTests` and `MusicFenceTests`, which is the only
+  /// place a number like that stays true.)
   ///
   /// **No About screen yet, deliberately.** That is where this will eventually
-  /// live, alongside the licence and — once `D24` lands — the attribution and
-  /// link for every bundled sound. It is blocked on `C10` settling which licence
+  /// live, alongside the licence. It is blocked on `C10` settling which licence
   /// the binaries carry, and a screen naming a licence before that is answered
   /// would state a claim that might need correcting in a binary already on
   /// somebody's phone. A version row waits for none of that.
+  ///
+  /// **`D25`'s sound credits do not wait for it.** `F2c.md`: *"a list nobody can
+  /// reach is not attribution."* Until the About screen exists they are the
+  /// footer of this section — reachable, on the same screen as the picker, and
+  /// generated from the sounds actually in the bundle so a credit can neither go
+  /// missing nor outlive the sound it names.
   @ViewBuilder
   private var build: some View {
     Section {
@@ -469,6 +476,8 @@ private struct SettingsForm: View {
       .textSelection(.enabled)
     } header: {
       header("About")
+    } footer: {
+      if let credits = AlertSound.credits { footer(credits) }
     }
     .listRowBackground(Color(.surfaceRaised))
   }

@@ -75,6 +75,25 @@ enum AlertSound: String, CaseIterable, Sendable {
     return Bundle.main.url(forResource: name, withExtension: type) != nil
   }
 
+  /// Who made the sounds this build ships, and where they came from, as the
+  /// paragraph a person reads.
+  ///
+  /// **`nil` when the app ships no borrowed sound**, because a credits heading
+  /// over an empty list is a claim that there is something to credit.
+  ///
+  /// Built from `playable` rather than `allCases`, for the reason that separates
+  /// a credit from a false statement: a sound whose file is not in the target is
+  /// never played, so naming its author would say we used their work when we did
+  /// not. The list therefore appears and disappears with the sounds themselves.
+  static var credits: String? {
+    let lines = playable.compactMap { sound -> String? in
+      guard let attribution = sound.attribution else { return nil }
+      return "\(sound.name) — \(attribution.author), \(attribution.licence)\n\(attribution.source)"
+    }
+    guard lines.isEmpty == false else { return nil }
+    return "Alert sounds\n\n" + lines.joined(separator: "\n\n")
+  }
+
   /// The sounds this build can offer, in catalogue order.
   ///
   /// Never `allCases`. See `isPlayable` for why the two differ.
