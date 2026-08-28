@@ -207,11 +207,20 @@ final class AlarmKitScheduler: AlarmScheduling {
   // MARK: An alarm that is ringing right now
 
   /// See `AlarmScheduling.alertingAlarmID`.
+  /// See `AlarmScheduling.currentAlertingAlarmID`.
+  func currentAlertingAlarmID() throws -> UUID? {
+    try AlarmManager.shared.alarms.first { $0.state == .alerting }?.id
+  }
+
   var alertingAlarmID: UUID? {
     // A read of `alarms` rather than of cached state. The cache would be one
     // more thing that can disagree with iOS, and this is not a hot path — it is
     // read when a screen appears and when the stream below says something moved.
-    (try? AlarmManager.shared.alarms)?.first { $0.state == .alerting }?.id
+    // The forgiving read, for the places where "could not ask" and "nothing is
+    // ringing" really are the same thing — drawing a screen, and seeding the
+    // stream below. `silenceAlarm()` uses the throwing one instead; see the
+    // protocol for why that distinction matters there.
+    try? currentAlertingAlarmID()
   }
 
   /// See `AlarmScheduling.alertingUpdates`.

@@ -25,7 +25,7 @@ A focus timer that works with the fixed toolset (Todoist, Apple Music) so that s
 | Music source | Apple Music (MusicKit). User picks an existing playlist or song from their library. Playlist loops when it ends. |
 | Music during a sprint | Skip-forward and stop are the only controls. Stop silences the music for the remainder of the current block; the timer is unaffected and the next block starts music again. Music can be toggled on/off before a sprint. |
 | Music during breaks | Pauses, and can be switched back on by hand. Resumes by itself at the next pomodoro. |
-| Distraction capture | Two buttons, I and E, tappable during a pomodoro. A tap records timestamp + task. At the end of that pomodoro the app prompts for one sentence per tap (skippable). |
+| Distraction capture | Two buttons, I and E, tappable during a pomodoro. A tap records timestamp + task. At the end of that pomodoro the app prompts for one sentence per tap (skippable). If the phone was locked or the app was away, the prompt waits and appears when the app is next opened — unless so long has passed that nobody could still be in that block, in which case the taps stay recorded and the prompt is dropped. |
 | Stats | Counts for everything: pomodoros per task, project, and day; I/E per task and day. Plus a Markdown export via the share sheet for the Rhodia review. |
 | Timer customization | Work length, short break, long break, pomodoros-per-sprint, sound on/off, which alert sound, auto-start next block on/off. Nothing else. Each alert sound can be played once from the settings screen before it is chosen. While a block is running these are read-only, and the screen says so. |
 | Data | Local only (SwiftData). Todoist token in Keychain. No analytics, no accounts, no server. |
@@ -75,7 +75,7 @@ August 21, 2026
 
 ## Amendments applied
 
-D1 D2 D3 D4 D17 D18 D20 D24 D25 D26 D27 D28
+D1 D2 D3 D4 D17 D18 D20 D24 D25 D26 D27 D28 D29
 
 Ratified deltas whose text has been written into this file. `DeltaIntegrityTests` reads this list;
 `docs/specs/AMENDMENT-BASELINE.txt` counts what is still outstanding, and the exact replacement text

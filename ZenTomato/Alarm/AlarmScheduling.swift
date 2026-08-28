@@ -85,6 +85,17 @@ protocol AlarmScheduling: AnyObject {
   /// is how a screen stays current.
   var alertingAlarmID: UUID? { get }
 
+  /// The same answer, but able to say **"I could not ask"**.
+  ///
+  /// **THE DIFFERENCE BETWEEN `nil` AND A THROW IS LOAD-BEARING**, and collapsing
+  /// them recreated the defect this whole feature exists to fix. `silenceAlarm()`
+  /// re-reads this when iOS refuses to stop an alarm, so as not to hide a button
+  /// for a bell that is still ringing — and the moment iOS is most likely to
+  /// refuse a read is the moment it just refused a stop. A `try?` there turned
+  /// "the alarm subsystem is unwell" into "nothing is ringing", cleared the flag,
+  /// and the de-duplicating update stream never raised it again.
+  func currentAlertingAlarmID() throws -> UUID?
+
   /// A stream of that same answer, one value per change.
   ///
   /// **A stream rather than a poll**, because the moment being drawn is the

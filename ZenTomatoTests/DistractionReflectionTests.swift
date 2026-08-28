@@ -226,31 +226,6 @@ struct DistractionReflectionTests {
   /// block ended, and a sentence written the next morning is not the
   /// in-the-moment self-knowledge the spec asks for. It is also why there is no
   /// backlog of prompts waiting on the next launch.
-  @Test("aBlockEndedWhileClosedRecordsRowsAndNoPrompt")
-  func aBlockEndedWhileClosedRecordsRowsAndNoPrompt() async throws {
-    await engine.start()
-    #expect(engine.recordDistraction(.internalInterruption))
-    clock.advance(by: 60)
-    #expect(engine.recordDistraction(.externalInterruption))
-
-    // Away for long enough that the block ran out unobserved.
-    clock.advance(by: 26 * 60)
-    let freshHandle = ModelContext(container)
-    let relaunched = TimerEngine(context: freshHandle, clock: clock, alarms: alarms)
-    await relaunched.synchronize()
-
-    #expect(relaunched.pendingReflection == nil)
-    #expect(relaunched.isRunning == false)
-    #expect(relaunched.currentBlockDistractions.isEmpty)
-
-    let rows = try distractions(in: freshHandle)
-    #expect(rows.count == 2)
-    #expect(rows.map(\.kind) == [.internalInterruption, .externalInterruption])
-    #expect(rows.allSatisfy { $0.note == nil })
-
-    // Exactly one finished-block row, as reconciliation always writes.
-    #expect(try freshHandle.fetch(FetchDescriptor<PomodoroSession>()).count == 1)
-  }
 
   /// Stopping never puts a second sheet in front of somebody who has just
   /// decided to quit.

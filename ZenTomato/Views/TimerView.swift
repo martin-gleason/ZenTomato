@@ -187,6 +187,13 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
         guard offered != nil else { return }
         presentReflectionIfPossible()
       }
+      // The other thing that frees the screen: the alarm stopping. An offer that
+      // arrived while the bell was ringing waited rather than covering the one
+      // button that could stop it — see `presentReflectionIfPossible()`.
+      .onChange(of: engine.ringingAlarmID) { _, ringing in
+        guard ringing == nil else { return }
+        presentReflectionIfPossible()
+      }
       // A REFUSED TAP BELONGS TO THE BLOCK IT HAPPENED IN.
       //
       // `endsAt` changes exactly once per block — when one begins, and again
@@ -999,7 +1006,19 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       isAskingWhyStopping == false,
       showingSettings == false,
       showingHistory == false,
-      reflection == nil
+      reflection == nil,
+      // **AND NOT WHILE THE ALARM IS RINGING.** `D26`'s whole complaint was that
+      // a noise this app started had no off switch inside the app; presenting
+      // this sheet over `TimerScreen` puts the Silence button *behind a modal*
+      // that has no silence control of its own. That is the reported defect
+      // surviving in the app's most common path — a focus block with taps in it,
+      // ending with the app in the foreground, where `boundaryReached()`
+      // deliberately leaves the alarm alerting.
+      //
+      // The offer is not lost by waiting. It stays on the engine and this
+      // function runs again when the alarm is silenced, which is the same
+      // "try again when the screen is free" rule the sheets above already use.
+      engine.ringingAlarmID == nil
     else { return }
     guard let taken = engine.consumePendingReflection() else { return }
     // Snapshotted at the moment of presentation rather than read live, so

@@ -180,9 +180,8 @@ feature built so nobody has to choose a sound blind.
 
 ## Evidence
 
-**Re-run for the tree as merged.** Earlier blocks here were from runs that
-predated a fix commit — evidence for a tree that was not the one being merged,
-which the second adversarial pass called out.
+**Re-run for the tree as merged**, after the fourth adversarial pass and
+`D29`.
 
 ```
 $ make ci
@@ -193,8 +192,9 @@ check-licence-wording.sh: OK — no disjunctive licence wording.
 check-open-register.sh: OK — the register renders as tables.
 run-script-tests.sh: 15 passed, 0 failed
 check-release-build.sh: OK — Release compiles with no warnings of ours.
-✔ Test run with 552 tests in 83 suites passed
+✔ Test run with 555 tests in 84 suites passed
 ```
+
 
 
 

@@ -485,7 +485,9 @@ struct TimerScreen: View {
   /// deliberate — but a button somebody is hunting for while a bell rings is the
   /// one case where being quiet is the wrong answer.
 
-  /// One or two buttons, depending on whether a block is running.
+  /// One button: Silence while the alarm rings, otherwise Start or Stop.
+  ///
+  /// The placement argument for Silence is the block immediately above.
   @ViewBuilder
   private var controls: some View {
     if model.alarmIsRinging {
@@ -849,11 +851,17 @@ private extension TimerScreenModel {
   /// and the timer is waiting, and one where auto-start has already begun the
   /// break. The Silence button occupies the primary control's slot in both, so
   /// these are also the check that nothing moved.
+  /// **The fields agree with each other, which the first version of this preview
+  /// did not.** `TimerView.screenModel` derives `blockName`, `kicker` and the
+  /// Start label from the same block, and the idle numeral is that block's whole
+  /// length — so "Focus block" beside "Start short break" beside "00:00" was a
+  /// screen the app cannot produce. A preview of an impossible state is worse
+  /// than none: it is the thing a reader checks the layout against.
   static let previewAlarmRingingIdle = TimerScreenModel(
-    blockName: "Focus block",
-    kicker: "Focus",
-    numeral: "00:00",
-    spokenNumeral: "No time remaining",
+    blockName: "Short break",
+    kicker: "Break",
+    numeral: "05:00",
+    spokenNumeral: "5 minutes",
     progress: Progress(completed: 3, total: 4),
     capture: Capture(internalCount: 1, externalCount: 0),
     music: .previewPlaying,

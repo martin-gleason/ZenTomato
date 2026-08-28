@@ -49,7 +49,7 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D26** | ratified | yes, applied | — | A ringing alarm can be silenced from inside the app |
 | **D27** | ratified | yes, applied | — | Settings are read-only while a block is running |
 | **D28** | ratified | yes, applied | — | The alert sound can be previewed from Settings |
-| **D29** | proposed | yes, pending | — | A locked phone is somebody being there |
+| **D29** | ratified | yes, applied | — | A locked phone is somebody being there |
 | **D30** | proposed | yes, pending | — | A watch-face complication |
 
 *24 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
@@ -1508,7 +1508,14 @@ nothing and the screen has to say so rather than appear broken.
 
 ## D29 — A locked phone is somebody being there
 
-**Proposed 2026-08-28. Not ratified.**
+**Proposed 2026-08-28. Ratified by the owner 2026-08-28 — *"d29 the small one is
+ratified"*** — and `A13` applied to `SPEC.md` the same day, on the `D24`/`A9`
+precedent, so the amendment ratchet never leaves zero.
+
+**The small version, explicitly.** The prompt is offered on reconciliation when
+the wake was prompt. `pendingReflection` stays in memory, so a prompt does not
+survive the app being *terminated* rather than suspended — the larger version,
+persisting it across a relaunch, was not taken and would cost a migration.
 
 **What was reported**, running `O29` on build `202608281343`:
 
@@ -1562,15 +1569,16 @@ persisting it, which is a schema change — a `@Model`, or a field on the sessio
 and that is a bigger decision than the threshold. **Two versions of this delta are
 possible and the owner should pick:**
 
-- **The small one.** Offer the prompt on reconciliation when `wakeWasPrompt`. Works
-  whenever the app was suspended, which is the common case. Nothing persisted, no
-  schema change.
-- **The larger one.** Persist the pending prompt so it survives a relaunch. Costs a
-  migration, and `O2` has only just been answered once.
+- **The small one — chosen.** Offer the prompt on reconciliation when
+  `wakeWasPrompt`. Works whenever the app was suspended, which is the common case.
+  Nothing persisted, no schema change.
+- **The larger one — not taken.** Persist the pending prompt so it survives a
+  relaunch. Costs a migration, and `O2` has only just been answered once.
 
-**No code either way until this is ratified.** It reverses a decision that is
-written down with reasons, and reversing those quietly is how a plan stops being a
-contract.
+**What the small version does not cover, stated so nobody is surprised by it:** if
+iOS terminates the app rather than suspending it, the offer is gone and the taps
+keep their empty notes. That is the same limitation `TimerEngineHolder` already
+records for a dismiss from a locked phone.
 
 ## D30 — A watch-face complication
 

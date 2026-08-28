@@ -190,6 +190,46 @@ struct SilenceAlarmTests {
     #expect(engine.lastFailure == nil)
   }
 
+  /// **"Could not ask" is not "nothing is ringing".**
+  ///
+  /// The failure branch re-reads the alarm system so as not to hide a button for
+  /// a bell that is still going. The moment iOS is most likely to refuse that
+  /// *read* is the moment it has just refused the *stop* — and a `try?` there
+  /// turned an unwell alarm subsystem into "all quiet", cleared the flag, and the
+  /// de-duplicating stream never raised it again. `O26`, one layer down.
+  @Test("aReadThatFailsKeepsTheButton")
+  func aReadThatFailsKeepsTheButton() async throws {
+    let id = try await runToTheAlarm()
+    alarms.stopAlertingError = SpyAlarmScheduler.Failure()
+    alarms.alertingReadError = SpyAlarmScheduler.Failure()
+
+    await engine.silenceAlarm()
+
+    #expect(
+      engine.ringingAlarmID == id,
+      "A failed read was taken as silence, and the button vanished with the bell still ringing.")
+  }
+
+  /// **Silencing must not erase a warning about the block that follows.**
+  ///
+  /// `handleDismiss()` chains into the next block, which can fail to schedule its
+  /// alarm or fail to save — both reported through `lastFailure`. Clearing that
+  /// property unconditionally on a successful silence wiped the message a line
+  /// after it was written.
+  @Test("silencingDoesNotEraseTheNextBlocksWarning")
+  func silencingDoesNotEraseTheNextBlocksWarning() async throws {
+    let settings = try #require(try context.fetch(FetchDescriptor<AppSettings>()).first)
+    settings.autoStartNextBlock = true
+    _ = try await runToTheAlarm()
+    alarms.scheduleError = SpyAlarmScheduler.Failure()
+
+    await engine.silenceAlarm()
+
+    #expect(
+      engine.lastFailure == .alarmSchedulingFailed,
+      "The next block's warning was erased by the silence that preceded it.")
+  }
+
   /// **Two taps inside the suspension advance the sprint once.**
   ///
   /// `silenceAlarm()` suspends across a real AlarmKit round trip, and the button
