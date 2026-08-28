@@ -74,4 +74,32 @@ final class ReentrantAlarmScheduler: AlarmScheduling {
     // Nothing to cancel: this stand-in never holds an alarm. Cancellation order
     // is `SpyAlarmScheduler`'s subject, not this one's.
   }
+
+  // MARK: An alarm that is ringing right now
+
+  /// What `alertingAlarmID` reports. A test sets it to make an alarm ring.
+  var alertingAlarmID: UUID?
+
+  /// Every id this stand-in was asked to silence, in order.
+  private(set) var silenced: [UUID] = []
+
+  /// When set, `stopAlerting` throws it instead of succeeding.
+  var stopAlertingError: (any Error)?
+
+  /// Values pushed into `alertingUpdates()`. Set before the stream is consumed.
+  var alertingSequence: [UUID?] = []
+
+  func alertingUpdates() -> AsyncStream<UUID?> {
+    let values = alertingSequence.isEmpty ? [alertingAlarmID] : alertingSequence
+    return AsyncStream { continuation in
+      for value in values { continuation.yield(value) }
+      continuation.finish()
+    }
+  }
+
+  func stopAlerting(id: UUID) throws {
+    if let stopAlertingError { throw stopAlertingError }
+    silenced.append(id)
+    if alertingAlarmID == id { alertingAlarmID = nil }
+  }
 }
