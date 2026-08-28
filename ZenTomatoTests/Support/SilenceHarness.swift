@@ -7,11 +7,25 @@ import Testing
 /// The shared setup for `D26`'s two suites: a store, a clock, a stand-in
 /// scheduler, an engine, and the one sequence that makes an alarm ring.
 ///
-/// **A real extraction, unlike the one this project claimed once and did not
-/// make.** `SilenceAlarmTests` crossed the 400-line file limit for real after the
-/// third adversarial pass, and the tests that had to move — the drift pair —
-/// needed every one of these members. Duplicating them into a second suite is how
-/// two harnesses drift apart, so there is one.
+/// **A real extraction, and the third attempt at describing one honestly.**
+///
+/// The exact history, because two previous versions of this sentence were wrong
+/// and both were caught by review rather than by anything automated:
+///
+/// - The first claimed `SilenceAlarmTests` had been split when nothing had left
+///   it. `SilenceControlFenceTests` carries that correction in its own header.
+/// - The second said the file "crossed the 400-line limit for real after the
+///   third adversarial pass". It had not: `git show 3c847b4` gives **392 lines**,
+///   eight under a ceiling that `.swiftlint.yml` does not override.
+///
+/// What actually happened: the two tests added *after* that pass —
+/// `twoTapsAdvanceOnce` and the refused-stop pair — took the file to 419, and
+/// `make ci` refused it. The split is genuine and `git show` will find the lines
+/// leaving `SilenceAlarmTests.swift`; only the account of when it became
+/// necessary was wrong, twice.
+///
+/// The tests that moved needed every member below, and duplicating a harness is
+/// how two harnesses drift apart, so there is one.
 ///
 /// `@MainActor` because the engine is.
 @MainActor

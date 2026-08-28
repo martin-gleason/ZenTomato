@@ -77,8 +77,19 @@ final class ReentrantAlarmScheduler: AlarmScheduling {
 
   // MARK: An alarm that is ringing right now
 
-  /// What `alertingAlarmID` reports. A test sets it to make an alarm ring.
-  var alertingAlarmID: UUID?
+  /// What is ringing, as far as this stand-in is concerned. A test sets it, or
+  /// calls `ring(_:)`.
+  var alertingAlarmIDValue: UUID?
+
+  /// **Mirrors the real one, including its blind spot.** `AlarmKitScheduler`
+  /// spells this `try? currentAlertingAlarmID()`, so a read that fails reads as
+  /// *nothing is ringing*. A stand-in that ignored `alertingReadError` here made
+  /// `aReadThatFailsKeepsTheButton` unable to fail — it passed against the very
+  /// code it was written to catch.
+  var alertingAlarmID: UUID? {
+    get { alertingReadError == nil ? alertingAlarmIDValue : nil }
+    set { alertingAlarmIDValue = newValue }
+  }
 
   /// Every id this stand-in was asked to silence, in order.
   private(set) var silenced: [UUID] = []
@@ -93,22 +104,31 @@ final class ReentrantAlarmScheduler: AlarmScheduling {
   func alertingUpdates() -> AsyncStream<UUID?> {
     AsyncStream { continuation in
       alertingContinuation = continuation
-      continuation.yield(alertingAlarmID)
+      continuation.yield(alertingAlarmIDValue)
     }
   }
 
   /// Makes an alarm ring in the middle of a schedule, which is the window this
   /// stand-in exists to produce.
   func ring(_ id: UUID?) {
-    alertingAlarmID = id
+    alertingAlarmIDValue = id
     alertingContinuation?.yield(id)
   }
 
   private var alertingContinuation: AsyncStream<UUID?>.Continuation?
 
+  /// When set, `currentAlertingAlarmID()` throws it — the "could not ask" case
+  /// that must not be read as "nothing is ringing".
+  var alertingReadError: (any Error)?
+
+  func currentAlertingAlarmID() throws -> UUID? {
+    if let alertingReadError { throw alertingReadError }
+    return alertingAlarmIDValue
+  }
+
   func stopAlerting(id: UUID) throws {
     if let stopAlertingError { throw stopAlertingError }
     silenced.append(id)
-    if alertingAlarmID == id { alertingAlarmID = nil }
+    if alertingAlarmIDValue == id { alertingAlarmIDValue = nil }
   }
 }

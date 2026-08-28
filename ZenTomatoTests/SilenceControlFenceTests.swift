@@ -65,6 +65,4 @@ struct SilenceControlFenceTests {
       .filter { $0.trimmingCharacters(in: .whitespaces).hasPrefix("//") == false }
       .joined(separator: "\n")
   }
-
-  // MARK: The drift test
 }
