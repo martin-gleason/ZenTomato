@@ -416,9 +416,28 @@ final class TimerEngine {
       completed: true,
       at: state.endsAt,
       mayAutoStart: wakeWasPrompt,
-      // Still no reflection prompt, whatever the gap: the taps are recorded and
-      // stay recorded, and what is refused is a sheet nobody was there to fill in.
-      mayPromptForReflection: false)
+      // **`D29`: A LOCKED PHONE IS SOMEBODY BEING THERE.**
+      //
+      // This was `false`, on the grounds that what was refused is "a sheet
+      // nobody was there to fill in". The owner found the hole in that by
+      // running a sprint the ordinary way — phone locked, in a pocket — and
+      // came back to three external interruptions tapped and no way to write
+      // any of them down. They were there for every minute of it.
+      //
+      // `SPEC.md` says the app prompts for one sentence per tap. In the most
+      // common way of using it, it did not.
+      //
+      // **The same test that decides auto-start decides this**, and it is the
+      // right question for both: `wakeWasPrompt` asks whether the gap since the
+      // block ended is inside the block's own length. Two minutes is somebody
+      // picking up a ringing phone. Fourteen hours is a phone left overnight,
+      // and that still gets no sheet — nobody is going to remember what a tap at
+      // 2am was about, and being asked would be worse than being left alone.
+      //
+      // The taps were never at risk either way; they are written down when they
+      // are tapped. What was lost is the sentence, which is the part the log
+      // exists for.
+      mayPromptForReflection: wakeWasPrompt)
     // A sprint that ended while the app was closed is not announced on the next
     // launch. The acknowledgement is for the person who was there.
     lastCompletedSprintSize = nil
@@ -1224,11 +1243,13 @@ extension TimerEngine {
   func watchForAlarms() async {
     // **THE FLAG IS CLEARED WHEN THE STREAM ENDS, NOT LEFT AT ITS LAST VALUE.**
     //
-    // Start and Stop are disabled while it is set, so a stream that finishes
-    // while the last value was non-`nil` — the screen going away mid-alarm, a
-    // sequence that terminates — would leave the flag stuck on and the controls
-    // stuck off. `defer` covers every exit including cancellation, which is the
-    // ordinary one: this is attached to a screen's lifetime.
+    // The flag means *an alarm is ringing right now*, and a screen that has
+    // stopped listening does not know that any more. A stream finishing while
+    // the last value was non-`nil` would leave a Silence button offering to stop
+    // a bell nothing is watching — and, since `presentReflectionIfPossible()`
+    // now waits on this flag, would also hold back a reflection sheet for ever.
+    // `defer` covers every exit including cancellation, which is the ordinary
+    // one: this is attached to a screen's lifetime.
     defer { ringingAlarmID = nil }
     for await id in alarms.alertingUpdates() {
       ringingAlarmID = id
@@ -1274,24 +1295,32 @@ extension TimerEngine {
     } catch {
       silenceFailed = true
     }
-    // **RE-READ, NEVER CLEARED BLIND — AND THE BLIND CLEAR WAS ITSELF A FIX THAT
-    // RECREATED `O26`.**
+    // **RE-READ, NEVER CLEARED BLIND — AND A BLIND CLEAR WAS ITSELF A FIX THAT
+    // RECREATED `O26`, TWICE.**
     //
-    // The first version cleared only on success, which left a dead screen when
-    // iOS refused. The second cleared on both branches, with a comment claiming
-    // `alertingUpdates()` would re-raise the flag if the alarm really was still
-    // going. **It would not.** That stream de-duplicates against its last value,
-    // and a refused stop changes no AlarmKit state — so the ringing id equals the
-    // last id, nothing is ever yielded again, and the button is gone for the rest
-    // of the session. `AlarmKitScheduler`'s own notes record an undismissed alarm
-    // sitting `.alerting` for over thirty seconds, and the next block is scheduled
-    // *sparing* that id, so it survives. That is the reported defect back, reached
-    // through the branch added to fix it.
+    // The first version cleared only on success, which left a screen with no
+    // pressable control when iOS refused. The second cleared on both branches,
+    // claiming `alertingUpdates()` would raise the flag again if the alarm were
+    // still going. It would not: that stream de-duplicates against its last
+    // value, and a refused stop changes no AlarmKit state, so the button was gone
+    // for the rest of the session with the bell still audible.
     //
-    // So the truth is asked for instead of assumed. The dead screen is solved
-    // where it belongs — `TimerScreen` no longer disables anything, because the
-    // Silence button's space is reserved and nothing moves under a finger.
-    ringingAlarmID = silenceFailed ? alarms.alertingAlarmID : nil
+    // The third re-read `alertingAlarmID`, which swallows a throw as `nil` — and
+    // the moment iOS is most likely to refuse a *read* is the moment it has just
+    // refused a *stop*. Same outcome, one layer down.
+    //
+    // So: ask the question that can fail, and when it fails keep what we had. A
+    // button offering to silence a bell that has already stopped is a smaller
+    // fault than a bell with no button.
+    if silenceFailed {
+      do {
+        ringingAlarmID = try alarms.currentAlertingAlarmID()
+      } catch {
+        ringingAlarmID = id
+      }
+    } else {
+      ringingAlarmID = nil
+    }
     await handleDismiss()
     // **REPORTED AFTER, NOT BEFORE, AND A TEST FOUND THAT.**
     //
@@ -1302,11 +1331,19 @@ extension TimerEngine {
     // saying nothing was wrong.
     //
     // **AND CLEARED ON A SUCCESSFUL RETRY**, which it was not. Press one fails
-    // and writes the message; press two succeeds, but `handleDismiss()` returns
-    // at its own `guard completed` before reaching the line that clears it — so
-    // "The alarm couldn't be switched off. Use the alert on the Lock Screen."
-    // sat there for the whole break, telling somebody to do a thing they had
-    // just done.
-    lastFailure = silenceFailed ? .alarmSilenceFailed : nil
+    // and writes the message; press two succeeds, and the message used to stay —
+    // telling somebody to use a Lock Screen alert they had just finished with.
+    //
+    // **BUT ONLY EVER ITS OWN MESSAGE.** Writing `nil` on success was a blind
+    // overwrite of whatever `handleDismiss()` had legitimately just set: the next
+    // block failing to schedule its alarm, or failing to save, both report
+    // through this same property a line earlier. Silencing an alarm must not
+    // erase a warning about the block that follows — the same defect as the one
+    // above, pointing the other way.
+    if silenceFailed {
+      lastFailure = .alarmSilenceFailed
+    } else if lastFailure == .alarmSilenceFailed {
+      lastFailure = nil
+    }
   }
 }
