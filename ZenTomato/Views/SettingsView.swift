@@ -363,9 +363,22 @@ private struct SettingsForm: View {
   /// consistency is the reason for the section, and it is a reason that holds
   /// whether or not a second music service ever arrives.
   ///
-  /// **No new setting, and nothing to change here.** `AppSettings` still holds
-  /// exactly six values — this is a report, not a control. The switch that turns
-  /// music on der
+  /// **No new setting, and nothing to change here.** This is a report, not a
+  /// control. The switch that turns music on lives on the timer screen where the
+  /// choice is actually made, because `D19` puts music decisions before a sprint
+  /// rather than inside one. (This used to quote a field count; that number lives
+  /// in `PolishFenceTests` and `MusicFenceTests`, which is the only place it
+  /// stays true — it was already stale here after `D24`.)
+  ///
+  /// **Never amber, never a warning triangle**, however badly it has gone. The
+  /// same rule the music row already follows: this app not being able to play
+  /// music is not an error condition, and the timer is unaffected either way.
+  ///
+  /// **`D27` does not lock this section**, and that is not an exception: music is
+  /// not a timer setting, is not in `AppSettings`, is not snapshotted at block
+  /// start, and `SPEC.md` gives it a row explicitly permitting changes during a
+  /// sprint.
+  @ViewBuilder
   private var music: some View {
     Section {
       LabeledContent("Apple Music") {

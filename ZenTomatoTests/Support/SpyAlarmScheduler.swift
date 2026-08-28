@@ -137,13 +137,34 @@ final class SpyAlarmScheduler: AlarmScheduling {
   /// Values pushed into `alertingUpdates()`. Set before the stream is consumed.
   var alertingSequence: [UUID?] = []
 
+  /// A stream that **stays open**, the way the real one does.
+  ///
+  /// It used to yield once and finish, which made every test that watched it
+  /// meaningless the moment `watchForAlarms()` learned to clear its flag when
+  /// the stream ends — correct behaviour that a finite stand-in cannot model.
+  /// The live sequence ends only when the screen watching it goes away, so this
+  /// one ends only when a test says so.
   func alertingUpdates() -> AsyncStream<UUID?> {
-    let values = alertingSequence.isEmpty ? [alertingAlarmID] : alertingSequence
-    return AsyncStream { continuation in
-      for value in values { continuation.yield(value) }
-      continuation.finish()
+    AsyncStream { continuation in
+      alertingContinuation = continuation
+      continuation.yield(alertingAlarmID)
+      for value in alertingSequence { continuation.yield(value) }
     }
   }
+
+  /// Makes an alarm ring, or stop, the way a phone would.
+  func ring(_ id: UUID?) {
+    alertingAlarmID = id
+    alertingContinuation?.yield(id)
+  }
+
+  /// Ends the stream, as a screen going away does.
+  func endAlerting() {
+    alertingContinuation?.finish()
+    alertingContinuation = nil
+  }
+
+  private var alertingContinuation: AsyncStream<UUID?>.Continuation?
 
   func stopAlerting(id: UUID) throws {
     if let stopAlertingError { throw stopAlertingError }

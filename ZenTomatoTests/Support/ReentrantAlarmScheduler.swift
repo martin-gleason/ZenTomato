@@ -89,13 +89,22 @@ final class ReentrantAlarmScheduler: AlarmScheduling {
   /// Values pushed into `alertingUpdates()`. Set before the stream is consumed.
   var alertingSequence: [UUID?] = []
 
+  /// A stream that stays open, like `SpyAlarmScheduler`'s and like the real one.
   func alertingUpdates() -> AsyncStream<UUID?> {
-    let values = alertingSequence.isEmpty ? [alertingAlarmID] : alertingSequence
-    return AsyncStream { continuation in
-      for value in values { continuation.yield(value) }
-      continuation.finish()
+    AsyncStream { continuation in
+      alertingContinuation = continuation
+      continuation.yield(alertingAlarmID)
     }
   }
+
+  /// Makes an alarm ring in the middle of a schedule, which is the window this
+  /// stand-in exists to produce.
+  func ring(_ id: UUID?) {
+    alertingAlarmID = id
+    alertingContinuation?.yield(id)
+  }
+
+  private var alertingContinuation: AsyncStream<UUID?>.Continuation?
 
   func stopAlerting(id: UUID) throws {
     if let stopAlertingError { throw stopAlertingError }

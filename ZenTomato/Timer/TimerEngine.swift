@@ -443,8 +443,6 @@ final class TimerEngine {
   /// present for is exactly what auto-start is not for.
   func handleDismiss() async {
     guard isRunning, let state else { return }
-    abandonGeneration &+= 1
-    lastFailure = nil
     let completed = clock.now >= state.endsAt
 
     // **A DISMISS FOR A BLOCK THAT HAS NOT ENDED IS A STALE ALARM, NOT AN ABANDON.**
@@ -472,6 +470,28 @@ final class TimerEngine {
     // clears everything outstanding, which would take the current block's alarm
     // with it and leave the break to end in silence.
     guard completed else { return }
+
+    // **THE GENERATION IS BUMPED HERE, NOT ABOVE THE GUARD, AND THAT ORDER COST
+    // THE DISTRACTION LOG A PROMPT.**
+    //
+    // It used to be the first line of this method. A dismiss for a block that
+    // has *not* ended returns without doing anything else — but it had already
+    // bumped the counter, and `publishReflection` refuses to publish when the
+    // generation has moved. So this sequence dropped a sheet:
+    //
+    //   focus ends -> `boundaryReached()` -> `end()` -> `begin()` suspends
+    //   awaiting `alarms.schedule(...)` -> the alarm rings -> Silence is tapped
+    //   -> `handleDismiss()` sees the *new* block, which has not completed,
+    //   bumps, returns -> `publishReflection` for the block that just finished
+    //   finds the generation moved and publishes nothing.
+    //
+    // That window is a real AlarmKit round trip, and it is exactly the case
+    // `D26` exists for: the app in the foreground when the bell goes. The lost
+    // sheet is the one thing this app is for.
+    //
+    // Bumping belongs to abandoning, and nothing above this line abandons.
+    abandonGeneration &+= 1
+    lastFailure = nil
 
     // **THE SHEET IS OFFERED HERE NOW, AND THE OLD REASONING WAS BACKWARDS.**
     //
@@ -1196,6 +1216,14 @@ extension TimerEngine {
   /// Keeps `ringingAlarmID` current for as long as the caller keeps this
   /// running. Attach it to the timer screen's lifetime.
   func watchForAlarms() async {
+    // **THE FLAG IS CLEARED WHEN THE STREAM ENDS, NOT LEFT AT ITS LAST VALUE.**
+    //
+    // Start and Stop are disabled while it is set, so a stream that finishes
+    // while the last value was non-`nil` — the screen going away mid-alarm, a
+    // sequence that terminates — would leave the flag stuck on and the controls
+    // stuck off. `defer` covers every exit including cancellation, which is the
+    // ordinary one: this is attached to a screen's lifetime.
+    defer { ringingAlarmID = nil }
     for await id in alarms.alertingUpdates() {
       ringingAlarmID = id
     }
@@ -1227,10 +1255,22 @@ extension TimerEngine {
     var silenceFailed = false
     do {
       try alarms.stopAlerting(id: id)
-      ringingAlarmID = nil
     } catch {
       silenceFailed = true
     }
+    // **CLEARED ON BOTH BRANCHES, AND THE FAILURE BRANCH IS WHY.**
+    //
+    // It used to be cleared only on success. Start and Stop are both disabled
+    // while this is set, so a refusal from iOS left a screen with three controls
+    // on it and nothing that could be pressed — the Silence button re-throwing,
+    // the other two inert, and no way out short of relaunching. A dead screen is
+    // a worse outcome than a button that stops matching a noise iOS would not
+    // let us end.
+    //
+    // The flag means "this app is offering to silence something". Once the offer
+    // has been taken and refused, the offer is over; `alertingUpdates()` remains
+    // the authority and will re-raise it if the alarm really is still going.
+    ringingAlarmID = nil
     await handleDismiss()
     // **REPORTED AFTER, NOT BEFORE, AND A TEST FOUND THAT.**
     //
