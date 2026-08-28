@@ -53,6 +53,26 @@ final class AppSettings {
   /// whole point of a timer is that it tells you without being watched.
   var soundEnabled: Bool
 
+  /// Which sound the alarm makes, as `AlertSound`'s raw value.
+  ///
+  /// **The seventh setting, and `SPEC.md` line 30 moved by exactly one to admit
+  /// it** — keeping "Nothing else." on the end, which is the fence the list
+  /// exists to be.
+  ///
+  /// **Stored as a `String` rather than the enum, deliberately.** A value written
+  /// by a later version — a sound this build has never heard of — must read back
+  /// as the default rather than fail to decode. `AlertSound.stored(_:)` is where
+  /// that softening happens, and it is the reason a person can move a database
+  /// between versions without losing a fortnight of distraction log over an
+  /// alarm tone.
+  ///
+  /// **Optional because this is a migration.** Every row written before `D24`
+  /// has no value here, and SwiftData fills it with `nil` rather than refusing to
+  /// open the store. `nil` means the system default, which is exactly what those
+  /// installs were already hearing — so the migration changes no behaviour, which
+  /// is the only kind of migration worth trusting.
+  var alertSoundRawValue: String?
+
   /// Whether the next block begins by itself when one ends. Defaults to OFF —
   /// a timer that starts a work block while you are still away from the desk
   /// is a timer that lies about how long you worked.
@@ -71,6 +91,7 @@ final class AppSettings {
     longBreakMinutes: Int = 15,
     pomodorosPerSprint: Int = 4,
     soundEnabled: Bool = true,
+    alertSoundRawValue: String? = nil,
     autoStartNextBlock: Bool = false
   ) {
     self.workMinutes = workMinutes
@@ -78,6 +99,7 @@ final class AppSettings {
     self.longBreakMinutes = longBreakMinutes
     self.pomodorosPerSprint = pomodorosPerSprint
     self.soundEnabled = soundEnabled
+    self.alertSoundRawValue = alertSoundRawValue
     self.autoStartNextBlock = autoStartNextBlock
   }
 

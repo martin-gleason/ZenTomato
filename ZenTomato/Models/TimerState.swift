@@ -95,6 +95,12 @@ final class TimerState {
   var pomodorosPerSprint: Int
   /// Whether this block's alarm makes a noise.
   var soundEnabled: Bool
+
+  /// Which sound this block's alarm makes, as `AlertSound`'s raw value.
+  ///
+  /// A `String` for the same forward-compatibility reason `AppSettings` stores
+  /// one, and optional because every row written before `D24` has none.
+  var alertSoundRawValue: String?
   /// Whether the block after this one begins by itself.
   var autoStartNextBlock: Bool
 
@@ -125,6 +131,7 @@ final class TimerState {
     longBreakMinutes = snapshot.longBreakMinutes
     pomodorosPerSprint = snapshot.pomodorosPerSprint
     soundEnabled = snapshot.soundEnabled
+    alertSoundRawValue = snapshot.alertSound.rawValue
     autoStartNextBlock = snapshot.autoStartNextBlock
   }
 
@@ -139,6 +146,7 @@ final class TimerState {
       longBreakMinutes: longBreakMinutes,
       pomodorosPerSprint: pomodorosPerSprint,
       soundEnabled: soundEnabled,
+      alertSound: AlertSound.stored(alertSoundRawValue),
       autoStartNextBlock: autoStartNextBlock)
   }
 
@@ -174,6 +182,7 @@ final class TimerState {
     longBreakMinutes = snapshot.longBreakMinutes
     pomodorosPerSprint = snapshot.pomodorosPerSprint
     soundEnabled = snapshot.soundEnabled
+    alertSoundRawValue = snapshot.alertSound.rawValue
     autoStartNextBlock = snapshot.autoStartNextBlock
   }
 

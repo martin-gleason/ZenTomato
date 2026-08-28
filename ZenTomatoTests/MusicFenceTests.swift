@@ -61,21 +61,29 @@ struct MusicFenceTests {
     }
   }
 
-  // MARK: The six-field rule, from the other side
+  // MARK: The customisation-list rule, from the other side
 
   /// **`AppSettings` gains nothing from F4.** Its own doc comment names the
-  /// absence of a music switch by name, and `SPEC.md`'s customisation list is six
-  /// items long and ends with the words "Nothing else."
+  /// absence of a music switch by name, and `SPEC.md`'s customisation list ends
+  /// with the words "Nothing else."
   ///
-  /// `AppSettingsTests` asserts the six columns are the six columns; this asserts
-  /// the specific thing F4 was most likely to do to it, which is to add a seventh
+  /// `AppSettingsTests` asserts the columns are the columns; this asserts the
+  /// specific thing F4 was most likely to do to it, which is to add one more
   /// because it was the obvious place.
+  ///
+  /// **SEVEN, AND THE SEVENTH IS NAMED HERE RATHER THAN COUNTED.** The list grew
+  /// by one when `D24` was ratified and *which alert sound* joined it. A bare
+  /// count would have been satisfied by any seventh column at all, including a
+  /// music one — which is the single thing this test exists to forbid. So the
+  /// seventh is asserted by name: the schema is these seven, and a music column
+  /// still fails whether it is the seventh or the eighth.
   @Test("appSettingsHasNoMusicColumn")
   func appSettingsHasNoMusicColumn() throws {
     let entity = try #require(Schema([AppSettings.self]).entities.first)
     let columns = entity.properties.map(\.name)
 
-    #expect(columns.count == 6)
+    #expect(columns.count == 7)
+    #expect(columns.contains("alertSoundRawValue"), "The seventh column is D24's alert sound, or the count is wrong.")
     for column in columns {
       for word in ["music", "playlist", "song", "audio", "volume"] {
         #expect(

@@ -125,7 +125,7 @@ final class AlarmKitScheduler: AlarmScheduling {
       // Explicitly nothing. A second button on an alarm is how a snooze or a
       // repeat arrives, and this app has neither.
       secondaryIntent: nil,
-      sound: Self.sound(enabled: request.soundEnabled))
+      sound: Self.sound(enabled: request.soundEnabled, choice: request.alertSound))
 
     _ = try await AlarmManager.shared.schedule(id: request.id, configuration: configuration)
   }
@@ -220,8 +220,19 @@ final class AlarmKitScheduler: AlarmScheduling {
   }
 
   /// Which sound the alarm makes.
-  private static func sound(enabled: Bool) -> AlertConfiguration.AlertSound {
-    enabled ? .default : .named(silentSoundFileName)
+  ///
+  /// **SOUND OFF BEATS A CHOSEN SOUND, AND THAT ORDER IS THE WHOLE RULE.** The
+  /// switch is a person saying *no noise*; a sound they picked earlier must not
+  /// override it. Written as an early return rather than a nested condition so
+  /// the precedence is legible at a glance and cannot be reversed by a tidy-up.
+  ///
+  /// `Silence.caf` is still how "off" is expressed, because `AlarmKit` has no
+  /// silent case — the alert sound is the system default or a named bundle file
+  /// and nothing else, so silence has to be a file containing silence.
+  private static func sound(enabled: Bool, choice: AlertSound) -> AlertConfiguration.AlertSound {
+    guard enabled else { return .named(silentSoundFileName) }
+    guard let fileName = choice.fileName else { return .default }
+    return .named(fileName)
   }
 
   /// What iOS itself draws for a block: the title of the alert when the alarm

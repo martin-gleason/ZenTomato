@@ -1143,7 +1143,8 @@ extension TimerEngine {
   private func scheduleAlarm(for state: TimerState) async {
     let request = BlockAlarmRequest(
       id: state.sessionID, kind: state.kind, endsAt: state.endsAt,
-      soundEnabled: state.soundEnabled, completedInSprint: state.completedInSprint,
+      soundEnabled: state.soundEnabled, alertSound: AlertSound.stored(state.alertSoundRawValue),
+      completedInSprint: state.completedInSprint,
       pomodorosPerSprint: state.pomodorosPerSprint)
     do {
       // The block that just ended, whose alarm is ringing or about to. Consumed
