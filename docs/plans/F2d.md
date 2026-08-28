@@ -3,7 +3,7 @@
 **Retrofit on F2.** Builds `D26`, ratified 2026-08-28 and applied to `SPEC.md`
 line 39 as `A10`.
 
-**PLAN ONLY. Awaiting the owner's yes.**
+**Gated 2026-08-28, built 2026-08-28.** The owner's yes was *"continue with f2c and f2e"* — `F2c` was already merged, so it named this plan and `F2e`.
 
 ## What the contract now says
 
@@ -98,3 +98,75 @@ building on a diagnosis that was withdrawn.
 **No fix for `C20`.** The alarm sounding with sound *off* is a different failure
 with an unfinished diagnosis. It is one minute of device time away from being
 decided, and `C20` says what to run.
+
+
+## What shipped
+
+**`alarmUpdates` exists, and was read rather than assumed.**
+`AlarmKit.swiftinterface` in the iOS 26.5 SDK carries
+`AlarmManager.alarmUpdates: some AsyncSequence<[Alarm], Never>`, and — the part
+that mattered — **`stop(id:)` alongside `cancel(id:)`**. Those are different
+operations: `cancel` is for an alarm still counting down, `stop` for one already
+alerting. The protocol keeps them separate for the same reason, so it cannot grow
+a method that sometimes works.
+
+`AlarmScheduling` gains three members: `alertingAlarmID` for a cheap read,
+`alertingUpdates()` for a stream whose **first value is the current state**, and
+`stopAlerting(id:)`. The stream's first value is what makes a screen opened *while
+the bell is already ringing* draw the button — which is the only case this feature
+exists for.
+
+**The engine reuses `handleDismiss()` and adds nothing to it.** `silenceAlarm()`
+stops the noise, then dismisses. The order is not interchangeable:
+`DismissBlockIntent` runs *after* iOS has ended the alert, so reaching that method
+from inside the app means nothing has been silenced yet — dismissing alone would
+have advanced the sprint and left the alarm ringing, which is the reported defect
+with an extra step.
+
+### Placement, which is the part for the owner to look at
+
+The plan refused to settle this in prose and said it would come back. What is
+built: **a filled "Silence" button in its own place above the primary control,
+and the primary control disabled while it shows.**
+
+The Start/Stop position changes identity on `isRunning`, and `isRunning` goes
+false at the exact instant an alarm begins — a control appearing *there* at *that*
+moment lands under a finger already travelling toward something else, which is how
+this report arrived. So the new button does not take that position. It does push
+the primary control down, and the answer to that is to make the thing that moves
+inert: while the alarm rings, Start and Stop are both disabled, so a mis-tap does
+nothing rather than the wrong thing.
+
+It is filled and loud, against this screen's general restraint. The one piece of
+colour here is normally the word above the number. A button somebody is hunting
+for while a bell rings is the one case where quiet is the wrong answer.
+
+## Evidence
+
+```
+$ make test
+✔ Test run with 537 tests in 80 suites passed
+```
+
+Nine new tests. **One of them found a real bug before any device did**:
+`handleDismiss()` clears `lastFailure` as its first act — correctly, so a new
+block does not inherit the last one's complaint — which meant a failure to
+silence was being written and then wiped a line later. Somebody would have been
+left with a ringing alarm and a screen saying nothing was wrong. The report now
+happens after the dismiss.
+
+The one worth naming is `theButtonAndTheSystemAlertAgree`: the same state is
+driven twice, once through the app's button and once through the path
+`DismissBlockIntent` runs, and the recorded outcome must match. Two
+implementations of "dismiss" drifting apart is this project's most repeated
+defect, and here they would drift silently — one is a button, the other is a
+system intent nobody watches.
+
+## Still to check on the device — `O29`
+
+Nothing here has been seen on a phone. Two runs:
+
+1. Let a block end with **the app in the foreground** and silence the alarm from
+   inside ZenPom without touching the system alert.
+2. Let one end with the app closed, dismiss from the system alert as usual, and
+   confirm the two paths do not fight — no double advance, no stuck button.

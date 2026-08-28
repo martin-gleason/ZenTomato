@@ -424,6 +424,15 @@ final class TimerEngine {
     lastCompletedSprintSize = nil
   }
 
+  // MARK: Silencing a ringing alarm
+
+  /// Which block's alarm is making a noise right now, or `nil`. `D26`.
+  ///
+  /// Stored here rather than in `TimerEngine+Silence.swift` because Swift has no
+  /// stored properties in extensions. The two methods that use it are over
+  /// there; this line is the only part that had to stay.
+  private(set) var ringingAlarmID: UUID?
+
   /// The Live Activity's dismiss button was tapped. The same button means two
   /// things and the engine, not the button, decides which: dismissing a block
   /// before its end abandons it; dismissing one whose end has passed is just
@@ -1169,5 +1178,67 @@ extension TimerEngine {
     } catch {
       lastFailure = .alarmCancellationFailed
     }
+  }
+}
+
+// MARK: - Silencing a ringing alarm
+
+/// `D26` — the two methods behind the Silence button.
+///
+/// **An extension, in this same file, because `TimerEngine`'s body reached its
+/// 250-line lint ceiling** — and that ceiling is doing its job: this is the
+/// largest type in the app and every feature has a reason to add to it. An
+/// extension is a separate declaration for the length rule, and being in the
+/// same file keeps `private` access, so nothing had to be widened to the module
+/// to make room. The stored `ringingAlarmID` stays in the class above, because
+/// Swift has no stored properties in extensions.
+extension TimerEngine {
+  /// Keeps `ringingAlarmID` current for as long as the caller keeps this
+  /// running. Attach it to the timer screen's lifetime.
+  func watchForAlarms() async {
+    for await id in alarms.alertingUpdates() {
+      ringingAlarmID = id
+    }
+  }
+
+  /// **`D26`: silence the alarm and move the sprint on, exactly as the system
+  /// alert's own Dismiss does.**
+  ///
+  /// THE ORDER IS STOP-THEN-DISMISS, AND IT IS NOT INTERCHANGEABLE.
+  /// `handleDismiss()` was written for `DismissBlockIntent`, which runs *after*
+  /// iOS has already ended the alert — its own comment says so. Reaching it from
+  /// inside the app means nothing has silenced anything yet, so the noise is
+  /// stopped first. Calling `handleDismiss()` alone here would advance the sprint
+  /// and leave the alarm ringing, which is the reported defect with an extra step.
+  ///
+  /// **AND IT IS `handleDismiss()`, NEVER `stop(reason:)`.** Stop ends the
+  /// *sprint* and `SPEC.md` prices that exit deliberately — it asks why and will
+  /// not proceed without an answer. Silencing an alarm is a different act with a
+  /// different consequence: the block is recorded **completed**, the reflection
+  /// prompt appears if it earned one, and the next block auto-starts or waits
+  /// according to the setting. One method carrying both meanings is how the `F2b`
+  /// arc produced four fixes in a row.
+  ///
+  /// A failure to stop is recorded rather than thrown. The sprint must still
+  /// advance: a person who asked for silence and got an error would otherwise be
+  /// left with a ringing alarm *and* a stuck timer.
+  func silenceAlarm() async {
+    guard let id = ringingAlarmID else { return }
+    var silenceFailed = false
+    do {
+      try alarms.stopAlerting(id: id)
+      ringingAlarmID = nil
+    } catch {
+      silenceFailed = true
+    }
+    await handleDismiss()
+    // **REPORTED AFTER, NOT BEFORE, AND A TEST FOUND THAT.**
+    //
+    // `handleDismiss()` clears `lastFailure` as its first act, correctly: a new
+    // block starts without the last one's complaint on screen. Setting the
+    // failure before calling it therefore wrote a message that was wiped a line
+    // later — the person would have been left with a ringing alarm and a screen
+    // saying nothing was wrong.
+    if silenceFailed { lastFailure = .alarmSilenceFailed }
   }
 }

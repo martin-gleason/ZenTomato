@@ -20,6 +20,13 @@ enum TimerEngineFailure: Equatable, Sendable {
   /// alarm sounding for a block the user has already skipped or stopped.
   case alarmCancellationFailed
 
+  /// The app was asked to silence a ringing alarm and iOS refused.
+  ///
+  /// **The sprint still advances** — see `TimerEngine.silenceAlarm()`. Somebody
+  /// who asked for quiet and got an error must not also be left with a stuck
+  /// timer, so this reports the noise and nothing else.
+  case alarmSilenceFailed
+
   /// The database refused a write. The timer is running in memory but the
   /// state on disk is behind, so closing the app could lose the block.
   case persistenceFailed
@@ -32,6 +39,8 @@ enum TimerEngineFailure: Equatable, Sendable {
       "This block won't sound an alarm when it ends."
     case .alarmCancellationFailed:
       "An old alarm couldn't be called off and may still sound."
+    case .alarmSilenceFailed:
+      "The alarm couldn't be switched off. Use the alert on the Lock Screen."
     case .persistenceFailed:
       "This block couldn't be saved and may be lost if you close the app."
     }

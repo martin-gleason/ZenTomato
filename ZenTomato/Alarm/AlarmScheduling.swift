@@ -69,4 +69,38 @@ protocol AlarmScheduling: AnyObject {
   ///   dismiss passes `false`, because being asked for silence is when silence
   ///   is wanted.
   func cancelOutstanding(sparingAlerting: Bool) throws
+
+  // MARK: An alarm that is ringing right now
+
+  /// The alarm of this app's that is **currently making a noise**, if any.
+  ///
+  /// **`D26` EXISTS BECAUSE NOTHING USED TO ASK THIS QUESTION.** The owner tried
+  /// to stop a ringing alarm from inside the app and could not — *"This wasn't a
+  /// stop the timer bug. stop the alarm bug."* No view observed `alerting`, and
+  /// `cancelOutstanding` was reachable only from a *confirmed* Stop, so the one
+  /// control that ended the noise belonged to iOS. If that alert was missed, the
+  /// sound had no off switch anywhere in ZenPom.
+  ///
+  /// Cheap to read, like `authorization`. It is a snapshot; `alertingUpdates()`
+  /// is how a screen stays current.
+  var alertingAlarmID: UUID? { get }
+
+  /// A stream of that same answer, one value per change.
+  ///
+  /// **A stream rather than a poll**, because the moment being drawn is the
+  /// instant an alarm starts, and a timer that samples it is a timer that draws
+  /// the button late — at the one moment somebody is reaching for it.
+  ///
+  /// The first value is the current state, so a screen that starts listening
+  /// after an alarm has already begun still sees it.
+  func alertingUpdates() -> AsyncStream<UUID?>
+
+  /// Ends a ringing alarm.
+  ///
+  /// **Distinct from `cancelOutstanding`, and the SDK draws the same
+  /// distinction**: `AlarmManager` has `cancel(id:)` for an alarm still counting
+  /// down and `stop(id:)` for one that is alerting. Silencing is not cancelling,
+  /// and conflating them is how this protocol would grow a method that sometimes
+  /// works.
+  func stopAlerting(id: UUID) throws
 }

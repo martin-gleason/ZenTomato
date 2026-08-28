@@ -33,6 +33,14 @@ struct TimerScreen: View {
   var onStop: () -> Void = { }
   var onOpenSettings: () -> Void = { }
 
+  /// Silence the ringing alarm and move the sprint on. `D26`.
+  ///
+  /// **Not `onSilenceBlock`**, which is thirty lines below and silences the
+  /// *music* for the rest of a block. Two callbacks with the word silence in them
+  /// is one too many for a screen where one of them stops a bell nobody can
+  /// otherwise stop, so this one says what it silences.
+  var onSilenceAlarm: () -> Void = { }
+
   /// The history control was tapped. Reachable in every state, including while a
   /// block runs — see `historyButton`.
   var onOpenHistory: () -> Void = { }
@@ -69,6 +77,8 @@ struct TimerScreen: View {
   var body: some View {
     VStack(spacing: Spacing.none) {
       centreColumn
+
+      silenceControl
 
       controls
         .accessibilitySortPriority(1)
@@ -444,6 +454,38 @@ struct TimerScreen: View {
     .accessibilityValue(Text(model.spokenNumeral))
   }
 
+  /// The one control that ends a ringing alarm. `D26`.
+  ///
+  /// **THE OWNER COULD NOT STOP A NOISE THIS APP STARTED.** *"This wasn't a stop
+  /// the timer bug. stop the alarm bug."* Until now the only control that ended a
+  /// ringing alarm belonged to iOS, so an alert that was missed — the app already
+  /// open, the phone in a pocket — left the sound with no off switch here.
+  ///
+  /// WHY IT IS NOT IN THE START/STOP POSITION, WHICH IS THE DECISION
+  /// That position changes identity on `isRunning`, and `isRunning` goes false at
+  /// the exact instant an alarm begins. A control appearing *there* at *that*
+  /// moment lands under a finger already travelling toward something else — which
+  /// is how the report arrived in the first place. So it gets its own place above
+  /// the primary control, and the primary control is disabled while it is
+  /// showing: the thing that moves is inert, so a mis-tap does nothing rather
+  /// than doing the wrong thing.
+  ///
+  /// Filled and loud, unlike everything else on this screen. The one piece of
+  /// colour here is normally the word above the number, and that restraint is
+  /// deliberate — but a button somebody is hunting for while a bell rings is the
+  /// one case where being quiet is the wrong answer.
+  @ViewBuilder
+  private var silenceControl: some View {
+    if model.alarmIsRinging {
+      Button("Silence") { onSilenceAlarm() }
+        .buttonStyle(StartButtonStyle())
+        .padding(.bottom, Spacing.md)
+        .accessibilityLabel(Text("Silence the alarm"))
+        .accessibilityHint(Text("Stops the sound and moves on to the next block."))
+        .accessibilitySortPriority(2)
+    }
+  }
+
   /// One or two buttons, depending on whether a block is running.
   @ViewBuilder
   private var controls: some View {
@@ -451,7 +493,10 @@ struct TimerScreen: View {
     case .start(let isEnabled, let spokenLabel):
       Button("Start") { onStart() }
         .buttonStyle(StartButtonStyle())
-        .disabled(!isEnabled)
+        // Inert while the alarm rings — see `silenceControl`. The Silence button
+        // above shifts this one downward, and a control that moves under a
+        // finger must not be one that does something.
+        .disabled(!isEnabled || model.alarmIsRinging)
         .accessibilityLabel(Text(spokenLabel))
 
     case .running:
@@ -474,6 +519,7 @@ struct TimerScreen: View {
       // as an encouraged thing to do, sixty times an hour, for the whole block.
       Button("Stop") { onStop() }
         .buttonStyle(SecondaryButtonStyle(emphasis: .quiet))
+        .disabled(model.alarmIsRinging)
         .accessibilityLabel(Text("Stop the timer"))
         .accessibilityHint(Text("Asks why, then ends the block and the sprint."))
     }

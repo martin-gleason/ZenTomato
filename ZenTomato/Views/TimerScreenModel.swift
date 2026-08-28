@@ -229,6 +229,13 @@ struct TimerScreenModel {
 
   let controls: Controls
 
+  /// Whether one of this app's alarms is making a noise right now. `D26`.
+  ///
+  /// Separate from `controls` on purpose: an alarm rings *across* the boundary
+  /// where `controls` flips from `.running` to `.start`, so folding it into that
+  /// enum would tie the button's life to the very transition it has to survive.
+  let alarmIsRinging: Bool
+
   /// Whether a block is counting right now.
   ///
   /// Derived from `controls` rather than stored, so it cannot disagree with what
@@ -256,7 +263,8 @@ struct TimerScreenModel {
     capture: Capture? = nil,
     attachment: Attachment? = nil,
     music: MusicRowModel?,
-    controls: Controls
+    controls: Controls,
+    alarmIsRinging: Bool = false
   ) {
     self.blockName = blockName
     self.kicker = kicker
@@ -270,6 +278,7 @@ struct TimerScreenModel {
     self.attachment = attachment
     self.music = music
     self.controls = controls
+    self.alarmIsRinging = alarmIsRinging
   }
 
   // MARK: The one state that is not a timer

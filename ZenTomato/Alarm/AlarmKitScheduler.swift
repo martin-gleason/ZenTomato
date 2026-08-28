@@ -204,6 +204,49 @@ final class AlarmKitScheduler: AlarmScheduling {
   /// block still ends on time; the phone simply makes no noise.
   private static let silentSoundFileName = "Silence.caf"
 
+  // MARK: An alarm that is ringing right now
+
+  /// See `AlarmScheduling.alertingAlarmID`.
+  var alertingAlarmID: UUID? {
+    // A read of `alarms` rather than of cached state. The cache would be one
+    // more thing that can disagree with iOS, and this is not a hot path — it is
+    // read when a screen appears and when the stream below says something moved.
+    (try? AlarmManager.shared.alarms)?.first { $0.state == .alerting }?.id
+  }
+
+  /// See `AlarmScheduling.alertingUpdates`.
+  ///
+  /// `AlarmManager.alarmUpdates` is the SDK's own sequence of the whole alarm
+  /// list. **Checked in `AlarmKit.swiftinterface` rather than assumed** — the
+  /// plan for this feature required that, because three framework assumptions
+  /// about this alarm have already been wrong and each cost a device round trip.
+  ///
+  /// Reduced to "which of ours is ringing", and de-duplicated, so a screen
+  /// re-renders when the answer changes and not every time any alarm ticks.
+  func alertingUpdates() -> AsyncStream<UUID?> {
+    AsyncStream { continuation in
+      let task = Task { @MainActor in
+        // The current answer first, so a screen that starts listening after an
+        // alarm has already begun still sees it.
+        var last = alertingAlarmID
+        continuation.yield(last)
+        for await alarms in AlarmManager.shared.alarmUpdates {
+          let ringing = alarms.first { $0.state == .alerting }?.id
+          guard ringing != last else { continue }
+          last = ringing
+          continuation.yield(ringing)
+        }
+        continuation.finish()
+      }
+      continuation.onTermination = { _ in task.cancel() }
+    }
+  }
+
+  /// See `AlarmScheduling.stopAlerting`.
+  func stopAlerting(id: UUID) throws {
+    try AlarmManager.shared.stop(id: id)
+  }
+
   /// Turns iOS's answer about permission into the app's own.
   ///
   /// A deliberate translation rather than passing the framework's value around.

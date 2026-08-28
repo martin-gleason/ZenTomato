@@ -211,6 +211,12 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       // Read once, and again whenever the Todoist sheet closes. The Keychain
       // does not publish changes, so there is nothing to watch.
       .task { readToken() }
+      // `D26`: keeps `engine.ringingAlarmID` current, which is what draws the
+      // Silence button. Tied to this screen's lifetime rather than started once
+      // at launch — the stream ends when the screen goes, and begins again with
+      // the current state when it returns, so a screen re-entered while an alarm
+      // is already ringing still shows the button.
+      .task { await engine.watchForAlarms() }
       // THE MIRROR IS FILLED ON THE WAY IN.
       //
       // Three things ask for a refresh in the whole app: this, the Todoist
@@ -436,6 +442,7 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       onStart: { self.startBlock() },
       onStop: { self.stopBlock() },
       onOpenSettings: { self.showingSettings = true },
+      onSilenceAlarm: { Task { await engine.silenceAlarm() } },
       onOpenHistory: { self.showingHistory = true },
       onOpenPlan: { self.openPlan() },
       // Called and finished on the spot. No `Task`, no `await`, nothing queued.
@@ -499,7 +506,8 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
         ? .running
         : .start(
           isEnabled: true,
-          spokenLabel: "Start \(spokenBlock), \(Self.spokenMinutes(secondsLeft / 60))"))
+          spokenLabel: "Start \(spokenBlock), \(Self.spokenMinutes(secondsLeft / 60))"),
+      alarmIsRinging: engine.ringingAlarmID != nil)
   }
 
   /// How many pomodoros to draw as done, out of how many.
