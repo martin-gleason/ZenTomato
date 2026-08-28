@@ -46,6 +46,9 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D23** | ratified | — | 1132 | The music picker gets a search field; scope was never exceeded |
 | **D24** | ratified | yes, applied | — | The alarm sound can be chosen; `AppSettings` gains a seventh field |
 | **D25** | ratified | yes, applied | — | Music can be switched on during a break |
+| **D26** | ratified | yes, applied | — | A ringing alarm can be silenced from inside the app |
+| **D27** | ratified | yes, applied | — | Settings are read-only while a block is running |
+| **D28** | ratified | yes, applied | — | The alert sound can be previewed from Settings |
 
 *24 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
@@ -1371,8 +1374,12 @@ Ratify and amend together, or neither.
 
 ## D26 — A ringing alarm can be silenced from inside the app
 
-**Proposed 2026-08-28. Not ratified.** Defect-adjacent, but it adds a control, so
-it is a delta rather than a fix that proceeds under `D22`.
+**Proposed 2026-08-28. Ratified by the owner 2026-08-28**, and `A10` applied to
+`SPEC.md` the same day at the owner's instruction — the `D24`/`A9` precedent, so
+the outstanding-amendment count never leaves zero. Defect-adjacent, but it adds a
+control, so it is a delta rather than a fix proceeding under `D22`.
+
+**The owner answered the open question below: silence and advance, like Dismiss.**
 
 **What was reported, and what it actually was.** The owner tried to stop a ringing
 alarm in a short break and could not. The first reading was a Stop-button problem;
@@ -1401,13 +1408,27 @@ Add to the *Alarm* row:
 > silences it. Silencing the alarm does not end the block, the break or the
 > sprint.
 
-**Open question for the owner:** should silencing also *advance* — that is, behave
-as the system alert's Dismiss does — or only stop the noise and leave the app
-where it is? These differ when auto-start is off.
+**Answered 2026-08-28: silence and advance, like Dismiss.** The control is the
+system alert's Dismiss button, drawn where the person is actually looking. Two
+buttons that stop the same noise and then leave the app in two different states
+would be worse than the one that is hard to find.
+
+**What that means precisely**, because "like Dismiss" has to name a path rather
+than a feeling: it runs the same route `DismissBlockIntent` runs. The block is
+recorded as **completed**, not abandoned; the reflection prompt appears if the
+block earned one; and the next block auto-starts if auto-start is on and stays
+queued if it is not. It is not `stop(reason:)` and it never asks why.
+
+**Currently:** *Block ends fire through AlarmKit, so the alert sounds through
+silent mode and through an active Focus.*
 
 ## D27 — Settings are read-only while a block is running
 
-**Proposed 2026-08-28 at the owner's direction. Not ratified.**
+**Proposed 2026-08-28 at the owner's direction. Ratified by the owner
+2026-08-28**, `A11` applied the same day.
+
+**Currently:** *Work length, short break, long break, pomodoros-per-sprint, sound
+on/off, which alert sound, auto-start next block on/off. Nothing else.*
 
 > I was able to change the sounds from small bell to struck bell in a sprint. both
 > sound good --- but i shouldn't be able to do that.
@@ -1439,7 +1460,11 @@ lie about a screen nobody can edit.
 
 ## D28 — The alert sound can be previewed from Settings
 
-**Proposed 2026-08-28 at the owner's direction. Not ratified.**
+**Proposed 2026-08-28 at the owner's direction. Ratified by the owner
+2026-08-28**, `A12` applied the same day.
+
+**Currently:** *Work length, short break, long break, pomodoros-per-sprint, sound
+on/off, which alert sound, auto-start next block on/off. Nothing else.*
 
 `F2c.md` ruled a preview out, and the reason it gave still stands:
 

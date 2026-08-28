@@ -27,7 +27,7 @@ A focus timer that works with the fixed toolset (Todoist, Apple Music) so that s
 | Music during breaks | Pauses, and can be switched back on by hand. Resumes by itself at the next pomodoro. |
 | Distraction capture | Two buttons, I and E, tappable during a pomodoro. A tap records timestamp + task. At the end of that pomodoro the app prompts for one sentence per tap (skippable). |
 | Stats | Counts for everything: pomodoros per task, project, and day; I/E per task and day. Plus a Markdown export via the share sheet for the Rhodia review. |
-| Timer customization | Work length, short break, long break, pomodoros-per-sprint, sound on/off, which alert sound, auto-start next block on/off. Nothing else. |
+| Timer customization | Work length, short break, long break, pomodoros-per-sprint, sound on/off, which alert sound, auto-start next block on/off. Nothing else. Each alert sound can be played once from the settings screen before it is chosen. While a block is running these are read-only, and the screen says so. |
 | Data | Local only (SwiftData). Todoist token in Keychain. No analytics, no accounts, no server. |
 | Minimum iOS | 26.0. Minimum watchOS 26.0. |
 
@@ -36,7 +36,7 @@ A focus timer that works with the fixed toolset (Todoist, Apple Music) so that s
 Each feature is a gate. Crossing it needs Marty's verbal yes on the plan.
 
 - **F1 — Skeleton.** SwiftUI app, SwiftData store, settings model, SwiftLint, GitHub Actions CI (build + unit tests on a macOS runner), `LICENSE`, `README`. *Done when:* CI is green on `main` and the app launches to an empty timer.
-- **F2 — Timer engine.** Pomodoro / short / long break cycle per settings. Survives backgrounding (state persisted). Block ends fire through AlarmKit, so the alert sounds through silent mode and through an active Focus. A Live Activity on the Lock Screen and in the Dynamic Island is required, not optional — AlarmKit's countdown API mandates one. *Done when:* unit tests cover the cycle and a backgrounded timer ends on time on a device.
+- **F2 — Timer engine.** Pomodoro / short / long break cycle per settings. Survives backgrounding (state persisted). Block ends fire through AlarmKit, so the alert sounds through silent mode and through an active Focus. While the alarm is ringing the timer screen shows one control that silences it and moves the sprint on, exactly as the system alert's own Dismiss does. A Live Activity on the Lock Screen and in the Dynamic Island is required, not optional — AlarmKit's countdown API mandates one. *Done when:* unit tests cover the cycle and a backgrounded timer ends on time on a device.
 - **F3 — Todoist.** Sign in with a Todoist personal API token, entered once and stored in Keychain; fetch projects, sections, tasks; picker; attach a task to the current pomodoro; **complete** a task with one button at the end of a pomodoro. *Verify at build time:* the current Todoist API version and rate limits (a third-party timer broke in early 2026 on a deprecated endpoint — don't repeat that). *Done when:* token entry, pick, and complete work against Marty's real account.
 - **F4 — Apple Music.** MusicKit authorization; library playlist/song picker; play, loop, skip; on/off toggle; pause on breaks. *Verify at build time:* background audio entitlement and MusicKit behavior with the timer in background. *Done when:* a playlist plays through a full sprint on a device with the screen locked.
 - **F5 — Distraction log.** I/E buttons on the running-timer screen; tap → record; end-of-pomodoro sentence prompt; persisted. At the end of a pomodoro the app presents one sheet containing a sentence field per distraction tap (each skippable) and, once F3 has landed, the Complete-task button. The break timer starts running the instant the block ends, behind the sheet — reflection never consumes break time. The auto-start-next-block setting governs the pomodoro after the break, not this sheet. *Done when:* a pomodoro with three taps yields three records with the right task and timestamps.
@@ -75,7 +75,7 @@ August 21, 2026
 
 ## Amendments applied
 
-D1 D2 D3 D4 D17 D18 D20 D24 D25
+D1 D2 D3 D4 D17 D18 D20 D24 D25 D26 D27 D28
 
 Ratified deltas whose text has been written into this file. `DeltaIntegrityTests` reads this list;
 `docs/specs/AMENDMENT-BASELINE.txt` counts what is still outstanding, and the exact replacement text
