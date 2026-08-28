@@ -44,8 +44,8 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D21b** | ratified | — | 992 | A task completed during a sprint does not come back into it |
 | **D22** | ratified | — | 1049 | A block records which project it was for, and the export labe… |
 | **D23** | ratified | — | 1132 | The music picker gets a search field; scope was never exceeded |
-| **D24** | owner said yes; awaiting `A9` paste | yes | — | The alarm sound can be chosen; `AppSettings` gains a seventh field |
-| **D25** | owner said yes; awaiting `A8` paste | yes | — | Music can be switched on during a break |
+| **D24** | ratified | yes, applied | — | The alarm sound can be chosen; `AppSettings` gains a seventh field |
+| **D25** | ratified | yes, applied | — | Music can be switched on during a break |
 
 *24 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
@@ -1203,10 +1203,15 @@ alphabetical — people remember a word from the middle of a playlist name.
 
 ## D24 — The alarm sound can be chosen. `AppSettings` gains a seventh field.
 
-**Proposed 2026-08-26. The owner said yes on 2026-08-27.** The heading still says
-*proposed* for the reason `D25` gives at length: stamping it before `SPEC.md` line
-30 changes would push the outstanding-amendment count above its baseline of zero
-and block every merge. `A9` in `AMENDMENTS-TO-APPLY.md` is the owner's half.
+**Proposed 2026-08-26. Ratified by the owner 2026-08-27, and `A9` applied to
+`SPEC.md` the same day at the owner's explicit instruction**, so the
+outstanding-amendment count never left zero.
+
+**The agent made that edit, which `conventions.md` ordinarily forbids.** It was
+transcription rather than authorship: the replacement text was written verbatim in
+`A9` before the owner ratified it, and the owner directed the change. The rule
+exists to stop the contract moving under the agent's hand unilaterally, and it did
+not.
 
 **The owner is sourcing the candidates.** The agent's job is the mechanism, the
 fence, and the attribution — not the taste.
@@ -1309,21 +1314,17 @@ is not ready, the sound picker carries it.
 
 ## D25 — Music can be switched on during a break
 
-**Proposed 2026-08-26. The owner said yes on 2026-08-27 — but this heading still
-says *proposed*, deliberately, and that is not an oversight.**
+**Proposed 2026-08-26. Ratified by the owner 2026-08-27, and `A8` applied to
+`SPEC.md` the same day at the owner's explicit instruction.**
 
-`DeltaIntegrityTests` counts deltas whose heading says `Ratified` and whose
-replacement text has not reached `SPEC.md`, and fails when that count grows above
-the baseline of **zero**. Stamping this ratified before the spec line is changed
-would turn the suite red and block every merge under branch protection.
+The two-step dance this heading described — ratify, then paste, then stamp — was
+collapsed into one commit by the owner directing the agent to make the edit. The
+count never left zero, which was the point of the dance.
 
-And the agent may not change `SPEC.md`: `conventions.md` says spec authority stays
-with the owner, and `AMENDMENTS-TO-APPLY.md` opens with *"the agent never edits
-the contract — this proposes, you apply."*
-
-So the ratification lands in two steps, and **`A8` in `AMENDMENTS-TO-APPLY.md` is
-the owner's half**. Once the line is pasted, this heading changes in the same
-commit as the build begins.
+**Recorded because the agent editing `SPEC.md` is ordinarily forbidden.** It was
+transcription, not authorship: `A8` held the replacement text verbatim before
+ratification, and the owner gave the instruction. `conventions.md`'s rule guards
+against the contract moving unilaterally; nothing here was unilateral.
 
 ### Where this came from
 

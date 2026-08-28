@@ -26,3 +26,16 @@ Guard syntax, and how to use case and test based dev in xcode. what a good use o
 - More basic swift work first
 - maybe learn how to write a swift test second
 - I stuck with the plan and refused to divert from the spec.
+
+
+PR-29
+Licensing issue.
+
+I had fable research licenses, s this is something I have no idea about. What was found is this: There is a copy-left carve out in gpl that will let me keep one license.
+this will make it easier if i get other contributors.
+
+## What I learned:
+Fable research was a good call as it saved a lot of extra work.
+
+## what i'd do differently:
+Work with a real software person to discuss licensees. 
