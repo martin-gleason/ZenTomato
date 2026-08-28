@@ -91,3 +91,37 @@ not attribution.
 
 On the device: choose a bell, run a block to its end, hear it. Then turn sound
 **off**, run another, and hear nothing.
+
+## What shipped, and what did not
+
+**Built, tested, merged-ready:** the catalogue, the seventh stored field, the
+snapshot plumbing, `sound(enabled:choice:)` with sound-off winning, the Settings
+picker, the on-screen credits, and eight tests. `524 tests in 78 suites passed`.
+
+**Not built: the two sound files.** Freesound will not serve them to anything but
+a browser — a request for either download returns a 17,034-byte HTML login page
+with HTTP 200, which is a page, not audio. The owner must download both and place
+them in `ZenTomato/Resources/`; see `O23`.
+
+**So the catalogue is computed from the bundle, not written down.** This is the
+one design decision the plan did not anticipate, and it is the decision this
+feature turns on. `AlertConfiguration.AlertSound.named(_:)` resolves against the
+bundle; when the file is absent there is no error, no warning and no fallback —
+the alarm simply makes no noise. Shipping a picker offering two sounds that are
+not there would have reintroduced the exact defect `D24` was ratified to fix,
+through the fix itself.
+
+`AlertSound.playable` is therefore `allCases.filter(\.isPlayable)`, and an
+unplayable sound is unreachable from every direction: not offered, not stored,
+not scheduled. Today that leaves one entry, so the picker and its credits are
+hidden — a control with one option does nothing, and a credits heading over an
+empty list claims something that is not true. **Adding the two files turns all of
+it on with no code change**, which is also what makes `O23` a genuine hand-off
+rather than a to-do list.
+
+**Would this be written the same way if the files were never coming?** Yes — that
+is the `D16` test, and it passes here for a reason that has nothing to do with the
+files. A resource that fails to copy into a target is the third silent-install
+failure this project has had (`project.yml` records the other two). Deriving the
+catalogue from the bundle means the next one shrinks a picker instead of silencing
+an alarm.
