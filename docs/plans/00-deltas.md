@@ -50,6 +50,7 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D27** | ratified | yes, applied | — | Settings are read-only while a block is running |
 | **D28** | ratified | yes, applied | — | The alert sound can be previewed from Settings |
 | **D29** | proposed | yes, pending | — | A locked phone is somebody being there |
+| **D30** | proposed | yes, pending | — | A watch-face complication |
 
 *24 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
@@ -1570,3 +1571,77 @@ possible and the owner should pick:**
 **No code either way until this is ratified.** It reverses a decision that is
 written down with reasons, and reversing those quietly is how a plan stops being a
 contract.
+
+## D30 — A watch-face complication
+
+**Proposed 2026-08-28. Not ratified.** Requested by the owner:
+
+> also, make sure zenpom can be installed as a complication on a ultra watch face
+
+**It cannot be made sure of, because it does not exist and the contract forbids
+it.** Stating that plainly rather than quietly building it:
+
+- **`SPEC.md` line 58 excludes it by name**, in the *Out of scope* list: *"widgets
+  beyond the Lock Screen Live Activity"*.
+- **`F7.md` declined it on purpose**, citing that line: *"No complication and no
+  watch-face widget… and `D2` does not change that."* The same list warns that
+  *"scope gravity is strongest here — a watch app invites a complication, a start
+  button, a task picker"*.
+- **Nothing in the tree builds one.** The only `WidgetKit` code is
+  `ZenTomatoActivity`, an `ActivityConfiguration` — a Live Activity, embedded in
+  the iOS app. A complication is a separate watchOS widget extension with
+  `.accessoryCircular`, `.accessoryCorner`, `.accessoryRectangular` and
+  `.accessoryInline` families. That target does not exist.
+
+So this is a build, not a check.
+
+### What it would actually cost
+
+**A new target**, embedded in the watch app, with its own Info.plist,
+provisioning and bundle id — and `project.yml` records **three separate silent
+install failures** on the watch already: a missing embed, missing provisioning,
+and an asset catalogue the target could not see. None of the three failed the
+build; each shipped an app that looked installed and was wrong.
+
+**A timeline**, not a live view. A complication is refreshed by WidgetKit on a
+budget, not driven by the app. Drawing a countdown means supplying a
+`TimelineEntry` per minute, or using a text style that counts down on its own —
+the second is right, and it is the same `Text(_:style:)` the watch app already
+uses.
+
+**A data path that does not exist yet.** `WatchLink` carries taps *to* the phone.
+A complication needs the block's kind and end time on the watch, in a place a
+widget extension can read — an App Group, which nothing in this project uses.
+
+**Four families, drawn four ways.** The Ultra's faces take corner and circular
+complications the other watches do not, so "works on an Ultra face" is a
+per-family design question, not one layout.
+
+### Proposed spec text
+
+**Currently:** *…widgets beyond the Lock Screen Live Activity…*
+
+Replace with:
+
+> …widgets beyond the Lock Screen Live Activity and a watch-face complication
+> showing the running block…
+
+And add to `F7`:
+
+> A complication on the watch face shows the current block and its remaining
+> time, and opens the app when tapped. It starts nothing and captures nothing.
+
+### The recommendation, which is not to do it now
+
+**The hard stop is September 13, 2026 — sixteen days.** Outstanding right now are
+two unrun device checks (`O29`'s second half, `O30`), one proposed delta the owner
+has not ruled on (`D29`, which is a lost reflection prompt in the ordinary
+locked-phone case), and a branch carrying two features that has needed three
+adversarial passes.
+
+**`D29` is worth more than this.** It is the distraction log — the stated point of
+the app — failing in the most common way of using it. A complication is a
+convenience on a surface the spec has excluded from the start.
+
+If the owner ratifies this anyway, it should be its own feature after the current
+branch merges, and it should not be squeezed in beside `D29`.
