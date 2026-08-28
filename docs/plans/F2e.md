@@ -144,9 +144,13 @@ nothing to explain.
 **The platform's own idiom, not a new control.** iOS's Settings › Sounds picker
 works exactly this way: tapping a row selects *and* plays. The alternative was a
 custom picker screen with a play glyph on every row — more surface on a screen
-this app has kept deliberately bare, and a second way to do one thing. The pushed
-list stays up while it plays, so a person keeps tapping until they like one, and
-nothing is committed until they leave.
+this app has kept deliberately bare, and a second way to do one thing.
+
+Whether the pushed list stays up on selection is iOS's behaviour and is asserted
+nowhere; a `.navigationLink` picker may pop straight back. Either way the sound is
+heard at the moment it is chosen and can be changed again immediately. An earlier
+draft of this section described the list staying up as though it were designed
+here. It is not.
 
 `Default` is the one that cannot be played, because it is iOS's alert sound rather
 than a file ZenPom holds. The player refuses and **the footer says so**, because a
@@ -176,6 +180,10 @@ feature built so nobody has to choose a sound blind.
 
 ## Evidence
 
+**Re-run after the second adversarial pass.** The block that stood here was
+from a run that predated the fix commit, which touched eight source and test
+files — evidence for a tree that was not the tree being merged.
+
 ```
 $ make ci
 check-lint.sh: OK — no lint violations.
@@ -184,9 +192,10 @@ check-secrets.sh: OK — no credential found in the tree.
 check-licence-wording.sh: OK — no disjunctive licence wording.
 check-open-register.sh: OK — the register renders as tables.
 run-script-tests.sh: 15 passed, 0 failed
-✔ Test run with 544 tests in 81 suites passed
 check-release-build.sh: OK — Release compiles with no warnings of ours.
+✔ Test run with 551 tests in 82 suites passed
 ```
+
 
 Seven new tests. They are **fences over source rather than view tests**, and that
 limit is stated rather than glossed: this project has no UI test target, and both
@@ -204,6 +213,14 @@ a separate declaration for the length rule, same file so `private` access surviv
 1. Start a block, open Settings, confirm nothing in the customization block can be
    changed and the note says why. Music and Todoist should still work.
 2. With no block running and **the ringer switch off**, select each bell and hear
-   it. Then start a playlist, select again, and confirm the music survives.
+   it — `.playback` is what should make that audible.
+   Then start a playlist and select again. **The app's music is expected to keep
+   playing** (same app, same session); audio from *another* app may be interrupted,
+   which is the stated trade-off of one non-mixable policy and is the same thing
+   starting a block's music already does.
+   Then **stop and start the music again after previewing**, which is the check
+   that matters most: the reverted `.mixWithOthers` version would have left the
+   session mixable for the life of the process and broken `F4`'s interruption
+   handling in a way nothing on screen would show.
 3. Start a preview and immediately leave the screen — and separately, background
    the app mid-preview. Both must go quiet.

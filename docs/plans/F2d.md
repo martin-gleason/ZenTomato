@@ -143,12 +143,24 @@ for while a bell rings is the one case where quiet is the wrong answer.
 
 ## Evidence
 
+**Re-run after the second adversarial pass.** The block that stood here was
+from a run that predated the fix commit, which touched eight source and test
+files — evidence for a tree that was not the tree being merged.
+
 ```
-$ make test
-✔ Test run with 537 tests in 80 suites passed
+$ make ci
+check-lint.sh: OK — no lint violations.
+check-todoist-writes.sh: OK — no Todoist endpoint outside the allowlist.
+check-secrets.sh: OK — no credential found in the tree.
+check-licence-wording.sh: OK — no disjunctive licence wording.
+check-open-register.sh: OK — the register renders as tables.
+run-script-tests.sh: 15 passed, 0 failed
+check-release-build.sh: OK — Release compiles with no warnings of ours.
+✔ Test run with 551 tests in 82 suites passed
 ```
 
-Nine new tests. **One of them found a real bug before any device did**:
+
+Fourteen tests across `SilenceAlarmTests` and `SilenceControlFenceTests`. **One found a real bug before any device did**:
 `handleDismiss()` clears `lastFailure` as its first act — correctly, so a new
 block does not inherit the last one's complaint — which meant a failure to
 silence was being written and then wiped a line later. Somebody would have been

@@ -1258,19 +1258,24 @@ extension TimerEngine {
     } catch {
       silenceFailed = true
     }
-    // **CLEARED ON BOTH BRANCHES, AND THE FAILURE BRANCH IS WHY.**
+    // **RE-READ, NEVER CLEARED BLIND — AND THE BLIND CLEAR WAS ITSELF A FIX THAT
+    // RECREATED `O26`.**
     //
-    // It used to be cleared only on success. Start and Stop are both disabled
-    // while this is set, so a refusal from iOS left a screen with three controls
-    // on it and nothing that could be pressed — the Silence button re-throwing,
-    // the other two inert, and no way out short of relaunching. A dead screen is
-    // a worse outcome than a button that stops matching a noise iOS would not
-    // let us end.
+    // The first version cleared only on success, which left a dead screen when
+    // iOS refused. The second cleared on both branches, with a comment claiming
+    // `alertingUpdates()` would re-raise the flag if the alarm really was still
+    // going. **It would not.** That stream de-duplicates against its last value,
+    // and a refused stop changes no AlarmKit state — so the ringing id equals the
+    // last id, nothing is ever yielded again, and the button is gone for the rest
+    // of the session. `AlarmKitScheduler`'s own notes record an undismissed alarm
+    // sitting `.alerting` for over thirty seconds, and the next block is scheduled
+    // *sparing* that id, so it survives. That is the reported defect back, reached
+    // through the branch added to fix it.
     //
-    // The flag means "this app is offering to silence something". Once the offer
-    // has been taken and refused, the offer is over; `alertingUpdates()` remains
-    // the authority and will re-raise it if the alarm really is still going.
-    ringingAlarmID = nil
+    // So the truth is asked for instead of assumed. The dead screen is solved
+    // where it belongs — `TimerScreen` no longer disables anything, because the
+    // Silence button's space is reserved and nothing moves under a finger.
+    ringingAlarmID = silenceFailed ? alarms.alertingAlarmID : nil
     await handleDismiss()
     // **REPORTED AFTER, NOT BEFORE, AND A TEST FOUND THAT.**
     //
