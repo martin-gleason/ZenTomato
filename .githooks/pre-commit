@@ -49,6 +49,10 @@ run_check "secret scan" ./scripts/check-secrets.sh --staged
 # sentence somebody ADDS believing it a helpful summary, rather than a file
 # somebody would notice was missing. See scripts/check-licence-wording.sh.
 run_check "licence wording" ./scripts/check-licence-wording.sh
+# The register is the mechanism for not losing work items. A malformed row ends
+# the table at that row in strict renderers, and six items vanished from the
+# owner's reader that way — see scripts/check-open-register.sh for the story.
+run_check "OPEN.md renders" ./scripts/check-open-register.sh
 
 if [[ $failed -ne 0 ]]; then
   cat <<'EOF' >&2
