@@ -3,10 +3,11 @@
 **Branch:** `F2d/silence-the-alarm` · **Plan:** `docs/plans/F2d.md` ·
 **Delta:** `D26`
 
-Five passes. **DO NOT MERGE** every time.
+Seven passes. **DO NOT MERGE** every time.
 
-**This file said "three" until the fifth pass caught it**, with passes four and
-five living only in commit messages — which is precisely what `conventions.md`
+**This file has been one pass behind the code twice.** It said "three" until the
+fifth pass caught it, with four and five living only in commit messages; it then
+omitted six until the seventh caught that too — which is precisely what `conventions.md`
 says the register exists to prevent: *"a Still open section inside one review is
 invisible from the next."* A whole pass being invisible is worse.
 
@@ -135,6 +136,49 @@ idle screen nor a break has a capture pair, and both literals carried one.
 `ReflectionWaitsForAlarmFenceTests` now holds both halves — the sheet waits, and
 something retries when the alarm stops, because waiting without a retry trades a
 covered button for a lost prompt.
+
+## Pass six
+
+**Eight blocking, and the pattern had become the finding.** Two were code: the
+previews were impossible for a *third* time — a capture pair, then a `kicker` no
+`BlockKind` produces, then a music row a break cannot show, each correction
+reading the fields it was told about and not the next one — and the
+`.alarmSilenceFailed` withdrawal added in pass five was a race that could strand
+the very message it withdrew, because `silenceAlarm()` writes it after a genuine
+suspension and the update stream does not yield `nil` twice.
+
+The previews stopped being hand-written and became derived. The withdrawal gained
+an `isSilencing` guard.
+
+The other six were the record disagreeing with the tree: a fourth comment still
+asserting the pre-`D29` rule on the very property the three fixed ones describe,
+`D29` carrying both its correction and the claim it refutes forty lines apart,
+this plan documenting the *reverted* silence-failure handling as shipped, and the
+evidence blocks stale for a third time.
+
+## Pass seven
+
+**Two code defects, both on one line written by the previous fix**, and both in
+`silenceAlarm()`'s failure report.
+
+The write branch was still a blind overwrite: a stop refused by an unwell alarm
+system is likely followed by a *schedule* refused by the same one, and this
+replaced "this block won't sound an alarm when it ends" with advice about the
+previous block. The running block having no alarm is the more serious of the two,
+and the comment directly above already said so — about the other branch.
+
+And the guard added in pass six to stop a stale message **suppressed a real one**:
+a `nil` read straight after a refused stop is exactly the disagreement
+`AlarmScheduling` calls load-bearing, so the person could be left with no button
+*and* no explanation. The message is now written whenever a silence is refused, as
+long as nothing more serious is already there.
+
+The fourth version of `previewAlarmRingingIdle` was still impossible, for a reason
+the derivation cannot fix: it was derived from `previewIdle`, the
+never-run-anything state, where no alarm has ever been scheduled. Deriving from a
+model faithfully does not make the flipped flag producible. It now comes from
+`previewSprintComplete` — a long break that has just ended, which is precisely
+when a sprint's last alarm rings and the timer waits.
 
 ## Verdict and evidence
 

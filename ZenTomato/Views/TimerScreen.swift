@@ -852,14 +852,31 @@ private extension TimerScreenModel {
   /// read the fields it was told about and not the next one.
   ///
   /// `ringingAlarm()` copies every field from a model the app demonstrably
-  /// produces and flips one flag, so the only way these can be wrong now is if
-  /// their sources are — and their sources are used by other previews.
+  /// produces and flips one flag. **That is necessary and not sufficient**: the
+  /// flag is outside the copy, so the source must also be a state in which an
+  /// alarm could actually be ringing. See `previewAlarmRingingIdle` for the one
+  /// that was not.
   ///
   /// Two states, at the two ends of a boundary: the timer waiting for the next
   /// block, and auto-start having already begun the break. The Silence button
   /// takes the primary control's slot in both, so these are also the check that
   /// nothing moved.
-  static let previewAlarmRingingIdle = previewIdle.ringingAlarm()
+  /// **Derived from `previewSprintComplete`, not `previewIdle`, and the
+  /// difference is whether the state can happen at all.**
+  ///
+  /// An alarm rings at a block's *end*, so an idle screen with one ringing has
+  /// just come from somewhere. `previewIdle` is the never-run-anything state —
+  /// Focus, nothing completed, no note — where no alarm has ever been scheduled.
+  /// `previewSprintComplete` is a long break that has just finished: waiting,
+  /// four of four, with its note. That is exactly when the last alarm of a sprint
+  /// goes off and the timer stops rather than chaining.
+  ///
+  /// The fourth version of this preview, and the fourth wrong field. The three
+  /// before it were caught by review; this one was too. `ringingAlarm()` copies
+  /// every field faithfully — but the flag it flips is outside the copy, and a
+  /// source model that could never be ringing does not become producible by
+  /// having the flag set on it.
+  static let previewAlarmRingingIdle = previewSprintComplete.ringingAlarm()
 
   static let previewAlarmRingingDuringNextBlock = previewShortBreakRunning.ringingAlarm()
 

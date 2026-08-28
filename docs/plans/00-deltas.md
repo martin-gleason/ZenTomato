@@ -1538,10 +1538,10 @@ written five times.
 > with the screen locked, all fired except the sheet. ther were 3 external
 > breaks and i was unable to capture it.
 
-**This is not a bug in the mechanical sense. It is a decision, and the decision is
-wrong about the owner.** `TimerEngine.synchronize()` ends a block that finished
-while the app was away and passes `mayPromptForReflection: false`, with this
-reasoning:
+**This was not a bug in the mechanical sense. It was a decision, and the decision
+was wrong about the owner.** `TimerEngine.synchronize()` ended a block that
+finished while the app was away and passed `mayPromptForReflection: false`, with
+this reasoning (past tense throughout: the delta is built):
 
 > Still no reflection prompt, whatever the gap: the taps are recorded and stay
 > recorded, and what is refused is a sheet nobody was there to fill in.
