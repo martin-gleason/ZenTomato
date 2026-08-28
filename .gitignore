@@ -162,3 +162,13 @@ docs/*.pages
 docs/*.key
 docs/*.sketch
 DerivedData-release/
+
+# The raw sound downloads. 17 MB of WAV that produced 690 KB of committed CAF,
+# and the CAF is the thing that ships — see docs/sounds/candidates.md for the
+# exact ffmpeg and afconvert commands, which is what makes the derivation
+# reproducible without carrying the sources.
+#
+# **Ignored because they were sitting untracked at the repository root**, where
+# one `git add -A` would have put a 16 MB untrimmed WAV into a public repo.
+docs/sounds/sources/
+*.wav

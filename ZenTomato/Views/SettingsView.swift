@@ -454,7 +454,7 @@ private struct SettingsForm: View {
   /// would state a claim that might need correcting in a binary already on
   /// somebody's phone. A version row waits for none of that.
   ///
-  /// **`D25`'s sound credits do not wait for it.** `F2c.md`: *"a list nobody can
+  /// **`D24`'s sound credits do not wait for it.** `F2c.md`: *"a list nobody can
   /// reach is not attribution."* Until the About screen exists they are the
   /// footer of this section — reachable, on the same screen as the picker, and
   /// generated from the sounds actually in the bundle so a credit can neither go

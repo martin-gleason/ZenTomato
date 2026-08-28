@@ -1,5 +1,8 @@
 import Foundation
+import SwiftData
 import Testing
+
+@testable import ZenTomato
 
 /// What F6b may not do, enforced rather than promised.
 ///
@@ -61,11 +64,31 @@ struct PolishFenceTests {
     // change it was watching for, arriving as a ratified amendment to
     // `SPEC.md` line 30 rather than as a quiet extra field.
     //
-    // It counts **stored** properties: `alertSound`, the computed accessor, lives
-    // in `AppSettingsAlertSound.swift` so that it cannot inflate a number whose
-    // subject is the schema.
-    #expect(try Self.count("^  var [a-z]", in: "ZenTomato/Models/AppSettings.swift") == 7)
+    // **ASKS THE SCHEMA, NOT THE FILE.** This used to grep `^  var [a-z]` in
+    // AppSettings.swift, and F2c showed what that measures: the seventh field's
+    // computed accessor was put in a second file, and the regex went on reading
+    // seven because the property had moved out of its reach. Swift forbids
+    // stored properties in extensions, so the schema claim survived by accident —
+    // but a fence that can be satisfied by moving code is measuring file shape
+    // rather than the database.
+    //
+    // `Schema` reports the persisted columns wherever the source lives.
+    #expect(try #require(Schema([AppSettings.self]).entities.first).properties.count == 7)
+    // TimerState is the other stored shape F2c touched: it carries the block's
+    // chosen sound, so a block runs under the setting it started with. Fenced
+    // here for the same reason AppSettings is — a schema change is a migration
+    // over somebody's real history, and it should be seen rather than counted
+    // after the fact.
+    let timerStateColumns = try #require(Schema([TimerState.self]).entities.first).properties.count
+    #expect(timerStateColumns == timerStateColumnCount)
   }
+
+  /// `TimerState`'s persisted column count, as `Schema` reports it.
+  ///
+  /// Pinned rather than grepped, for the reason the `AppSettings` line above
+  /// gives: a regex over a source file measures where code lives, and code
+  /// moves. Sixteen before `F2c`; the seventeenth is `alertSoundRawValue`.
+  private let timerStateColumnCount = 17
 
   /// `noNewProtocol` — because a protocol is the shape of "swappable later".
   ///

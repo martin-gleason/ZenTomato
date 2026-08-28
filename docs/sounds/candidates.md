@@ -48,3 +48,51 @@ consistent.
 of one idea; a third and fourth that are **different in kind** — something soft and
 wooden, something like a chime or a singing bowl — would give the setting a reason
 to exist.
+
+## What shipped, and exactly how it was made
+
+**Built 2026-08-28.** Both files were already in the tree — untracked, at the
+repository root, downloaded 2026-08-27 09:09. An earlier draft of `O23` said the
+agent could not fetch them and the owner would have to; that was written after a
+`curl` returned Freesound's login page, and it was wrong about the tree. The
+adversarial reviewer found the files sitting there.
+
+The raw downloads now live in `docs/sounds/sources/`, which is git-ignored: 17 MB
+of WAV produced 690 KB of CAF, and the CAF is what ships. These two commands are
+what makes that reproducible without carrying the sources.
+
+**`SmallBell.caf`** — 462044, 15HVojta_Michael, CC0. 5.08 s, already the right
+shape, so nothing is cut. Lifted 8.8 dB because the source peaks at −9.8 dBFS and
+an alarm wants to be heard, and faded over the last 0.4 s so the file ends rather
+than stops.
+
+```
+ffmpeg -i 462044__15hvojta_michael__small-bell_2.wav \
+  -af "volume=8.8dB,afade=t=out:st=4.68:d=0.4" -ac 1 -ar 44100 -c:a pcm_s16le SmallBell.wav
+afconvert -f caff -d LEI16@44100 SmallBell.wav ZenTomato/Resources/SmallBell.caf
+```
+
+**`StruckBell.caf`** — 397349, fmiramar_, CC0. **The trim this document asked
+for.** The source is 41.7 s of repeated strikes; measured with `astats` at 0.5 s
+resolution, the first strike begins at 1.10 s and the second lands at 3.75 s. The
+cut is 1.05 → 3.70 with a 0.5 s fade, so the file ends on the first strike's decay
+and never on the next hit. 2.65 s.
+
+```
+ffmpeg -ss 1.05 -t 2.65 -i 397349__fmiramar__bell0005.wav \
+  -af "volume=10.0dB,afade=t=out:st=2.15:d=0.5" -ac 1 -ar 44100 -c:a pcm_s16le StruckBell.wav
+afconvert -f caff -d LEI16@44100 StruckBell.wav ZenTomato/Resources/StruckBell.caf
+```
+
+Both are mono 44.1 kHz Int16 CAF, matching `Silence.caf`'s family, both peak at
+about −2 dBFS so neither is louder than the other, and both are far inside the
+30-second cap this document worried about.
+
+**Trimming and normalising make these derivative works, which CC0 permits without
+condition.** The credits in `AlertSound` name the original authors and link to the
+original sounds regardless — `D24`'s ruling is stricter than the licence, and a
+derivative is still somebody's bell.
+
+**Still wanted, unchanged:** a third sound *different in kind* — something wooden,
+a chime, a singing bowl. Two bells are two variations of one idea. That is the
+owner's choice, not the agent's.
