@@ -139,6 +139,30 @@ struct AlertSoundTests {
     }
   }
 
+  /// **The credits a person can actually read, not just the data behind them.**
+  ///
+  /// `F2c.md`: *"a list nobody can reach is not attribution."* The fence above
+  /// proves every bundled sound has a well-formed credit; this proves the credit
+  /// reaches the screen — and that the heading does not appear over nothing when
+  /// the app ships no borrowed sound at all.
+  @Test("theCreditsOnScreenMatchTheSoundsThatShip")
+  func theCreditsOnScreenMatchTheSoundsThatShip() {
+    let borrowed = AlertSound.playable.filter { $0.attribution != nil }
+    let credits = AlertSound.credits
+
+    guard borrowed.isEmpty == false else {
+      #expect(credits == nil, "A credits heading appeared with nothing to credit.")
+      return
+    }
+
+    let text = try? #require(credits)
+    for sound in borrowed {
+      #expect(text?.contains(sound.name) == true)
+      #expect(text?.contains(sound.attribution?.author ?? "") == true)
+      #expect(text?.contains(sound.attribution?.source ?? "") == true)
+    }
+  }
+
   /// The system sound is Apple's, so it is the one case with nothing to credit.
   @Test("theSystemSoundIsNotCreditedToAnybody")
   func theSystemSoundIsNotCreditedToAnybody() {
