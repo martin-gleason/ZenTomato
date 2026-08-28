@@ -152,11 +152,22 @@ nothing is committed until they leave.
 than a file ZenPom holds. The player refuses and **the footer says so**, because a
 row that silently does nothing reads as broken.
 
-**`.playback` with `.mixWithOthers`** is the session pair that satisfies both
-requirements: audible with the ringer switch off — the sound being chosen
-certainly will be — without stopping the person's music. **This is the part that
-fails quietly**, differently on a device than in a simulator, which is why it is
-in the device check rather than only in a test.
+**The preview configures no audio session of its own, and the first version's
+attempt to was wrong twice.** It set `.playback` with `.mixWithOthers` and
+deactivated the session on stop. `AudioSessionInterruptions.prepareForPlayback()`
+already sets `.playback` with **no options** and its own comment says the session
+is *"deliberately never turned off again"* — so the preview left the process in a
+mixable session for the rest of its life, which stops the interruption notices
+`F4`'s music-resume depends on arriving in the ordinary way, and handed the
+session back every time Settings was closed even if nothing had played.
+
+It now asks for the same preparation the music path asks for, which is idempotent
+by design, and never deactivates. `.playback` is what makes a preview audible with
+the ringer switch off, and that matters: the chosen sound certainly will be
+audible then, so a preview that goes quiet on a silent phone teaches the opposite
+of the truth. **The trade-off is stated rather than hidden** — with one
+non-mixable policy a preview can interrupt another app's audio, exactly as
+starting a block's music already does. One session, one policy.
 
 **A preview cannot outlive its screen.** Stopped on `onDisappear` and on the scene
 leaving `.active`, because backgrounding does not fire the former. A sound still

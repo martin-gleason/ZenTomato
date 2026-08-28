@@ -170,3 +170,39 @@ Nothing here has been seen on a phone. Two runs:
    inside ZenPom without touching the system alert.
 2. Let one end with the app closed, dismiss from the system alert as usual, and
    confirm the two paths do not fight — no double advance, no stuck button.
+
+
+## What the adversarial review changed
+
+**Verdict: DO NOT MERGE, seven blocking findings.** The two worth naming here:
+
+**Silencing inside the auto-start window swallowed the reflection prompt.**
+`handleDismiss()` bumped `abandonGeneration` as its *first* line, above the
+`guard completed else { return }`. So: a focus block ends, `end()` chains into
+`begin()`, `begin()` suspends awaiting a real AlarmKit round trip, the alarm rings
+in that window, Silence is tapped — `handleDismiss()` sees the *new* block, which
+has not completed, bumps the counter and returns. `publishReflection` then found
+the generation moved and published nothing. **The distraction log is the point of
+this app**, and the case it failed in is the exact one `D26` was built for: the
+app in the foreground when the bell goes. The bump now happens after the guard,
+because bumping belongs to abandoning and nothing above that line abandons.
+
+The test for it **was written wrong first and passed with the bug reinstated** —
+it never rang an alarm, so `silenceAlarm()` returned at its first guard and the
+window was never entered. Corrected, it fails with the bug and passes with the
+fix, both confirmed by putting the bug back.
+
+**A refusal from iOS left a dead screen.** `ringingAlarmID` was cleared only on
+the success branch, and Start and Stop are both disabled while it is set — so a
+throw from `stopAlerting` left three controls on screen and nothing that could be
+pressed, with no way out but relaunching. Cleared on both branches now, and
+`watchForAlarms()` clears it on every exit including cancellation.
+
+Also taken: the drift test **could not fail for the reason it was written** — it
+called `handleDismiss()` directly rather than the intent's real route through
+`TimerEngineHolder`, and compared two methods that differ only by the call it
+never inspected. It now goes through `TimerEngineHolder.dismissRunningBlock()`,
+checks the reflection offer too, and has a sibling asserting that `handleDismiss()`
+alone does *not* silence. The `AsyncStream` termination handler is installed before
+the task exists rather than after. And the two tests `F2d.md` promised and the
+first build shipped without — auto-start honoured both ways — are here.

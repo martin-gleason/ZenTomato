@@ -77,9 +77,16 @@ struct SettingsLockTests {
     let source = try Self.settingsSource()
 
     #expect(source.contains(".onDisappear { preview.stop() }"))
-    // Backgrounding does not fire onDisappear, so the scene phase is checked too.
-    #expect(source.contains("scenePhase"))
-    #expect(source.contains("preview.stop()"))
+    // **THE SCENE-PHASE CHECK, ASSERTED AS A BLOCK RATHER THAN AS A WORD.**
+    // This used to assert `contains("scenePhase")`, which the `@Environment`
+    // declaration alone satisfies — the whole `onChange` could be deleted and
+    // the fence stayed green while the backgrounding promise was broken.
+    let onChange = try #require(
+      Self.slice(of: source, from: ".onChange(of: scenePhase)", to: "}"),
+      "The scene-phase handler is gone. Backgrounding does not fire onDisappear.")
+    #expect(onChange.contains("preview.stop()"))
+    // Two stops, one per exit, so neither can be removed silently.
+    #expect(Self.occurrences(of: "preview.stop()", in: source) == 2)
   }
 
   /// The preview plays once. A loop would be a sound to hunt an off switch for.
@@ -90,16 +97,28 @@ struct SettingsLockTests {
     #expect(source.contains("numberOfLoops = 0"))
   }
 
-  /// **The session must be audible with the ringer switch off, and must not stop
-  /// the person's music.** `.playback` ignores the switch; `.mixWithOthers`
-  /// declines to interrupt. This is the pair, and it is the part that fails
-  /// quietly — hence also `F2e`'s device check.
-  @Test("theSessionIsAudibleAndPolite")
-  func theSessionIsAudibleAndPolite() throws {
+  /// **The preview does not configure the audio session, and never deactivates
+  /// it.**
+  ///
+  /// The first version did both, and both were wrong: it overwrote the app's
+  /// category with a mixable one for the life of the process — which stops the
+  /// interruption notices `F4`'s music-resume depends on arriving in the
+  /// ordinary way — and it deactivated the shared session on every call, so
+  /// opening Settings and closing it again handed back a session the app's own
+  /// music needs. One app, one session policy, one place that sets it.
+  @Test("thePreviewDoesNotOwnTheAudioSession")
+  func thePreviewDoesNotOwnTheAudioSession() throws {
     let source = try Self.previewSource()
 
-    #expect(source.contains(".playback"))
-    #expect(source.contains(".mixWithOthers"))
+    #expect(
+      source.contains("AudioSessionInterruptions.prepareForPlayback()"),
+      "The preview must ask for the same preparation the music path asks for.")
+    #expect(
+      source.contains("setCategory") == false,
+      "The preview set its own category. There is one session policy in this app.")
+    #expect(
+      source.contains("setActive") == false,
+      "The preview touched the session's active state. It never may.")
   }
 
   /// `systemDefault` is iOS's sound, not a file this app holds, so the player

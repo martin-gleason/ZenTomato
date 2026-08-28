@@ -225,12 +225,19 @@ final class AlarmKitScheduler: AlarmScheduling {
   /// re-renders when the answer changes and not every time any alarm ticks.
   func alertingUpdates() -> AsyncStream<UUID?> {
     AsyncStream { continuation in
-      let task = Task { @MainActor in
+      // **THE HANDLER IS INSTALLED BEFORE THE TASK EXISTS**, via a box, because
+      // the other order leaves a window: a consumer that cancels between the
+      // `Task` starting and `onTermination` being assigned leaves the task
+      // running with nothing holding a reference to cancel it.
+      let box = WatchBox()
+      continuation.onTermination = { _ in box.cancel() }
+      box.task = Task { @MainActor in
         // The current answer first, so a screen that starts listening after an
         // alarm has already begun still sees it.
         var last = alertingAlarmID
         continuation.yield(last)
         for await alarms in AlarmManager.shared.alarmUpdates {
+          if Task.isCancelled { break }
           let ringing = alarms.first { $0.state == .alerting }?.id
           guard ringing != last else { continue }
           last = ringing
@@ -238,8 +245,17 @@ final class AlarmKitScheduler: AlarmScheduling {
         }
         continuation.finish()
       }
-      continuation.onTermination = { _ in task.cancel() }
     }
+  }
+
+  /// Holds the watching task so a cancellation handler can be installed before
+  /// the task is created.
+  ///
+  /// A tiny class rather than a captured `var`, because the handler must be able
+  /// to reach a value that does not exist yet.
+  private final class WatchBox: @unchecked Sendable {
+    var task: Task<Void, Never>?
+    func cancel() { task?.cancel() }
   }
 
   /// See `AlarmScheduling.stopAlerting`.
