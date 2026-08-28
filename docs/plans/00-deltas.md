@@ -1368,3 +1368,113 @@ is live spec text, so ratifying `D25` without applying the replacement the same
 day turns `DeltaIntegrityTests` red — the outstanding-amendment baseline is
 pinned at **zero**, and a red test blocks every merge under branch protection.
 Ratify and amend together, or neither.
+
+## D26 — A ringing alarm can be silenced from inside the app
+
+**Proposed 2026-08-28. Not ratified.** Defect-adjacent, but it adds a control, so
+it is a delta rather than a fix that proceeds under `D22`.
+
+**What was reported, and what it actually was.** The owner tried to stop a ringing
+alarm in a short break and could not. The first reading was a Stop-button problem;
+the owner corrected it:
+
+> This wasn't a stop the timer bug. stop the alarm bug.
+
+**The gap is certain and does not depend on reproducing anything.**
+`cancelAlarm()` is reachable from two engine paths only — a *confirmed* Stop, and
+one internal path — and **no view in this app observes `Alarm.State.alerting`**.
+The only control that ends a ringing alarm is the Dismiss button on the alert iOS
+draws. If that alert is missed, swiped, or never seen — the app was already in the
+foreground, say — the sound has no off switch anywhere in ZenPom.
+
+**The app's own Stop button is not that switch, and must not become it.** Stop
+opens the reason sheet and ends the *sprint*; `SPEC.md` prices that exit
+deliberately. Silencing an alarm is a different act with a different consequence,
+and giving one button both meanings is how the `F2b` arc produced four fixes in a
+row.
+
+### Proposed spec text
+
+Add to the *Alarm* row:
+
+> While the alarm is ringing, the timer screen shows a single control that
+> silences it. Silencing the alarm does not end the block, the break or the
+> sprint.
+
+**Open question for the owner:** should silencing also *advance* — that is, behave
+as the system alert's Dismiss does — or only stop the noise and leave the app
+where it is? These differ when auto-start is off.
+
+## D27 — Settings are read-only while a block is running
+
+**Proposed 2026-08-28 at the owner's direction. Not ratified.**
+
+> I was able to change the sounds from small bell to struck bell in a sprint. both
+> sound good --- but i shouldn't be able to do that.
+
+**The engine was correct.** Settings are frozen into `TimerSettingsSnapshot` at
+block start and nowhere else, so the change landed on the *next* block — which is
+exactly what the screen already promises: *"A block is running. Changes take
+effect when it ends, not now."*
+
+**So this changes ratified behaviour rather than fixing a defect**, and the owner
+chose the wider of the two options: **lock the whole screen, not just the sound
+row.** One rule beats a screen where one row behaves differently from the four
+above it for a reason nobody can see.
+
+### Proposed spec text
+
+Add to the *Timer customization* row:
+
+> While a block is running these are read-only. The screen says so.
+
+**What stays editable, and why it is not an exception.** Todoist sign-in and the
+music selection are not timer settings — they are not in `AppSettings`, are not
+snapshotted, and `SPEC.md` gives music its own row saying it may be toggled during
+a sprint. `D27` covers the customization row only.
+
+**The running-block note changes wording** from *"Changes take effect when it ends,
+not now"* to something that says the rows are locked. The old sentence would be a
+lie about a screen nobody can edit.
+
+## D28 — The alert sound can be previewed from Settings
+
+**Proposed 2026-08-28 at the owner's direction. Not ratified.**
+
+`F2c.md` ruled a preview out, and the reason it gave still stands:
+
+> playing an alarm inside Settings is a new audio path, `AlarmKit` does not offer
+> it, and `AVAudioPlayer` for it would be a second sound system.
+
+**The owner has now hit the gap that reason costs**: three sounds in a picker, and
+no way to hear one without running a block to its end. Choosing between sounds you
+cannot hear is not a choice.
+
+### What it actually costs, stated before it is agreed to
+
+**A second audio system, and that is the whole price.** `MusicCoordinator` owns
+audio in this app today. A preview means `AVAudioPlayer` or `AVAudioEngine`
+playing a bundled file, which brings:
+
+- **An `AVAudioSession` category decision.** Preview must not stop the person's
+  music, and must not be silenced by the ringer switch — an alert preview that is
+  inaudible on a silent phone teaches the wrong thing about a sound that *will*
+  be audible when it matters.
+- **Interaction with a running block.** `D27` would make the picker read-only
+  during a block, which removes this case entirely — the two deltas are cleaner
+  together than either is alone.
+- **Interaction with music.** Previewing while a playlist plays must duck or
+  ignore, and either is a decision rather than a default.
+- **A stop rule.** A preview that outlives the screen it was started from is a
+  sound with no off switch, which is `D26`'s defect arriving by a second door.
+
+### Proposed spec text
+
+Add to the *Timer customization* row:
+
+> Each alert sound can be played once from the settings screen before it is
+> chosen.
+
+**Scope note.** Preview plays the bundled file. It cannot preview `Default`, which
+is iOS's own alert sound and is not a file this app holds — that row previews
+nothing and the screen has to say so rather than appear broken.
