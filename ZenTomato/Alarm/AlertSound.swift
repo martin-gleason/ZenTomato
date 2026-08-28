@@ -52,6 +52,34 @@ enum AlertSound: String, CaseIterable, Sendable {
     }
   }
 
+  /// Whether this app can actually play it.
+  ///
+  /// **A NAMED SOUND THAT IS NOT IN THE BUNDLE IS SILENCE, NOT A FALLBACK.**
+  /// `AlertConfiguration.AlertSound.named(_:)` resolves against the bundle, and
+  /// when the file is absent there is no error, no warning and no default — the
+  /// alarm simply makes no noise. That is the exact failure this whole feature
+  /// exists to prevent, arriving through the feature itself.
+  ///
+  /// So the catalogue is not the list of sounds somebody wrote down; it is the
+  /// list of sounds this build can play, computed from the bundle. A case whose
+  /// file has not been added yet is not offered, is never stored, and cannot be
+  /// scheduled. The day the file is added it appears in the picker with no code
+  /// change, and if it is ever dropped from the target the picker shrinks rather
+  /// than going quiet.
+  ///
+  /// The system default is always playable: it is not a file.
+  var isPlayable: Bool {
+    guard let fileName else { return true }
+    let name = (fileName as NSString).deletingPathExtension
+    let type = (fileName as NSString).pathExtension
+    return Bundle.main.url(forResource: name, withExtension: type) != nil
+  }
+
+  /// The sounds this build can offer, in catalogue order.
+  ///
+  /// Never `allCases`. See `isPlayable` for why the two differ.
+  static var playable: [AlertSound] { allCases.filter(\.isPlayable) }
+
   /// Who made it and where it came from.
   ///
   /// **The owner's ruling: every sound is attributed, with a link.** Stricter than
@@ -91,8 +119,12 @@ enum AlertSound: String, CaseIterable, Sendable {
   /// has to think about.** Forward compatibility is the whole reason the raw
   /// value is stored: a sound added in a later version must degrade to the
   /// default here rather than take the database with it.
+  /// **Also rejects a sound this build cannot play**, for the same reason the
+  /// picker will not offer one: a name that resolves to nothing is a silent
+  /// alarm, and a silent alarm is indistinguishable from the bug that started
+  /// this. An unplayable stored value is treated exactly like an unknown one.
   static func stored(_ rawValue: String?) -> AlertSound {
     guard let rawValue, let known = AlertSound(rawValue: rawValue) else { return .systemDefault }
-    return known
+    return known.isPlayable ? known : .systemDefault
   }
 }
