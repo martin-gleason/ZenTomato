@@ -193,14 +193,31 @@ private struct SettingsForm: View {
   var cache: TodoistCacheStore?
   var plan: SessionPlanStore?
 
+  @Environment(\.scenePhase) private var scenePhase
+
+  /// `D28`. Owned here rather than passed in: it holds no state anybody else
+  /// needs, and a preview must not outlive the screen that started it.
+  @State private var preview = AlertSoundPreview()
+
   var body: some View {
     Form {
       if isBlockRunning {
         runningBlockNote
       }
-      blockLengths
-      sprint
-      whenABlockEnds
+      // `D27`: the customization rows lock together, from one modifier on the
+      // group rather than one per row. A row added later cannot forget to join
+      // them, which is the only way this stays true.
+      Group {
+        blockLengths
+        sprint
+        whenABlockEnds
+      }
+      .disabled(isBlockRunning)
+
+      // NOT LOCKED, AND NOT AN EXCEPTION. Music and Todoist are not timer
+      // settings: neither is in `AppSettings`, neither is snapshotted at block
+      // start, and `SPEC.md` gives music its own row explicitly permitting
+      // changes during a sprint. `D27` covers the customization row only.
       music
       todoist
       build
@@ -210,6 +227,15 @@ private struct SettingsForm: View {
     // on recycling rather than once on open — the picker attaches its own refresh
     // at this level for the same reason.
     .task { refreshMusicAvailability() }
+    // **EVERY WAY OUT, NOT ONLY THE TIDY ONE.** A sound still playing after the
+    // screen has gone is a sound with no off switch — `D26`'s defect arriving
+    // inside the feature built so nobody has to choose a sound blind. `onDisappear`
+    // covers a swipe-down and a back-tap; the scene phase covers the app being
+    // put away mid-preview, which `onDisappear` does not fire for.
+    .onDisappear { preview.stop() }
+    .onChange(of: scenePhase) { _, phase in
+      if phase != .active { preview.stop() }
+    }
     // iOS's own grouped-list background is a grey that fights this app's warm
     // page. Dropping it and painting the page underneath is what makes the sheet
     // look like part of the same app as the timer.
@@ -241,7 +267,11 @@ private struct SettingsForm: View {
   private var runningBlockNote: some View {
     Section {
       Label {
-        Text("A block is running. Changes take effect when it ends, not now.")
+        // **`D27` CHANGED THIS SENTENCE, AND IT HAD TO.** It used to read
+        // "Changes take effect when it ends, not now" — true when the rows were
+        // editable and a lie the moment they were not. Copy describing a control
+        // the person cannot use is worse than no copy: it sends them to try.
+        Text("A block is running. These settings are locked until it ends.")
           .font(Typography.label)
           .foregroundStyle(Color(.warningText))
       } icon: {
@@ -285,77 +315,6 @@ private struct SettingsForm: View {
       footer("How many focus blocks you do before the long break.")
     }
     .listRowBackground(Color(.surfaceRaised))
-  }
-
-  private var whenABlockEnds: some View {
-    Section {
-      // Tinted from the design system rather than left as the system's green.
-      // The two look almost identical, which is exactly why it has to be said:
-      // an untinted switch is the app's one colour arriving from somewhere other
-      // than the token table.
-      Toggle("Sound", isOn: $settings.soundEnabled)
-        .tint(Color(.action))
-        // The visible label is one word because the section heading above it
-        // supplies the rest of the sentence. VoiceOver does not read a section
-        // heading before every row, so it gets the whole phrase.
-        .accessibilityLabel(Text("Sound when a block ends"))
-
-      // BELOW the switch, and disabled when the switch is off. The screen
-      // should read the way the code decides: sound off means no noise, so a
-      // sound choice under it is not a live control and must not look like one.
-      // Hidden, not shown-with-one-option, when the bundle holds no alternative.
-      // A picker whose list has a single entry is a control that does nothing.
-      if AlertSound.playable.count > 1 {
-        Picker("Alert sound", selection: $settings.alertSound) {
-          ForEach(AlertSound.playable, id: \.self) { sound in
-            Text(sound.name).tag(sound)
-          }
-        }
-        .pickerStyle(.navigationLink)
-        .font(Typography.body)
-        .disabled(settings.soundEnabled == false)
-        .accessibilityLabel(Text("Alert sound when a block ends"))
-      }
-
-      Toggle("Start the next block automatically", isOn: $settings.autoStartNextBlock)
-        .tint(Color(.action))
-        .accessibilityHint(
-          Text("When the long break ends the timer stops and waits, even with this on."))
-    } header: {
-      header("When a block ends")
-    } footer: {
-      footer(Self.whenABlockEndsFooter)
-    }
-    .listRowBackground(Color(.surfaceRaised))
-  }
-
-  /// The footer under "When a block ends", which has a paragraph the screen only
-  /// sometimes earns.
-  ///
-  /// **Copy that describes a control the person cannot see is worse than no copy
-  /// at all** — it tells them to go looking for something that is not there. The
-  /// sound-choice sentence appears exactly when the picker does, on the same
-  /// condition, so the two cannot drift.
-  private static var whenABlockEndsFooter: String {
-    let sound = AlertSound.playable.count > 1
-      ? """
-        With Sound off the block still ends on time and the alert still appears — \
-        the phone just doesn't make a noise, whichever alert sound is chosen.
-
-        A block keeps the sound it started with, so changing this mid-block takes \
-        effect at the next one.
-        """
-      : """
-        With Sound off the block still ends on time and the alert still appears — \
-        the phone just doesn't make a noise.
-        """
-
-    return """
-      \(sound)
-
-      Auto-start carries you through a sprint, not into the next one. When the \
-      long break ends the timer stops and waits for you.
-      """
   }
 
   /// One duration row: a label, the current value, and a chevron that opens a
@@ -406,13 +365,7 @@ private struct SettingsForm: View {
   ///
   /// **No new setting, and nothing to change here.** `AppSettings` still holds
   /// exactly six values — this is a report, not a control. The switch that turns
-  /// music on lives on the timer screen where the choice is actually made,
-  /// because D19 puts music decisions before a sprint rather than inside one.
-  ///
-  /// **Never amber, never a warning triangle**, however badly it has gone. The
-  /// same rule the music row already follows: this app not being able to play
-  /// music is not an error condition, and the timer is unaffected either way.
-  @ViewBuilder
+  /// music on der
   private var music: some View {
     Section {
       LabeledContent("Apple Music") {
@@ -579,6 +532,101 @@ private struct SettingsForm: View {
   /// long break is earned by finished pomodoros, never by attempts.
   private static func spokenPomodoros(_ count: Int) -> String {
     "\(count) \(count == 1 ? "pomodoro" : "pomodoros")"
+  }
+}
+
+// MARK: - SettingsForm + when a block ends
+
+/// The one section `D24`, `D27` and `D28` all landed in, moved out of the struct.
+///
+/// **An extension in the same file, because `SettingsForm` reached its 250-line
+/// lint ceiling** — by one line, which is the ceiling doing exactly what it is
+/// for: this screen is where every new setting wants to go. An extension is a
+/// separate declaration for the length rule, and staying in this file keeps
+/// `private` access, so nothing had to widen to make room.
+extension SettingsForm {
+  private var whenABlockEnds: some View {
+    Section {
+      // Tinted from the design system rather than left as the system's green.
+      // The two look almost identical, which is exactly why it has to be said:
+      // an untinted switch is the app's one colour arriving from somewhere other
+      // than the token table.
+      Toggle("Sound", isOn: $settings.soundEnabled)
+        .tint(Color(.action))
+        // The visible label is one word because the section heading above it
+        // supplies the rest of the sentence. VoiceOver does not read a section
+        // heading before every row, so it gets the whole phrase.
+        .accessibilityLabel(Text("Sound when a block ends"))
+
+      // BELOW the switch, and disabled when the switch is off. The screen
+      // should read the way the code decides: sound off means no noise, so a
+      // sound choice under it is not a live control and must not look like one.
+      // Hidden, not shown-with-one-option, when the bundle holds no alternative.
+      // A picker whose list has a single entry is a control that does nothing.
+      if AlertSound.playable.count > 1 {
+        Picker("Alert sound", selection: $settings.alertSound) {
+          ForEach(AlertSound.playable, id: \.self) { sound in
+            Text(sound.name).tag(sound)
+          }
+        }
+        .pickerStyle(.navigationLink)
+        .font(Typography.body)
+        .disabled(settings.soundEnabled == false)
+        .accessibilityLabel(Text("Alert sound when a block ends"))
+        // `D28`: SELECTING A SOUND PLAYS IT, WHICH IS THE PLATFORM'S OWN IDIOM.
+        //
+        // iOS's Settings › Sounds picker works exactly this way — tapping a row
+        // both selects and plays — so this needs no explanation to anybody who
+        // has ever changed a ringtone, and it adds no control to a screen this
+        // app has kept deliberately bare. The alternative was a custom picker
+        // screen with a play glyph on every row: more surface, more to draw,
+        // and a second way to do the same thing.
+        //
+        // The pushed list stays up while it plays, so a person can keep tapping
+        // until they like one. That is what "before it is chosen" means in
+        // practice: nothing is committed until they leave.
+        .onChange(of: settings.alertSound) { _, chosen in preview.play(chosen) }
+      }
+
+      Toggle("Start the next block automatically", isOn: $settings.autoStartNextBlock)
+        .tint(Color(.action))
+        .accessibilityHint(
+          Text("When the long break ends the timer stops and waits, even with this on."))
+    } header: {
+      header("When a block ends")
+    } footer: {
+      footer(Self.whenABlockEndsFooter)
+    }
+    .listRowBackground(Color(.surfaceRaised))
+  }
+
+  /// The footer under "When a block ends", which has a paragraph the screen only
+  /// sometimes earns.
+  ///
+  /// **Copy that describes a control the person cannot see is worse than no copy
+  /// at all** — it tells them to go looking for something that is not there. The
+  /// sound-choice sentence appears exactly when the picker does, on the same
+  /// condition, so the two cannot drift.
+  private static var whenABlockEndsFooter: String {
+    let sound = AlertSound.playable.count > 1
+      ? """
+        With Sound off the block still ends on time and the alert still appears — \
+        the phone just doesn't make a noise, whichever alert sound is chosen.
+
+        Choosing a sound plays it. Default is iOS's own alert sound rather than \
+        one ZenPom holds, so it is the one that cannot be played here.
+        """
+      : """
+        With Sound off the block still ends on time and the alert still appears — \
+        the phone just doesn't make a noise.
+        """
+
+    return """
+      \(sound)
+
+      Auto-start carries you through a sprint, not into the next one. When the \
+      long break ends the timer stops and waits for you.
+      """
   }
 }
 

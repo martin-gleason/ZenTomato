@@ -3,7 +3,7 @@
 **Retrofit on F2c.** Builds `D27` and `D28`, both ratified 2026-08-28 and applied
 to `SPEC.md` line 30 as `A11` and `A12`.
 
-**PLAN ONLY. Awaiting the owner's yes.**
+**Gated 2026-08-28, built 2026-08-28.** The owner's yes was *"continue with f2c and f2e"*.
 
 ## Why these are one feature and not two
 
@@ -117,3 +117,82 @@ be a worse lie than a preview that is simply quieter.
 
 **No change to the music system.** The preview player does not route through
 `MusicCoordinator`, and `MusicCoordinator` does not learn about previews.
+
+
+## What shipped
+
+**`D27` is one modifier on one `Group`.** Durations, sprint size and the whole
+*When a block ends* section lock together from a single `.disabled(isBlockRunning)`
+— because the failure this guards is not today's code being wrong, it is next
+year's row being added outside the group. A fence asserts the group holds all
+three and that there is exactly one such modifier, and it was **shown to fail**:
+moving `whenABlockEnds` out of the group turns the suite red.
+
+Music and Todoist stay editable, and the fence asserts they are *outside* the
+group rather than merely that they work. Neither is in `AppSettings`, neither is
+snapshotted, and `SPEC.md` gives music its own row permitting changes during a
+sprint.
+
+**The note changed, and had to.** *"Changes take effect when it ends, not now"*
+was true when the rows were editable and a lie the moment they were not. It now
+says they are locked. The footer also lost its sentence about a block keeping the
+sound it started with: nobody can change it mid-block any more, so there is
+nothing to explain.
+
+### `D28` — selecting a sound plays it
+
+**The platform's own idiom, not a new control.** iOS's Settings › Sounds picker
+works exactly this way: tapping a row selects *and* plays. The alternative was a
+custom picker screen with a play glyph on every row — more surface on a screen
+this app has kept deliberately bare, and a second way to do one thing. The pushed
+list stays up while it plays, so a person keeps tapping until they like one, and
+nothing is committed until they leave.
+
+`Default` is the one that cannot be played, because it is iOS's alert sound rather
+than a file ZenPom holds. The player refuses and **the footer says so**, because a
+row that silently does nothing reads as broken.
+
+**`.playback` with `.mixWithOthers`** is the session pair that satisfies both
+requirements: audible with the ringer switch off — the sound being chosen
+certainly will be — without stopping the person's music. **This is the part that
+fails quietly**, differently on a device than in a simulator, which is why it is
+in the device check rather than only in a test.
+
+**A preview cannot outlive its screen.** Stopped on `onDisappear` and on the scene
+leaving `.active`, because backgrounding does not fire the former. A sound still
+playing after the screen has gone would be `D26`'s defect arriving inside the
+feature built so nobody has to choose a sound blind.
+
+## Evidence
+
+```
+$ make ci
+check-lint.sh: OK — no lint violations.
+check-todoist-writes.sh: OK — no Todoist endpoint outside the allowlist.
+check-secrets.sh: OK — no credential found in the tree.
+check-licence-wording.sh: OK — no disjunctive licence wording.
+check-open-register.sh: OK — the register renders as tables.
+run-script-tests.sh: 15 passed, 0 failed
+✔ Test run with 544 tests in 81 suites passed
+check-release-build.sh: OK — Release compiles with no warnings of ours.
+```
+
+Seven new tests. They are **fences over source rather than view tests**, and that
+limit is stated rather than glossed: this project has no UI test target, and both
+rules here are structural — *"every customization row is locked by one flag"* and
+*"a preview cannot outlive its screen"* are claims about how the file is written.
+What no fence can check is whether it looks right, which is what the device check
+is for.
+
+`SettingsForm` crossed its 250-line lint ceiling by one line, so the section all
+three of `D24`, `D27` and `D28` landed in moved to an extension in the same file —
+a separate declaration for the length rule, same file so `private` access survives.
+
+## Still to check on the device — `O30`
+
+1. Start a block, open Settings, confirm nothing in the customization block can be
+   changed and the note says why. Music and Todoist should still work.
+2. With no block running and **the ringer switch off**, select each bell and hear
+   it. Then start a playlist, select again, and confirm the music survives.
+3. Start a preview and immediately leave the screen — and separately, background
+   the app mid-preview. Both must go quiet.
