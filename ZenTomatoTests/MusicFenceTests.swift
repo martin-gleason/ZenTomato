@@ -121,6 +121,7 @@ struct MusicFenceTests {
     var statesWithSkip = 0
     var statesWithTooManyControls = 0
     var statesWithAControlDuringABreak = 0
+    var statesWithTransportDuringABreak = 0
 
     for isRunning in [true, false] {
       for kind in BlockKind.allCases {
@@ -143,8 +144,19 @@ struct MusicFenceTests {
             if isRunning, kind == .work, row.interactiveControlCount > 2 {
               statesWithTooManyControls += 1
             }
-            if isRunning, kind != .work, row.interactiveControlCount > 0 {
-              statesWithAControlDuringABreak += 1
+            // **ONE CONTROL IS PERMITTED IN A BREAK NOW, AND ONLY ONE.**
+            //
+            // `D25` re-opened the switch during a break — `SPEC.md` line 27,
+            // "pauses, and can be switched back on by hand". The transport did
+            // not come with it, and that is what this still guards: the count
+            // may be one, and the one must be the switch.
+            //
+            // Counting rather than flag-checking is the same insight as the
+            // work-block clause above: a second control arriving in a break is
+            // exactly what nobody would think to add a check for.
+            if isRunning, kind != .work {
+              if row.interactiveControlCount > 1 { statesWithAControlDuringABreak += 1 }
+              if row.canSkip || row.canStop { statesWithTransportDuringABreak += 1 }
             }
           }
         }
@@ -158,7 +170,10 @@ struct MusicFenceTests {
     // when the row widens — the one above only watches skip.
     #expect(statesWithTooManyControls == 0,
             "a focus block offers skip and stop and no third control")
-    #expect(statesWithAControlDuringABreak == 0)
+    #expect(statesWithAControlDuringABreak == 0,
+            "a break offers the switch and nothing beside it")
+    #expect(statesWithTransportDuringABreak == 0,
+            "skip or stop appeared during a break; D25 re-opened the switch, not the transport")
   }
 
   /// An instruction is never put on a line that cannot be obeyed.

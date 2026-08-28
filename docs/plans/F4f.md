@@ -3,9 +3,8 @@
 **Retrofit on F4.** Builds `D25`, ratified 2026-08-27 and applied to `SPEC.md`
 line 27.
 
-**PLAN ONLY. Awaiting the owner's yes**, per the gate reaffirmed in
-`conventions.md` on 2026-08-27 — the rule being that a plan written after the code
-is a justification and cannot do the gate's job.
+**Planned first, approved by the owner, then built** — the second piece of work to
+go through the gate in the right order since it was reaffirmed.
 
 ## What the contract now says
 
@@ -83,3 +82,49 @@ the contract and contradicts its first clause.
 On the device: a short break starts silent, the switch turns music on, the block
 ends and music stops without being asked, and the next pomodoro plays as it always
 did.
+
+---
+
+## Built, 2026-08-27
+
+### The design call the plan did not settle
+
+`isOn` is the standing intention, so **during a break with music enabled the
+switch already read "on" while nothing was playing** — leaving nothing to switch
+back on, which is exactly what the contract promises. That forced the answer:
+**inside a break the switch shows and sets *this break*.** It goes off when the
+break pauses the music, and putting it back on plays for that block only.
+
+The switch changing state at a boundary is the point rather than a glitch — it
+mirrors what the music did.
+
+`isEnabled` is left alone by a break toggle, so a sprint's music setting is still
+decided before the sprint, where `D19` put it.
+
+### Two fences moved, both by exactly one control
+
+`theSwitchIsLockedWhileABlockRuns` asserted the switch was locked in **every**
+block kind. The work-block half survives and is the half worth keeping; the break
+half was the old contract.
+
+`MusicFenceTests` asserted **zero** controls during a break. It now permits one
+and adds a separate assertion that **skip and stop are still absent** — the count
+was doing two jobs, and only one of them changed.
+
+### The mutation that got through
+
+**Deleting the line that clears the request at a boundary left every test green.**
+Every test in `MusicInABreakTests` at that point exercised the pure rule, and this
+is about the state the rule is fed — so the flag could outlive its break and reach
+a later block with nothing objecting.
+
+That is precisely the defect `D20`'s silence flag shipped with: set, never
+cleared, 291 tests green because none of them crossed a boundary. Three
+coordinator-level tests now cover it, and the mutation fails two of them.
+
+### Verification
+
+| Mutation | Caught by |
+|---|---|
+| M22 · a break plays whenever music is switched on | `aBreakIsSilentEvenWithMusicSwitchedOn` |
+| M23 · the request is never cleared at a boundary | `theRequestDiesWithTheBreakItWasAbout`, `aSecondBreakStartsSilent` |

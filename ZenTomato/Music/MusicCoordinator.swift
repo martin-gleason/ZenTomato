@@ -144,6 +144,19 @@ final class MusicCoordinator {
   /// not the same as whether anything can actually play.
   private(set) var isEnabled: Bool
 
+  /// Whether somebody asked for sound during **this** break.
+  ///
+  /// **`SPEC.md` line 27: "Pauses, and can be switched back on by hand."** The
+  /// first clause is what this exists to protect. `isEnabled` — the standing
+  /// intention set before a sprint — must not be what makes a break sound, or
+  /// somebody who leaves music on for weeks never gets a silent break again and
+  /// the contract's opening clause is dead.
+  ///
+  /// **Scoped to one block and cleared at every boundary.** Not persisted, not a
+  /// setting: `AppSettings` still holds six values. Asking for sound in one break
+  /// says nothing about the next.
+  fileprivate(set) var breakSoundWasRequested = false
+
   /// The chosen playlist or song, or `nil` when nothing has been chosen.
   private(set) var selection: MusicSelection?
 
@@ -298,6 +311,18 @@ final class MusicCoordinator {
     // started another.
     if kind != self.kind || isRunning != isTimerRunning {
       isSilencedForThisBlock = false
+      // **AND THE BREAK REQUEST ENDS WITH THE BREAK IT WAS ABOUT.**
+      //
+      // Same shape as the line above and cleared on the same condition, because
+      // it is the same kind of promise: scoped to one block. `SPEC.md` line 27
+      // says a break "resumes by itself at the next pomodoro" — which is only
+      // true if asking for sound in one break says nothing about the next block.
+      //
+      // Cleared on a real change rather than unconditionally, for the reason
+      // D20's flag learned the hard way: this runs on every observation of the
+      // engine, including ones where nothing moved, and clearing on those would
+      // cut off sound the person had just asked for.
+      breakSoundWasRequested = false
     }
     self.kind = kind
     isTimerRunning = isRunning
@@ -321,6 +346,13 @@ final class MusicCoordinator {
   ///
   /// - Parameter enabled: where the person just put the switch.
   func setEnabled(_ enabled: Bool) async {
+    // A break is the one running block this switch still works in (`D25`); see
+    // `requestBreakSound` in the extension below.
+    if isTimerRunning, kind != .work {
+      requestBreakSound(enabled)
+      return
+    }
+
     guard !isTimerRunning else { return }
 
     guard enabled else {
@@ -496,7 +528,7 @@ final class MusicCoordinator {
     let wantsSound = MusicPlaybackPhase.shouldSound(
       isRunning: isTimerRunning,
       kind: kind,
-      isEnabled: isEnabled,
+      intention: .init(standing: isEnabled, breakSoundWasRequested: breakSoundWasRequested),
       availability: availability,
       selection: selection)
 
@@ -608,57 +640,6 @@ final class MusicCoordinator {
     refreshIsPlaying()
   }
 
-  /// Asks the player whether sound is coming out, and remembers the answer.
-  ///
-  /// Called at every moment that could have changed it. See `isPlaying` for why
-  /// the answer is stored rather than asked for on the spot.
-  private func refreshIsPlaying() {
-    // **NOTHING IS READ ON THIS THREAD, AND THAT IS THE WHOLE POINT.**
-    //
-    // This method used to read `player.isPlaying` and `player.nowPlayingTitle`
-    // directly. Both are cross-process calls to the media server on the real
-    // player, and this method is reached from seven places — including the
-    // status-changed callback, which fires most often exactly when the media
-    // server is busiest. `docs/crashes/ZenTomato-2026-08-26-134602.ips` is the
-    // result: the watchdog killed the app after ten seconds of wall clock in
-    // which our own code used fifty-three milliseconds of CPU.
-    //
-    // The reading still happens, and is still not cached — `F4-contract.md` §8
-    // was right that a cached value makes the skip button lie. It happens off
-    // this actor, so a wedged media daemon costs a late row instead of the
-    // process.
-    playbackReadGeneration &+= 1
-    let generation = playbackReadGeneration
-    playbackReadTask?.cancel()
-    playbackReadTask = Task { @MainActor [weak self, player] in
-      let snapshot = await player.playbackSnapshot()
-      guard let self, !Task.isCancelled else { return }
-      // **A late answer is discarded rather than applied.** Two reads can be in
-      // flight when a block boundary lands between them, and the older one
-      // finishing second would put a stale row on screen — the same class of
-      // defect the load path's generation counter exists to prevent, arriving
-      // through a different door.
-      guard generation == self.playbackReadGeneration else { return }
-      self.isPlaying = snapshot.isPlaying
-      self.nowPlayingTitle = snapshot.nowPlayingTitle
-    }
-    // NO AUTOMATIC UN-SILENCING HERE, AND THAT IS A DELIBERATE LIMIT.
-    //
-    // It is tempting to clear the silence whenever the player reports playing —
-    // Control Centre can start what this app paused, and it does not say so. But
-    // a load this app had already superseded ALSO finishes by reporting playing,
-    // because MusicKit's play() is not cancellation-cooperative, and from here
-    // the two are indistinguishable. Clearing on either would let a stopped
-    // block restart itself, which is exactly the defect the reassertion path
-    // exists to prevent, arriving through a different door.
-    //
-    // So the way back is the button, which now exists. What remains is narrow
-    // and known: start the music from Control Centre while a block is silenced
-    // and this app still believes it is silent, so the next thing that applies
-    // state will pause it again. Pressing play in the app rather than in Control
-    // Centre does the right thing, and the button is right there.
-  }
-
   /// Re-states silence if silence is what the rule currently wants.
   ///
   /// Called only by work that discovers it has been superseded. It never starts
@@ -668,7 +649,7 @@ final class MusicCoordinator {
     let wantsSound = MusicPlaybackPhase.shouldSound(
       isRunning: isTimerRunning,
       kind: kind,
-      isEnabled: isEnabled,
+      intention: .init(standing: isEnabled, breakSoundWasRequested: breakSoundWasRequested),
       availability: availability,
       selection: selection)
 
@@ -763,6 +744,103 @@ private enum MusicPlaybackOutcome {
   case itemHasGone
   /// The player refused for some other reason.
   case refused
+}
+
+// MARK: - Reading what the player is doing
+
+/// The off-main-actor playback reading added in `C16`.
+///
+/// **In an extension because the class body reached the linter's length limit**,
+/// and this is the cleanest seam left: every member here is about *asking the
+/// player a question*, and nothing else in the class needs to know how the answer
+/// is fetched. The same reasoning that moved audio interruptions and availability
+/// out below.
+@MainActor
+extension MusicCoordinator {
+  /// Asks the player whether sound is coming out, and remembers the answer.
+  ///
+  /// Called at every moment that could have changed it. See `isPlaying` for why
+  /// the answer is stored rather than asked for on the spot.
+  private func refreshIsPlaying() {
+    // **NOTHING IS READ ON THIS THREAD, AND THAT IS THE WHOLE POINT.**
+    //
+    // This method used to read `player.isPlaying` and `player.nowPlayingTitle`
+    // directly. Both are cross-process calls to the media server on the real
+    // player, and this method is reached from seven places — including the
+    // status-changed callback, which fires most often exactly when the media
+    // server is busiest. `docs/crashes/ZenTomato-2026-08-26-134602.ips` is the
+    // result: the watchdog killed the app after ten seconds of wall clock in
+    // which our own code used fifty-three milliseconds of CPU.
+    //
+    // The reading still happens, and is still not cached — `F4-contract.md` §8
+    // was right that a cached value makes the skip button lie. It happens off
+    // this actor, so a wedged media daemon costs a late row instead of the
+    // process.
+    playbackReadGeneration &+= 1
+    let generation = playbackReadGeneration
+    playbackReadTask?.cancel()
+    playbackReadTask = Task { @MainActor [weak self, player] in
+      let snapshot = await player.playbackSnapshot()
+      guard let self, !Task.isCancelled else { return }
+      // **A late answer is discarded rather than applied.** Two reads can be in
+      // flight when a block boundary lands between them, and the older one
+      // finishing second would put a stale row on screen — the same class of
+      // defect the load path's generation counter exists to prevent, arriving
+      // through a different door.
+      guard generation == self.playbackReadGeneration else { return }
+      self.isPlaying = snapshot.isPlaying
+      self.nowPlayingTitle = snapshot.nowPlayingTitle
+    }
+    // NO AUTOMATIC UN-SILENCING HERE, AND THAT IS A DELIBERATE LIMIT.
+    //
+    // It is tempting to clear the silence whenever the player reports playing —
+    // Control Centre can start what this app paused, and it does not say so. But
+    // a load this app had already superseded ALSO finishes by reporting playing,
+    // because MusicKit's play() is not cancellation-cooperative, and from here
+    // the two are indistinguishable. Clearing on either would let a stopped
+    // block restart itself, which is exactly the defect the reassertion path
+    // exists to prevent, arriving through a different door.
+    //
+    // So the way back is the button, which now exists. What remains is narrow
+    // and known: start the music from Control Centre while a block is silenced
+    // and this app still believes it is silent, so the next thing that applies
+    // state will pause it again. Pressing play in the app rather than in Control
+    // Centre does the right thing, and the button is right there.
+  }
+}
+
+// MARK: - Music during a break
+
+/// `D25` — *"Pauses, and can be switched back on by hand."*
+///
+/// **In an extension for the reason the two below are:** the class body reached
+/// the linter's length limit, and the honest answer to "eleven lines too long" is
+/// to find a seam rather than raise the number. This is a good seam — it is one
+/// obligation of one line of the contract, and nothing else in the class needs to
+/// know how it is kept.
+@MainActor
+extension MusicCoordinator {
+  /// Whether the block now running is a break.
+  ///
+  /// Exposed because the music sheet has no `BlockKind` of its own and needs the
+  /// same answer the timer row derives from one. Deriving it in two places is how
+  /// two surfaces come to disagree about whether a control works.
+  var isBreak: Bool { isTimerRunning && kind != .work }
+
+  /// Asks for sound during **this** break, or takes it away again.
+  ///
+  /// **`isEnabled` is deliberately untouched.** The standing intention belongs
+  /// before a sprint, where `D19` put it; what changes here is one block. A person
+  /// who turns music on for one break has not changed their mind about sprints.
+  ///
+  /// **Refused when nothing could play anyway**, so the switch never turns on and
+  /// produces silence — the row's standing rule that nothing offers a control
+  /// which cannot act.
+  func requestBreakSound(_ enabled: Bool) {
+    guard availability.permitsPlayback, selection != nil else { return }
+    breakSoundWasRequested = enabled
+    apply()
+  }
 }
 
 // MARK: - Audio interruptions

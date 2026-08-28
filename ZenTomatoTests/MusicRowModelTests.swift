@@ -54,7 +54,15 @@ struct MusicRowModelTests {
 
     for breakKind in [BlockKind.shortBreak, BlockKind.longBreak] {
       let onABreak = Self.row(isRunning: true, kind: breakKind, playback: .playing)
-      #expect(onABreak.interactiveControlCount == 0)
+      // **ONE CONTROL NOW, NOT ZERO — the switch, and only the switch.**
+      //
+      // `D25` re-opened it during a break: `SPEC.md` line 27 says music
+      // "pauses, and can be switched back on by hand". The transport did *not*
+      // come with it, and that is the half this assertion still guards — the
+      // owner asked for the switch and nothing else, and skip and stop appearing
+      // at a boundary is the movement `D19.3` forbids.
+      #expect(onABreak.interactiveControlCount == 1)
+      #expect(onABreak.isTogglable)
       #expect(onABreak.canSkip == false)
       #expect(onABreak.canStop == false)
     }
@@ -89,18 +97,6 @@ struct MusicRowModelTests {
   }
 
   // MARK: The switch
-
-  /// `SPEC.md` says music is toggled before a sprint. Mid-sprint the switch is
-  /// present and cannot be touched — present, because removing it would make a
-  /// control appear and disappear at every block boundary, which is the movement
-  /// D19.3 forbids.
-  @Test("theSwitchIsLockedWhileABlockRuns")
-  func theSwitchIsLockedWhileABlockRuns() {
-    for kind in BlockKind.allCases {
-      #expect(Self.row(isRunning: true, kind: kind).isTogglable == false)
-    }
-    #expect(Self.row(isRunning: false, kind: .work).isTogglable)
-  }
 
   /// A switch sitting in the on position while nothing can play is a control that
   /// lies about itself. Every way music can be unavailable draws it off, and

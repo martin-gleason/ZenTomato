@@ -54,16 +54,49 @@ enum MusicPlaybackPhase {
   ///   - availability: whether this app may play music at all.
   ///   - selection: the chosen playlist or song, or `nil`.
   /// - Returns: `true` only in the one situation where music belongs.
+  /// What the person has asked for, in the two forms it comes in.
+  ///
+  /// **One value rather than two parameters, because they are never useful
+  /// apart** — the same move `MusicRowModel.Sound` made, and for the same reason.
+  /// The linter's parameter limit was the prompt; the reason to do it is that
+  /// "the standing intention" and "asked for this break" are one question with a
+  /// phase-dependent answer, and passing them separately invites a caller to
+  /// consult the wrong one.
+  struct Intention: Equatable, Sendable {
+    /// Music switched on, set before a sprint (`D19`).
+    let standing: Bool
+
+    /// Sound asked for during **this** break, and cleared at every boundary.
+    let breakSoundWasRequested: Bool
+
+    /// Which of the two governs, given the block.
+    func wantsSound(in kind: BlockKind) -> Bool {
+      kind == .work ? standing : breakSoundWasRequested
+    }
+  }
+
   static func shouldSound(
     isRunning: Bool,
     kind: BlockKind,
-    isEnabled: Bool,
+    intention: Intention,
     availability: MusicAvailability,
     selection: MusicSelection?
   ) -> Bool {
-    isRunning
-      && kind == .work
-      && isEnabled
+    // **A BREAK IS SILENT UNLESS SOMEBODY ASKED, THIS BREAK.**
+    //
+    // `SPEC.md` line 27 now reads: *"Pauses, and can be switched back on by
+    // hand. Resumes by itself at the next pomodoro."* Three obligations, and the
+    // first is the one a careless reading of the second destroys. "Music can be
+    // switched on during a break" is easy to implement as "breaks play music",
+    // which satisfies the sentence's middle clause and contradicts its opening
+    // one.
+    //
+    // So `isEnabled` — the standing intention — is deliberately **not** what
+    // makes a break sound. It is `breakSoundWasRequested`, which the coordinator
+    // sets when the switch is used and clears at every boundary. A person who
+    // leaves music switched on for weeks still gets silent breaks.
+    return isRunning
+      && intention.wantsSound(in: kind)
       && availability.permitsPlayback
       && selection != nil
   }
