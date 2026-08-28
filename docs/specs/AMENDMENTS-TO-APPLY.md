@@ -1,8 +1,17 @@
 # Amendments to apply to `SPEC.md`
 
-**For the owner. The agent never edits the contract — this proposes, you apply.**
+**For the owner. The agent proposes amendments here; the owner decides them.**
 
-Seven ratified deltas whose text has never reached `SPEC.md`. Each block below gives the **exact
+*On 2026-08-27 the owner instructed the agent to apply `A8` and `A9` directly. That
+is the exception rather than the rule, and it was transcription of text already
+written and ratified — see the note on each block.*
+
+**Nothing here is outstanding. Every block below has been applied.** `A1`–`A7`
+went into `SPEC.md` on 2026-08-24 and `A8`–`A9` on 2026-08-27; the file is kept as
+the record of what each amendment changed and why, not as a to-do list.
+
+`docs/specs/AMENDMENT-BASELINE.txt` holds the authoritative count, and
+`DeltaIntegrityTests` fails if it ever grows. Each block below gives the **exact
 current line** and the **exact replacement**, so applying one is a copy and a paste rather than a
 judgement. Nothing here is new: every one was ratified between 21 and 23 August 2026 and is already
 built and shipped in the app.
@@ -187,6 +196,8 @@ backlog count drops as the old text disappears from the file.
 
 ## A8 — D25: music can be switched on during a break
 
+**APPLIED to `SPEC.md` line 27 on 2026-08-27.** Kept for the record; nothing to do.
+
 **Ratified by the owner 2026-08-27.** Unlike `A1`–`A7`, this one is **not yet built** — the
 behaviour it describes does not exist in the app today, and will not until `F4f` lands.
 
@@ -214,6 +225,8 @@ commit, and the count never leaves zero.
 ---
 
 ## A9 — D24: the alarm sound can be chosen
+
+**APPLIED to `SPEC.md` line 30 on 2026-08-27.** Kept for the record; nothing to do.
 
 **Ratified by the owner 2026-08-27.** Like `A8` and unlike `A1`–`A7`, this describes
 behaviour that does **not** exist yet.
