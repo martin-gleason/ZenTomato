@@ -1539,7 +1539,7 @@ written five times.
 > breaks and i was unable to capture it.
 
 **This is not a bug in the mechanical sense. It is a decision, and the decision is
-wrong about the owner.** `TimerEngine.reconcile()` ends a block that finished
+wrong about the owner.** `TimerEngine.synchronize()` ends a block that finished
 while the app was away and passes `mayPromptForReflection: false`, with this
 reasoning:
 
@@ -1558,7 +1558,7 @@ stats. What is lost is the sentence, which is the part the log exists for.
 
 ### What the code already knows
 
-`reconcile()` computes `wakeWasPrompt` — whether the gap since the block ended is
+`synchronize()` computes `wakeWasPrompt` — whether the gap since the block ended is
 inside the block's own length — and already uses it to decide auto-start. That is
 the same question this needs: *did somebody come back to this promptly, or did the
 phone sit overnight?* A fourteen-hour gap is nobody being there; two minutes is
@@ -1579,22 +1579,26 @@ Replace with:
 
 ### The part that needs deciding, not assuming
 
-**`pendingReflection` is in memory only.** If the app was terminated rather than
-suspended, there is nothing to wait. Making the prompt survive that means
-persisting it, which is a schema change — a `@Model`, or a field on the session —
-and that is a bigger decision than the threshold. **Two versions of this delta are
-possible and the owner should pick:**
+**~~`pendingReflection` is in memory only. If the app was terminated rather than
+suspended, there is nothing to wait.~~** **Struck 2026-08-28 — this was wrong**,
+and it is the sentence the correction at the top of this delta is about. The taps
+are persisted; `TimerEngine.init` rehydrates them and `synchronize()` derives the
+offer from the rebuilt list, so a relaunch does not lose it. Left visible rather
+than deleted, because it is what the owner was told when they ratified.
+
+**Two versions of this delta were possible and the owner picked:**
 
 - **The small one — chosen.** Offer the prompt on reconciliation when
-  `wakeWasPrompt`. Works whenever the app was suspended, which is the common case.
-  Nothing persisted, no schema change.
-- **The larger one — not taken.** Persist the pending prompt so it survives a
-  relaunch. Costs a migration, and `O2` has only just been answered once.
+  `wakeWasPrompt`. Nothing persisted, no schema change.
+- **The larger one — not taken.** Persist the *published offer* so it survives a
+  relaunch that happens after the block was already reconciled. Costs a migration,
+  and `O2` has only just been answered once.
 
-**What the small version does not cover, stated so nobody is surprised by it:** if
-iOS terminates the app rather than suspending it, the offer is gone and the taps
-keep their empty notes. That is the same limitation `TimerEngineHolder` already
-records for a dismiss from a locked phone.
+**What the small version does not cover** is stated in the correction above, and
+it is narrower than this section first claimed: the offer survives a relaunch,
+because the taps are persisted and the offer is derived from them. What is lost is
+a termination *after* the block has already been reconciled and the offer
+published.
 
 ## D30 — A watch-face complication
 
