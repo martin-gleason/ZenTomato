@@ -8,10 +8,12 @@ agent working on this project was made for the owner and is the owner's; that
 arrangement is recorded in CLAUDE.md, which is a working instruction rather than
 a statement of ownership, and this file is the statement.
 
-It matters because this project licenses two things two different ways: the
-source under GPL-3.0-or-later, and binaries distributed by the copyright holder
-under the MIT License. Only a sole copyright holder can do that. The arrangement
-lasts exactly as long as that remains true.
+It matters because this project pairs its licence with a pledge only a copyright
+holder can make: GPL-3.0-or-later everywhere, plus an App Store distribution
+exception (LICENSE-EXCEPTION.md) committing never to enforce the one conflict
+between that licence and Apple's terms. A pledge over the whole work can only be
+given by someone holding copyright in the whole work. The arrangement lasts
+exactly as long as that remains true.
 
 CONTRIBUTIONS
 
@@ -21,8 +23,8 @@ matter of policy, but because nobody can license work they do not own.
 
 LICENCES
 
-  LICENSE          GPL-3.0-or-later, covering the source
-  LICENSE-APP.md   MIT, covering binaries distributed by the copyright holder
+  LICENSE               GPL-3.0-or-later — the licence, covering everything
+  LICENSE-EXCEPTION.md  The App Store non-enforcement pledge. Not a licence.
 
 THIRD-PARTY MATERIAL
 

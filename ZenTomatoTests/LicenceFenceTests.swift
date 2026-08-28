@@ -3,89 +3,86 @@ import Testing
 
 @testable import ZenTomato
 
-/// The two licences stay two licences.
+/// One licence, one pledge, and neither may quietly become something else.
 ///
-/// **WHAT IS BEING PROTECTED.** ZenPom licenses the **source** under
-/// GPL-3.0-or-later and **binaries distributed by the copyright holder** under
-/// MIT. That is licence-per-channel, and it works only because one person holds
-/// the copyright.
+/// **WHAT IS BEING PROTECTED.** ZenPom is GPL-3.0-or-later everywhere, paired
+/// with an App Store distribution exception — the copyright holder's pledge not
+/// to enforce the GPL's no-added-restrictions clause against Apple's terms. It is
+/// the arrangement the GPL apps actually on the App Store use: Signal, Nextcloud,
+/// Telegram, Element, Bitwarden.
 ///
-/// It is one sentence away from being worthless. *"Dual licensed under GPL-3.0 or
-/// MIT"* is the **disjunctive** form: it offers both licences for the same
-/// artifact, so anyone who wants the source takes MIT and the copyleft protects
-/// nothing.
-///
-/// **The shell check is the real gate** — `scripts/check-licence-wording.sh` runs
-/// in the pre-commit hook and in CI, and it reads the prose. This file holds the
-/// parts a grep cannot: that the files exist, that each says what it is for, and
-/// that the MIT notice reaches the built app, which MIT itself requires.
+/// **The failure this guards is redescription.** The exception is not a second
+/// licence, and the moment prose describes the project as "GPL or something
+/// else", the copyleft is being offered away. `scripts/check-licence-wording.sh`
+/// greps the prose for that shape; this file holds what a grep cannot — that the
+/// files exist, that each says what kind of thing it is, and that the GPL notice
+/// actually travels inside the app, which GPL §4 requires of every conveyed copy.
 @Suite("LicenceFence")
 struct LicenceFenceTests {
-  /// `bothLicencesExistAndSayWhatTheyCover` — a file, not a promise.
-  @Test("bothLicencesExistAndSayWhatTheyCover")
-  func bothLicencesExistAndSayWhatTheyCover() throws {
+  /// `theLicenceAndThePledgeExist` — files, not promises.
+  @Test("theLicenceAndThePledgeExist")
+  func theLicenceAndThePledgeExist() throws {
     let gpl = try Self.read("LICENSE")
     #expect(gpl.contains("GNU GENERAL PUBLIC LICENSE"))
     #expect(gpl.contains("Version 3"))
 
-    let app = try Self.read("LICENSE-APP.md")
-    #expect(app.contains("MIT License"))
+    let exception = try Self.read("LICENSE-EXCEPTION.md")
+    // Whitespace-normalised before matching: the pledge spans a hard-wrapped
+    // line, and a fence that broke when a paragraph was re-wrapped would be
+    // deleted rather than obeyed.
+    let flattened = exception.components(separatedBy: .whitespacesAndNewlines)
+      .filter { $0.isEmpty == false }.joined(separator: " ")
     #expect(
-      app.contains("Permission is hereby granted, free of charge"),
-      "LICENSE-APP.md names MIT without reproducing it, which grants nothing.")
+      flattened.contains("commits not to pursue any licence violation that results"),
+      "The exception no longer contains the pledge, which is its entire content.")
     #expect(
-      app.contains("does not cover the source"),
-      "LICENSE-APP.md must say what it does NOT cover; that limit is the whole arrangement.")
+      exception.contains("solely"),
+      "The pledge must stay scoped to the one conflict; without 'solely' it reads as blanket non-enforcement.")
   }
 
-  /// `theBinaryLicenceRefusesToCoverTheSource` — the limit, stated in the file.
+  /// `theExceptionSaysWhatItIsNot` — the redescription guard, from inside the file.
   ///
-  /// A reader holding an MIT-licensed binary must not be able to conclude they
-  /// hold MIT rights over the source. The file says so; this keeps it saying so.
-  @Test("theBinaryLicenceRefusesToCoverTheSource")
-  func theBinaryLicenceRefusesToCoverTheSource() throws {
-    let app = try Self.read("LICENSE-APP.md")
-    #expect(app.contains("GPL-3.0-or-later"), "The binary licence never names what governs the source.")
-    #expect(app.lowercased().contains("not a choice between two"))
+  /// Whoever edits the exception must keep the sentence saying it is not a second
+  /// licence and not a choice, because that sentence is what a hurried reader
+  /// needs and what a helpful summariser would cut first.
+  @Test("theExceptionSaysWhatItIsNot")
+  func theExceptionSaysWhatItIsNot() throws {
+    let exception = try Self.read("LICENSE-EXCEPTION.md")
+    #expect(exception.contains("not a second licence"))
+    #expect(exception.contains("does not add a second one"))
   }
 
-  /// `contributionTermsExist` — because without them the arrangement expires.
+  /// `contributionTermsJoinThePledge` — because a pledge over the whole work
+  /// needs every copyright holder in it.
   ///
-  /// Dual licensing survives exactly as long as one person holds all the
-  /// copyright. A merged contribution with no relicensing grant ends it, and
-  /// nothing in the code can prevent that — only a document read beforehand.
-  @Test("contributionTermsExist")
-  func contributionTermsExist() throws {
+  /// A merged contribution whose author never joined the pledge can do what a VLC
+  /// developer did in 2011: object, and be entitled to. The terms exist so that
+  /// conversation happens before the work, not after.
+  @Test("contributionTermsJoinThePledge")
+  func contributionTermsJoinThePledge() throws {
     let contributing = try Self.read("CONTRIBUTING.md")
-    #expect(contributing.lowercased().contains("relicense"))
-    #expect(
-      contributing.contains("You keep your copyright"),
-      "The terms must say what a contributor keeps, not only what they grant.")
+    #expect(contributing.contains("LICENSE-EXCEPTION.md"))
+    #expect(contributing.contains("You keep your copyright"))
 
     let notice = try Self.read("NOTICE")
     #expect(notice.contains("Martin Gleason"))
     #expect(notice.contains("GPL-3.0-or-later"))
-    #expect(notice.contains("MIT"))
   }
 
-  /// `theMitNoticeShipsInsideTheApp` — MIT's one obligation.
+  /// `theGplNoticeShipsInsideTheApp` — §4's obligation, held in code.
   ///
-  /// > The above copyright notice and this permission notice shall be included in
-  /// > all copies or substantial portions of the Software.
-  ///
-  /// For an app that means the text is reachable **in the binary**, not merely in
-  /// the repository. Until the About screen lands this is the copy that would
-  /// carry it, so this test asserts the text exists somewhere the app can show —
-  /// and fails loudly if the licence is ever shipped with nothing to display.
-  @Test("theMitNoticeShipsInsideTheApp")
-  func theMitNoticeShipsInsideTheApp() {
+  /// A licence file in the repository satisfies the repository. Every conveyed
+  /// copy of the program owes its recipient the notice, and the app is a
+  /// conveyed copy.
+  @Test("theGplNoticeShipsInsideTheApp")
+  func theGplNoticeShipsInsideTheApp() {
+    #expect(AppLicence.notice.contains("GNU General Public License"))
+    #expect(AppLicence.notice.contains("Martin Gleason"))
+    #expect(AppLicence.notice.contains("version 3"))
     #expect(
-      AppLicence.mit.contains("Permission is hereby granted, free of charge"),
-      "The app cannot show its own licence, which is the one thing MIT requires.")
-    #expect(AppLicence.mit.contains("Martin Gleason"))
-    #expect(
-      AppLicence.sourceNotice.contains("GPL-3.0-or-later"),
-      "The app does not say where its source is or what governs it.")
+      AppLicence.notice.contains("WITHOUT ANY WARRANTY"),
+      "The warranty disclaimer is part of the notice the GPL's appendix specifies.")
+    #expect(AppLicence.appStoreException.contains("pledged"))
     #expect(AppLicence.sourceURL.absoluteString.contains("github.com"))
   }
 

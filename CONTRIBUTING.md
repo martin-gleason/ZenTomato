@@ -10,23 +10,27 @@ unusual enough to be worth a page.**
 
 ## The condition
 
-By opening a pull request you grant Martin Gleason a perpetual, irrevocable,
-worldwide, royalty-free licence to use, modify and **relicense** your
-contribution, including under licences other than the GPL.
+By opening a pull request you agree that your contribution is licensed
+GPL-3.0-or-later **and is covered by the App Store distribution exception in
+[`LICENSE-EXCEPTION.md`](LICENSE-EXCEPTION.md)** — that is, you join the pledge
+not to enforce the one conflict between the GPL and Apple's App Store terms
+against distribution of this app or apps derived from it.
 
-You keep your copyright. You are granting a licence, not signing it away.
+You keep your copyright. You keep every other right the GPL gives you, including
+the right to demand the source. You are joining one narrow non-enforcement
+pledge, nothing more.
 
 ## Why, in plain terms
 
-This project licenses two things two different ways:
+This app ships on the App Store under the GPL, the way Signal, Nextcloud and
+Telegram do: the copyright holder pledges not to enforce the GPL's
+no-added-restrictions clause against Apple's terms. **A pledge over the whole work
+only holds if every copyright holder in the work has made it.**
 
-- the **source**, here, under **GPL-3.0-or-later**
-- **binaries** distributed by the copyright holder, under the **MIT License**
-
-That is only possible while one person holds copyright in all of it. **The moment
-a contribution is merged under the GPL alone, that contributor's copyright is in
-the tree, and the binary can no longer be licensed under anything else without
-their permission.**
+The moment a contribution is merged without it, that contributor can do what a
+VLC developer did in 2011: ask Apple to remove the app, and be entitled to.
+Apple complied then and would comply now — the removal was never Apple auditing
+licences, it was a rights holder objecting.
 
 This is not hypothetical. VLC was removed from the App Store in 2011 after a
 developer who had written much of it — and who had contributed it under the GPL —
