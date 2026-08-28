@@ -3,7 +3,7 @@
 **Retrofit on F2.** Builds `D24`, ratified 2026-08-27 and applied to `SPEC.md`
 line 30.
 
-**PLAN ONLY. Awaiting the owner's yes.**
+**Gated 2026-08-27, built 2026-08-28.** The owner's yes was "build f2c".
 
 ## What the contract now says
 
@@ -92,36 +92,100 @@ not attribution.
 On the device: choose a bell, run a block to its end, hear it. Then turn sound
 **off**, run another, and hear nothing.
 
-## What shipped, and what did not
+## What shipped
 
-**Built, tested, merged-ready:** the catalogue, the seventh stored field, the
-snapshot plumbing, `sound(enabled:choice:)` with sound-off winning, the Settings
-picker, the on-screen credits, and eight tests. `524 tests in 78 suites passed`.
+**Everything the plan asked for, including the sounds.** The catalogue, the
+seventh stored field, the snapshot plumbing, `AlarmSoundDecision` with sound-off
+winning, the Settings picker, the on-screen credits, both bell files, and eleven
+tests.
 
-**Not built: the two sound files.** Freesound will not serve them to anything but
-a browser — a request for either download returns a 17,034-byte HTML login page
-with HTTP 200, which is a page, not audio. The owner must download both and place
-them in `ZenTomato/Resources/`; see `O23`.
+**The plan's `Done when` is now runnable, and has not been run** — see `O24`. The
+bells were trimmed and converted from a waveform; a file that is correct in
+`afinfo` can still be inaudible through a phone speaker or unpleasant at the end
+of a focus block, and that is a judgement only the owner makes.
 
-**So the catalogue is computed from the bundle, not written down.** This is the
-one design decision the plan did not anticipate, and it is the decision this
-feature turns on. `AlertConfiguration.AlertSound.named(_:)` resolves against the
-bundle; when the file is absent there is no error, no warning and no fallback —
-the alarm simply makes no noise. Shipping a picker offering two sounds that are
-not there would have reintroduced the exact defect `D24` was ratified to fix,
-through the fix itself.
+### The decision the plan did not anticipate
 
-`AlertSound.playable` is therefore `allCases.filter(\.isPlayable)`, and an
-unplayable sound is unreachable from every direction: not offered, not stored,
-not scheduled. Today that leaves one entry, so the picker and its credits are
-hidden — a control with one option does nothing, and a credits heading over an
-empty list claims something that is not true. **Adding the two files turns all of
-it on with no code change**, which is also what makes `O23` a genuine hand-off
-rather than a to-do list.
+`AlertConfiguration.AlertSound.named(_:)` resolves against the bundle, and when
+the file is absent there is no error, no warning and no fallback — the alarm
+simply makes no noise. Shipping a picker that offers a sound the target does not
+contain would reintroduce the exact defect `D24` was ratified to fix, through the
+fix itself.
 
-**Would this be written the same way if the files were never coming?** Yes — that
-is the `D16` test, and it passes here for a reason that has nothing to do with the
-files. A resource that fails to copy into a target is the third silent-install
-failure this project has had (`project.yml` records the other two). Deriving the
-catalogue from the bundle means the next one shrinks a picker instead of silencing
-an alarm.
+So `AlertSound.playable` is computed from the bundle rather than written down, and
+an unplayable sound is unreachable from every direction: not offered, not stored,
+not scheduled, and never credited on screen. **Would this be written the same way
+if every sound were always present?** Yes — that is `D16`'s test, and it passes
+for a reason unrelated to today: a resource failing to reach a target is the third
+silent-install failure this project has had, and `project.yml` records the other
+two. Deriving the catalogue from the bundle means the next one shrinks a picker
+instead of silencing an alarm.
+
+### What the adversarial review changed
+
+The reviewer returned **DO NOT MERGE** on the first pass. Six blocking findings,
+all fixed here:
+
+- **`D25` cited four times where `D24` was meant.** `D25` is music during a break,
+  which shipped as `F4f`. The attribution ruling is `D24`'s. A comment naming the
+  wrong ratification is a corrupted audit trail in a project amended only by
+  numbered deltas.
+- **The precedence rule had no test and could not have one.** `sound(enabled:choice:)`
+  was `private static` and returned a framework type that is not usefully
+  comparable, so the rule the plan called *"most likely to be got backwards"* was
+  held by a comment. It is now `AlarmSoundDecision.decide`, and
+  `AlarmSoundDecisionTests` asserts it exhaustively over the catalogue.
+- **The attribution fence compared two `switch` statements in one file.** `D24`
+  says *every bundled sound file*, so it now enumerates `ZenTomato/Resources` and
+  names `Silence.caf` as the one file we made ourselves. The old version could not
+  have seen a sound added to the target and never credited.
+- **The bell files were already in the tree.** Untracked, at the repository root,
+  since 2026-08-27. `O23` said the owner had to supply them; the owner already
+  had. See `docs/sounds/candidates.md` for the trim, and `O23` for the correction.
+- **`docs/chores/C18.md` still described an MIT grant** that commit `870dba8`
+  removed — a title, a table row and three task rows, live on `main`, that would
+  have put MIT copy in the About screen. Corrected, and `O25` records the
+  structural fix.
+- **The evidence was a bare string.** Replaced below.
+
+Two of its non-blocking findings were also worth taking: `PolishFenceTests` now
+asks `Schema` instead of grepping a file — F2c had shown that a property can be
+moved out of a regex's reach — and `AlertSound.playable` is a `static let`, since
+`isPlayable` was doing a filesystem lookup on the main actor on every evaluation
+of the settings screen's `body`.
+
+## Evidence
+
+`make ci` — lint, the Todoist allowlist, the secret scan, both licence checks, the
+register check, the shell tests, the full suite, and a Release compile:
+
+```
+$ make ci
+check-lint.sh: OK — no lint violations.
+check-todoist-writes.sh: OK — no Todoist endpoint outside the allowlist.
+check-secrets.sh: OK — no credential found in the tree.
+check-licence-wording.sh: OK — no disjunctive licence wording.
+check-open-register.sh: OK — the register renders as tables.
+run-script-tests.sh: 14 passed, 0 failed
+✔ Test run with 527 tests in 79 suites passed after 4.521 seconds.
+check-release-build.sh: OK — Release compiles with no warnings of ours.
+```
+
+**The three licence tests were shown to fail before they passed.** A guard that
+has never refused anything is not known to work, and this one demonstrably was
+not — the per-channel phrase sat in `C18.md`'s own title for a day while the check
+reported OK every time. It could not be tested at all, because it always read its
+own repository; `LICENCE_CHECK_ROOT` is the seam that makes it testable, and the
+first run of the new cases was `11 passed, 3 failed`.
+
+**The bells reach the bundle**, checked in the product rather than in
+`project.yml` — the failure mode `C18-T5` names:
+
+```
+$ find DerivedData -name "*.caf" -path "*ZenTomato.app*"
+Silence.caf
+SmallBell.caf
+StruckBell.caf
+```
+
+**Not evidence, and not claimed as any:** nothing here has been heard. `O24`.

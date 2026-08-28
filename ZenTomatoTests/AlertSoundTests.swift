@@ -4,8 +4,13 @@ import Testing
 
 @testable import ZenTomato
 
-/// The sound catalogue, and the two promises made when `D24` and `D25` were
-/// ratified: an upgrade changes nothing, and every borrowed sound is credited.
+/// The sound catalogue, and the two promises `D24` made: an upgrade changes
+/// nothing, and every borrowed sound is credited.
+///
+/// **Both are `D24`. `D25` is music during a break** — a different delta that
+/// shipped as `F4f`. An earlier draft of this suite cited it here and in three
+/// other places; a comment citing the wrong ratification is a corrupted audit
+/// trail in a project whose contract is amended only by numbered deltas.
 @Suite("AlertSound")
 struct AlertSoundTests {
   // MARK: The upgrade promise
@@ -106,62 +111,122 @@ struct AlertSoundTests {
 
   // MARK: The attribution promise
 
-  /// **Every sound that is not ours carries a credit, and every credit points at
-  /// a real sound.** Asserted in both directions on purpose.
+  /// **Every sound file this app ships is accounted for, and every credit names a
+  /// file that is really there.** Asserted against the directory, not against the
+  /// source file the credits are written in.
   ///
-  /// One direction alone is a test that passes while the promise is broken: check
-  /// only that credits are well-formed and a new sound may ship with none; check
-  /// only that sounds have credits and a credit may name a file nobody ships.
-  /// The owner's condition for ratifying `D25` was "we must attribute with a link
-  /// to each alarm sound", and that is a statement about the pairing.
-  @Test("everyBorrowedSoundIsCreditedAndEveryCreditIsRealBothWays")
-  func everyBorrowedSoundIsCreditedAndEveryCreditIsRealBothWays() throws {
-    for sound in AlertSound.allCases {
-      // Forwards: a sound that ships a file is a sound somebody else made.
-      if sound.fileName != nil {
-        let attribution = try #require(
-          sound.attribution, "\(sound.rawValue) ships a sound file with no credit.")
-        #expect(attribution.author.isEmpty == false)
-        #expect(attribution.licence.isEmpty == false)
-        #expect(
-          attribution.source.hasPrefix("https://"),
-          "\(sound.rawValue)'s credit must be a link somebody can follow.")
-        #expect(URL(string: attribution.source) != nil)
-      }
-      // Backwards: a credit that names nothing is a credit for a sound we do not
-      // actually play, which is worse than none — it says we borrowed something
-      // we did not.
-      if sound.attribution != nil {
-        #expect(
-          sound.fileName != nil,
-          "\(sound.rawValue) carries a credit but ships no sound file.")
-      }
+  /// `D24`: *"every bundled sound file has exactly one attribution entry … the
+  /// counts match in both directions — a sound with no credit fails, and a credit
+  /// with no sound fails."* An earlier version of this test compared
+  /// `AlertSound.fileName` with `AlertSound.attribution` — two `switch`
+  /// statements in one file, which any edit touches together. It could not see a
+  /// sound file added to the target and never listed, which is exactly how
+  /// attribution rots, and it passed while the tree held two credits for files
+  /// that did not exist.
+  ///
+  /// So it reads `ZenTomato/Resources` from the source tree via `#filePath`, the
+  /// way `StatsMarkdownGoldenTests` reads its golden and `LaunchBackgroundTests`
+  /// reads the launch colour. The directory is the thing that ships; a list is
+  /// just a claim about it.
+  @Test("everyShippedSoundFileIsAccountedForAndEveryCreditIsReal")
+  func everyShippedSoundFileIsAccountedForAndEveryCreditIsReal() throws {
+    let files = try Self.shippedSoundFileNames()
+    #expect(files.isEmpty == false, "No sound files found at all — the fence is reading the wrong directory.")
+
+    // Forwards: every file in the directory is either an AlertSound with a
+    // credit, or one of the files below that are ours and have nobody to credit.
+    for file in files where Self.soundsWeMadeOurselves.contains(file) == false {
+      let sound = try #require(
+        AlertSound.allCases.first { $0.fileName == file },
+        """
+        \(file) ships in the app and is not in the AlertSound catalogue. \
+        Either credit it, or add it to soundsWeMadeOurselves with a reason.
+        """)
+      let attribution = try #require(
+        sound.attribution, "\(file) ships with no credit.")
+      #expect(attribution.author.isEmpty == false)
+      #expect(attribution.licence.isEmpty == false)
+      #expect(
+        attribution.source.hasPrefix("https://"),
+        "\(file)'s credit must be a link somebody can follow.")
+      #expect(URL(string: attribution.source) != nil)
     }
+
+    // Backwards: a credit that names a file we do not ship is a false statement
+    // about somebody's work — worse than no credit, because it says we used
+    // something we did not.
+    for sound in AlertSound.allCases where sound.attribution != nil {
+      let fileName = try #require(sound.fileName, "\(sound.rawValue) carries a credit but names no file.")
+      #expect(
+        files.contains(fileName),
+        "\(sound.rawValue) credits \(fileName), which is not in ZenTomato/Resources.")
+    }
+
+    // And the counts match, which is the sentence D24 actually wrote. Stated
+    // separately because the two loops above could both pass on an empty set.
+    let credited = AlertSound.allCases.filter { $0.attribution != nil }
+    let borrowedFiles = files.filter { Self.soundsWeMadeOurselves.contains($0) == false }
+    #expect(credited.count == borrowedFiles.count)
   }
 
   /// **The credits a person can actually read, not just the data behind them.**
   ///
-  /// `F2c.md`: *"a list nobody can reach is not attribution."* The fence above
-  /// proves every bundled sound has a well-formed credit; this proves the credit
-  /// reaches the screen — and that the heading does not appear over nothing when
-  /// the app ships no borrowed sound at all.
+  /// `D24`: *"a list nobody can reach is not attribution, so if About is not
+  /// ready, the sound picker carries it."* The fence above proves every bundled
+  /// sound has a well-formed credit; this proves the credit reaches the screen,
+  /// and that the heading does not stand over an empty list when the app ships
+  /// nothing borrowed.
   @Test("theCreditsOnScreenMatchTheSoundsThatShip")
-  func theCreditsOnScreenMatchTheSoundsThatShip() {
+  func theCreditsOnScreenMatchTheSoundsThatShip() throws {
     let borrowed = AlertSound.playable.filter { $0.attribution != nil }
-    let credits = AlertSound.credits
 
     guard borrowed.isEmpty == false else {
-      #expect(credits == nil, "A credits heading appeared with nothing to credit.")
+      #expect(AlertSound.credits == nil, "A credits heading appeared with nothing to credit.")
       return
     }
 
-    let text = try? #require(credits)
+    let text = try #require(AlertSound.credits)
     for sound in borrowed {
-      #expect(text?.contains(sound.name) == true)
-      #expect(text?.contains(sound.attribution?.author ?? "") == true)
-      #expect(text?.contains(sound.attribution?.source ?? "") == true)
+      let attribution = try #require(sound.attribution)
+      #expect(text.contains(sound.name))
+      #expect(text.contains(attribution.author))
+      #expect(text.contains(attribution.licence))
+      #expect(text.contains(attribution.source), "\(sound.name)'s link is not on screen.")
+    }
+    // Nobody unplayable is credited on screen — that would name an author whose
+    // work this build does not actually play.
+    for sound in AlertSound.allCases where sound.isPlayable == false {
+      #expect(text.contains(sound.name) == false)
     }
   }
+
+  /// The sound files this app ships, read from the source tree.
+  ///
+  /// `#filePath` is this file's own path as compiled, so the repository is two
+  /// directories up. Reading the tree rather than the bundle is deliberate: the
+  /// question is "what did we commit and did we credit it", which a reviewer can
+  /// check against the same directory in a pull request.
+  private static func shippedSoundFileNames() throws -> Set<String> {
+    let resources = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()      // ZenTomatoTests
+      .deletingLastPathComponent()      // the repository
+      .appending(path: "ZenTomato")
+      .appending(path: "Resources")
+
+    let contents = try FileManager.default.contentsOfDirectory(
+      at: resources, includingPropertiesForKeys: nil)
+    return Set(contents.map(\.lastPathComponent).filter { $0.hasSuffix(".caf") })
+  }
+
+  /// Sound files this app made rather than borrowed, and therefore has nobody to
+  /// credit.
+  ///
+  /// **A named list, not a silence in the fence.** `Silence.caf` is half a second
+  /// of digital nothing generated for the sound-off setting; it is not an alert
+  /// sound, is not offered in the picker and belongs to no author. Every other
+  /// file in that directory must be credited, and adding one here is a decision
+  /// somebody has to write down rather than something a test quietly permits.
+  private static let soundsWeMadeOurselves: Set<String> = ["Silence.caf"]
 
   /// The system sound is Apple's, so it is the one case with nothing to credit.
   @Test("theSystemSoundIsNotCreditedToAnybody")

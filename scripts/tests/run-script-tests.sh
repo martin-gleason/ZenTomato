@@ -37,6 +37,7 @@ readonly FIXTURES_DIR="${SCRIPT_DIR}/fixtures"
 readonly CHECK_TODOIST="${SCRIPTS_DIR}/check-todoist-writes.sh"
 readonly CHECK_REWRITE="${SCRIPTS_DIR}/check-wholesale-rewrite.sh"
 readonly ALLOWLIST="${SCRIPTS_DIR}/todoist-allowed-endpoints.txt"
+readonly CHECK_LICENCE="${SCRIPTS_DIR}/check-licence-wording.sh"
 
 work_dir="$(mktemp -d -- "${TMPDIR:-/tmp}/zentomato-script-tests.XXXXXX")"
 # shellcheck disable=SC2064  # expand work_dir now, while it is still in scope.
@@ -267,6 +268,100 @@ make_rewrite_repo() {
   git -C "$dir" commit -qm "add a plan"
 }
 
+# A repository holding one markdown file, so the licence check has something to
+# read. It runs `git ls-files`, so the file has to be tracked, not merely present.
+make_licence_repo() {
+  local dir="$1"
+  mkdir -p "$dir"
+  git -C "$dir" init --quiet
+  git -C "$dir" config user.email t@example.com
+  git -C "$dir" config user.name test
+  printf 'placeholder\n' > "${dir}/README.md"
+  git -C "$dir" add README.md
+  git -C "$dir" commit --quiet -m init
+}
+
+# Runs the real check inside a throwaway repo whose README says "$1".
+licence_check_on() {
+  local dir="$1" line="$2"
+  printf '%s\n' "$line" > "${dir}/README.md"
+  git -C "$dir" add README.md
+  ( LICENCE_CHECK_ROOT="$dir" "$CHECK_LICENCE" >/dev/null 2>&1 )
+}
+
+# **THE CHECK HAS TO BE SHOWN TO FAIL.** A licence guard that has never refused
+# anything is not known to work — and this one demonstrably was not: the
+# per-channel phrase sat in docs/chores/C18.md's own title for a day while the
+# check reported OK on every run.
+test_licence_check_catches_a_disjunction() {
+  local name="licenceCheckCatchesADisjunction"
+  local dir="${work_dir}/licence-disjunction"
+  make_licence_repo "$dir"
+
+  if licence_check_on "$dir" 'ZenPom is dual licensed under GPL-3.0 or MIT.'; then
+    fail "$name" "the check allowed the one sentence that voids the copyleft"
+    return
+  fi
+  pass "$name"
+}
+
+test_licence_check_catches_a_per_channel_grant() {
+  local name="licenceCheckCatchesAPerChannelGrant"
+  local dir="${work_dir}/licence-channel"
+  make_licence_repo "$dir"
+
+  # Nothing here is disjunctive, which is exactly why the original pattern
+  # could not see it.
+  if licence_check_on "$dir" 'GPL-3.0 for the repository, MIT for the app.'; then
+    fail "$name" "the check allowed a permissive licence named per channel" \
+      "this is the form that was live on main for a day"
+    return
+  fi
+  pass "$name"
+}
+
+test_licence_check_catches_the_binary_phrasing() {
+  local name="licenceCheckCatchesTheBinaryPhrasing"
+  local dir="${work_dir}/licence-binary"
+  make_licence_repo "$dir"
+
+  if licence_check_on "$dir" 'The compiled binary is licensed under MIT.'; then
+    fail "$name" "the check allowed a grant the project does not make"
+    return
+  fi
+  pass "$name"
+}
+
+# And the other half, which is what keeps it alive: a check that fires on the
+# word "commit" gets deleted within a week. `MIT` is a substring of both words
+# below and neither is a licence claim.
+test_licence_check_allows_ordinary_prose() {
+  local name="licenceCheckAllowsOrdinaryProse"
+  local dir="${work_dir}/licence-prose"
+  make_licence_repo "$dir"
+
+  if ! licence_check_on "$dir" 'Run the checks before a commit; the app is permitted to chain a block.'; then
+    fail "$name" "the check fired on ordinary prose" \
+      "MIT is inside commit and permitted — word boundaries are load-bearing"
+    return
+  fi
+  pass "$name"
+}
+
+# The pledge must remain sayable. LICENSE-EXCEPTION.md describes what the app
+# does NOT do, and a fence that cannot tell a mention from a use is switched off.
+test_licence_check_allows_the_pledge() {
+  local name="licenceCheckAllowsThePledge"
+  local dir="${work_dir}/licence-pledge"
+  make_licence_repo "$dir"
+
+  if ! licence_check_on "$dir" 'ZenPom ships solely under GPL-3.0-or-later, with a non-enforcement pledge.'; then
+    fail "$name" "the check refused the arrangement that actually ships"
+    return
+  fi
+  pass "$name"
+}
+
 test_rewrite_hook_refuses_wholesale_replacement() {
   local name="rewriteHookRefusesWholesaleReplacement"
   local dir="${work_dir}/rewrite-refuse"
@@ -344,6 +439,11 @@ test_rewrite_hook_refuses_wholesale_replacement
 test_rewrite_hook_allows_a_declared_rewrite
 test_rewrite_hook_allows_ordinary_editing
 test_rewrite_hook_ignores_a_new_file
+test_licence_check_catches_a_disjunction
+test_licence_check_catches_a_per_channel_grant
+test_licence_check_catches_the_binary_phrasing
+test_licence_check_allows_ordinary_prose
+test_licence_check_allows_the_pledge
 
 echo
 echo "run-script-tests.sh: ${passed} passed, ${failed} failed"

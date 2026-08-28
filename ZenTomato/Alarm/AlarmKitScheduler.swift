@@ -219,20 +219,23 @@ final class AlarmKitScheduler: AlarmScheduling {
     }
   }
 
-  /// Which sound the alarm makes.
+  /// Renders the decision into the two shapes the framework offers.
   ///
-  /// **SOUND OFF BEATS A CHOSEN SOUND, AND THAT ORDER IS THE WHOLE RULE.** The
-  /// switch is a person saying *no noise*; a sound they picked earlier must not
-  /// override it. Written as an early return rather than a nested condition so
-  /// the precedence is legible at a glance and cannot be reversed by a tidy-up.
+  /// **The rule itself is in `AlarmSoundDecision.decide`, not here**, because
+  /// here it could not be tested: this function is unreachable from a test and
+  /// `AlertConfiguration.AlertSound` is not usefully comparable. This is a
+  /// translation with no judgement in it, and every judgement it used to hold is
+  /// now asserted in `AlarmSoundDecisionTests`.
   ///
-  /// `Silence.caf` is still how "off" is expressed, because `AlarmKit` has no
-  /// silent case — the alert sound is the system default or a named bundle file
-  /// and nothing else, so silence has to be a file containing silence.
+  /// `Silence.caf` is how "off" is expressed, because `AlarmKit` has no silent
+  /// case — the alert sound is the system default or a named bundle file and
+  /// nothing else, so silence has to be a file containing silence.
   private static func sound(enabled: Bool, choice: AlertSound) -> AlertConfiguration.AlertSound {
-    guard enabled else { return .named(silentSoundFileName) }
-    guard let fileName = choice.fileName else { return .default }
-    return .named(fileName)
+    switch AlarmSoundDecision.decide(soundEnabled: enabled, choice: choice) {
+    case .silent: .named(silentSoundFileName)
+    case .systemDefault: .default
+    case .bundled(let fileName): .named(fileName)
+    }
   }
 
   /// What iOS itself draws for a block: the title of the alert when the alarm

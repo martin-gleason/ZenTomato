@@ -62,13 +62,29 @@ enum AlertSound: String, CaseIterable, Sendable {
   ///
   /// So the catalogue is not the list of sounds somebody wrote down; it is the
   /// list of sounds this build can play, computed from the bundle. A case whose
-  /// file has not been added yet is not offered, is never stored, and cannot be
-  /// scheduled. The day the file is added it appears in the picker with no code
-  /// change, and if it is ever dropped from the target the picker shrinks rather
-  /// than going quiet.
+  /// file is not in the target is not offered, is never stored, and cannot be
+  /// scheduled — so if one is ever dropped from the target the picker shrinks
+  /// rather than the alarm going quiet.
   ///
   /// The system default is always playable: it is not a file.
-  var isPlayable: Bool {
+  var isPlayable: Bool { Self.playable.contains(self) }
+
+  /// The sounds this build can offer, in catalogue order.
+  ///
+  /// **A `static let`, resolved once per launch, because this is disk I/O.**
+  /// `isPlayable` and `credits` are both read from a SwiftUI `body`, which runs
+  /// on the main actor and re-runs whenever anything on the settings screen
+  /// changes. A `Bundle.url(forResource:)` per evaluation, three times over, is a
+  /// filesystem hit on the actor that also draws the timer — the same class of
+  /// mistake as `A18`, where a property read turned out to be a blocking
+  /// cross-process call. The bundle cannot change while the app is running, so
+  /// once is the correct number of times to ask.
+  ///
+  /// Never `allCases`. See `isPlayable` for why the two differ.
+  static let playable: [AlertSound] = allCases.filter(\.existsInBundle)
+
+  /// The one place the bundle is actually consulted.
+  private var existsInBundle: Bool {
     guard let fileName else { return true }
     let name = (fileName as NSString).deletingPathExtension
     let type = (fileName as NSString).pathExtension
@@ -85,19 +101,14 @@ enum AlertSound: String, CaseIterable, Sendable {
   /// a credit from a false statement: a sound whose file is not in the target is
   /// never played, so naming its author would say we used their work when we did
   /// not. The list therefore appears and disappears with the sounds themselves.
-  static var credits: String? {
+  static let credits: String? = {
     let lines = playable.compactMap { sound -> String? in
       guard let attribution = sound.attribution else { return nil }
       return "\(sound.name) — \(attribution.author), \(attribution.licence)\n\(attribution.source)"
     }
     guard lines.isEmpty == false else { return nil }
     return "Alert sounds\n\n" + lines.joined(separator: "\n\n")
-  }
-
-  /// The sounds this build can offer, in catalogue order.
-  ///
-  /// Never `allCases`. See `isPlayable` for why the two differ.
-  static var playable: [AlertSound] { allCases.filter(\.isPlayable) }
+  }()
 
   /// Who made it and where it came from.
   ///

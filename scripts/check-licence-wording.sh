@@ -35,7 +35,16 @@
 # The licence is named alone. The pledge is described as a pledge.
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+# The repository to read. Overridable ONLY so this check can be shown to fail:
+# `scripts/tests/run-script-tests.sh` points it at throwaway repositories holding
+# one sentence each. Nothing in the build sets it, so every real run reads this
+# repository.
+#
+# **A guard that has never refused anything is not known to work.** This one had
+# not: the per-channel phrase sat in `docs/chores/C18.md`'s own title for a day
+# while the check reported OK on every run, and it could not be tested at all
+# because it always read the same directory.
+cd "${LICENCE_CHECK_ROOT:-$(dirname "$0")/..}"
 
 # THE ALLOWLIST, AND WHY EVERY ENTRY IS A HOLE.
 #
@@ -60,10 +69,45 @@ files=$(git ls-files '*.md' 'LICENSE*' '.claude/**' 2>/dev/null | grep -vE "$all
 # a single line. Case-insensitive, and tolerant of the ways people write GPLv3.
 disjunction='(or|either|\/|,|choice of|your option|whichever)'
 gpl='GPL[- ]?v?3(\.0)?([- ]or[- ]later)?|GNU General Public'
-permissive='MIT|BSD|Apache([- ]2(\.0)?)?|ISC|zlib'
+# WORD BOUNDARIES, BECAUSE `MIT` IS INSIDE `commit` AND `permitted`.
+# Both appear in this repository's prose constantly, and a check that fires on
+# "before a commit" is a check somebody deletes rather than fixes.
+permissive='(^|[^A-Za-z])(MIT|BSD|Apache([- ]2(\.0)?)?|ISC|zlib)([^A-Za-z]|$)'
 pattern="(($gpl)[^.]{0,40}${disjunction}[^.]{0,20}($permissive))|(($permissive)[^.]{0,40}${disjunction}[^.]{0,20}($gpl))"
 
 hits=$(grep -inEH "$pattern" $files 2>/dev/null || true)
+
+# THE SECOND SHAPE, AND THE ONE THAT ACTUALLY GOT THROUGH.
+#
+# The pattern above reads a licence offered as an ALTERNATIVE. It cannot read a
+# licence assigned PER CHANNEL — "GPL for the repo, MIT for the app" — because
+# nothing in that sentence is disjunctive. That form was live on `main` for a day
+# in `docs/chores/C18.md`, whose own title said it, and this check passed on it
+# every time it ran.
+#
+# It is worth naming separately rather than widening the first pattern, because it
+# is a different mistake: the first gives the copyleft away, the second describes
+# a licence the project does not grant. ZenPom ships under ONE licence plus a
+# non-enforcement pledge; a sentence promising MIT to anyone holding the binary
+# is a promise nobody made.
+channel='(app|binary|binaries|build|release|App Store|TestFlight|IPA|bundle)'
+for_channel="($permissive)[^.]{0,20}(for|on|covers?|covering|licen[sc]ed under)[^.]{0,25}(the )?$channel"
+channel_first="$channel[^.]{0,25}(is|are|ships? under|licen[sc]ed under)[^.]{0,20}($permissive)"
+channel_hits=$(grep -inEH "($for_channel)|($channel_first)" $files 2>/dev/null || true)
+
+if [ -n "$channel_hits" ]; then
+  echo "check-licence-wording.sh: FAIL — a permissive licence named per channel."
+  echo
+  echo "$channel_hits" | sed 's/^/  /'
+  echo
+  echo "  ZenPom ships under ONE licence, GPL-3.0-or-later, plus the"
+  echo "  non-enforcement pledge in LICENSE-EXCEPTION.md. Saying a permissive"
+  echo "  licence covers the app or the binary describes a grant that does not"
+  echo "  exist — the pledge is a promise not to sue, not a second licence."
+  echo
+  echo "  This is the form that got past the disjunction check for a day."
+  exit 1
+fi
 
 if [ -n "$hits" ]; then
   echo "check-licence-wording.sh: FAIL — a disjunctive licence phrase."
