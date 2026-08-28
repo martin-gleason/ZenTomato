@@ -133,6 +133,9 @@ jobs:
       - name: Licences are not described as alternatives
         run: make check-licence
 
+      - name: The open-items register renders as tables
+        run: make check-register
+
       - name: Todoist allowlist
         run: make check-todoist
 
