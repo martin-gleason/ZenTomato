@@ -3,10 +3,8 @@
 **Read this before opening a pull request. There is one condition, and it is
 unusual enough to be worth a page.**
 
-> **DRAFT — the owner has not yet ratified these terms.** `O22` is the open
-> decision. Everything below is the agent's proposal for what `C18` needs; it is
-> not in force until the owner says so, and it is a legal instrument rather than a
-> style guide.
+> **In force since 2026-08-27**, ratified by the copyright holder (`O22`). These
+> terms apply to every pull request opened after that date.
 
 ## The condition
 
