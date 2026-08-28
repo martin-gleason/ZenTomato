@@ -57,7 +57,7 @@ straight back. Both now say so.
 
 ## What came back clean
 
-**Scope**, all three passes. Nothing reaches Watch, Mac, CloudKit, widgets, themes
+**Scope**, all five passes. Nothing reaches Watch, Mac, CloudKit, widgets, themes
 or streaks; no Todoist endpoint; no credential; no licence wording.
 
 **`D27`'s lock is one modifier on one `Group`**, and the fence was shown to fail

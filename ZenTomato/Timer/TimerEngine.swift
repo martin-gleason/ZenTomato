@@ -148,7 +148,8 @@ final class TimerEngine {
     return true
   }
 
-  /// Set once, at the end of a work block the app was awake to see end, when
+  /// Set once, at the end of a work block somebody could still be in — the app
+  /// was awake to see it end, or `D29`'s prompt-wake test passed — when
   /// that block had at least one tap. The screen takes it and clears it.
   ///
   /// It is a *presentation signal* and never a record. Nothing about what is
@@ -644,8 +645,9 @@ final class TimerEngine {
     // `handleDismiss()` offers one when the block it dismisses had completed, and
     // `synchronize()` offers one under `D29` when the wake was prompt. What is
     // special about *this* path is only that it needs no such test: the two
-    // guards above already establish that the app was awake and in front of
-    // somebody at the moment the block ended.
+    // guards above already establish that the app was awake at the moment the
+    // block ended — which is not the same as somebody watching, as the note
+    // above says, but it is the strongest evidence this engine can have.
     await end(state: state, completed: true, at: state.endsAt, mayAutoStart: true, mayPromptForReflection: true)
   }
 
@@ -1283,7 +1285,17 @@ extension TimerEngine {
       //
       // The alarm going quiet is the event that makes it untrue, so that is where
       // it is withdrawn — and only that one message, never somebody else's.
-      if id == nil, lastFailure == .alarmSilenceFailed {
+      //
+      // **NOT WHILE A SILENCE IS IN FLIGHT, AND THAT GUARD IS THE WHOLE RACE.**
+      // `silenceAlarm()` writes the message *after* `await handleDismiss()`,
+      // which genuinely suspends — `end()` → `begin()` → `await
+      // alarms.schedule(…)` — releasing the main actor. Without this check the
+      // stream could yield `nil` inside that window, find no message to withdraw,
+      // and then have one written a moment later that nothing ever clears: the
+      // update stream de-duplicates against its last value, so `nil` is not
+      // yielded twice. That is the stuck message this withdrawal was added to
+      // prevent, arriving by timing.
+      if id == nil, isSilencing == false, lastFailure == .alarmSilenceFailed {
         lastFailure = nil
       }
     }
@@ -1374,7 +1386,13 @@ extension TimerEngine {
     // erase a warning about the block that follows — the same defect as the one
     // above, pointing the other way.
     if silenceFailed {
-      lastFailure = .alarmSilenceFailed
+      // **ONLY IF WE STILL BELIEVE IT IS RINGING.** The message says "use the
+      // alert on the Lock Screen", which is advice about a noise. If the alarm
+      // went quiet during the dismiss above — somebody used that very alert —
+      // then writing it now would put a stale instruction on screen with nothing
+      // left to act on, and the stream will not yield `nil` a second time to take
+      // it away.
+      if ringingAlarmID != nil { lastFailure = .alarmSilenceFailed }
     } else if lastFailure == .alarmSilenceFailed {
       lastFailure = nil
     }
