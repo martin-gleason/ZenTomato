@@ -7,9 +7,15 @@ import Testing
 /// `D29` — a locked phone is somebody being there.
 ///
 /// **Its own file because `DistractionReflectionTests` crossed the 400-line
-/// limit** when these two arrived: 433, against a ceiling `.swiftlint.yml` does
-/// not override. (Stated with the number, because this project has written three
-/// wrong sentences about a file crossing that limit — see `SilenceHarness`.)
+/// limit** when these two arrived — against a ceiling `.swiftlint.yml` does not
+/// override.
+///
+/// **No line count is quoted here, and that is deliberate.** The first version of
+/// this sentence said 433; the count is 434, and being off by one is exactly the
+/// kind of checkable claim this branch has now got wrong five times (see
+/// `SilenceHarness` for three of them). A number nobody re-derives is a number
+/// that rots. `make ci` refused the file; that is the fact, and it is
+/// reproducible.
 ///
 /// The pair belongs together anyway: one asserts the sheet is offered to somebody
 /// who was there, the other that it is not offered to somebody who was not, and

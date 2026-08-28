@@ -384,13 +384,21 @@ final class TimerEngine {
     // Ended while the app was suspended or closed. Recorded as completed rather
     // than abandoned: it finished and the alarm fired; the user was not looking.
     cancelAlarm()
-    // No reflection sheet on this path, for the same reason there is no
-    // auto-start on it: arriving here means nobody was present when the block
-    // ended. The taps are already recorded and stay recorded; what is refused
-    // is the *prompt*. A sentence written an hour after the fact is not the
-    // self-knowledge data the spec asks for, and a queue of prompts waiting to
-    // be worked through the next time the app opens is a capture surface by
-    // another name.
+    // **`D29` REVERSED THIS, AND THE OLD REASONING IS KEPT BECAUSE HALF OF IT
+    // STILL HOLDS.**
+    //
+    // This used to refuse the prompt outright: "arriving here means nobody was
+    // present when the block ended… a sentence written an hour after the fact is
+    // not the self-knowledge data the spec asks for." The half that is right is
+    // the hour. The half that was wrong is *nobody was present* — the ordinary
+    // way to run a pomodoro is with the phone locked in a pocket, and the owner
+    // came back from one to three tapped interruptions and no way to write any of
+    // them down.
+    //
+    // So the refusal is now conditional on the gap rather than absolute; see
+    // `mayPromptForReflection` below. A prompt offered two minutes later is the
+    // person who was there all along. One offered fourteen hours later is the
+    // backlog the old comment rightly refused to build.
     // WHETHER THE CYCLE CARRIES ON DEPENDS ON HOW LONG AGO IT ENDED.
     //
     // This path is taken whenever a block finished while the app was not awake —
@@ -623,13 +631,21 @@ final class TimerEngine {
     // Ended at the instant it was due to end, not the instant this ran: the
     // task can wake a moment late and the record must not drift with it.
     //
-    // THIS IS THE ONLY PLACE A REFLECTION SHEET IS EVER OFFERED.
-    // Not because sheets are special, but because this is the only path in the
-    // engine that can establish the app was awake and in front of somebody when
-    // the block ended — the two guards above are exactly that test, and they
-    // are F2's, already written and already tested for the auto-start question.
-    // Every other way a block can end goes through `synchronize()` or
-    // `handleDismiss()`, both of which mean nobody was watching.
+    // THIS IS THE PATH THAT CAN ALWAYS OFFER A REFLECTION SHEET, AND IT IS NO
+    // LONGER THE ONLY ONE.
+    //
+    // It says so here because the sentence that stood in its place — "this is the
+    // only place a reflection sheet is ever offered… every other way a block can
+    // end goes through `synchronize()` or `handleDismiss()`, both of which mean
+    // nobody was watching" — became false twice on one branch, and a comment
+    // asserting an exclusivity the engine does not have is one a later editor
+    // will build on.
+    //
+    // `handleDismiss()` offers one when the block it dismisses had completed, and
+    // `synchronize()` offers one under `D29` when the wake was prompt. What is
+    // special about *this* path is only that it needs no such test: the two
+    // guards above already establish that the app was awake and in front of
+    // somebody at the moment the block ended.
     await end(state: state, completed: true, at: state.endsAt, mayAutoStart: true, mayPromptForReflection: true)
   }
 
@@ -690,7 +706,10 @@ final class TimerEngine {
   ///   - instant: the moment to record it as having ended.
   ///   - mayAutoStart: whether the next block may begin by itself.
   ///   - mayPromptForReflection: whether the person is here to be asked about
-  ///     their taps. True only from `boundaryReached()`.
+  ///     their taps. Always true from `boundaryReached()`, which knows the app was
+  ///     awake; true from `handleDismiss()` for a block that had completed; and
+  ///     true from `synchronize()` when the wake was prompt — `D29`, which is
+  ///     what a locked phone in a pocket looks like from in here.
   private func end(
     state: TimerState,
     completed: Bool,
@@ -1253,6 +1272,20 @@ extension TimerEngine {
     defer { ringingAlarmID = nil }
     for await id in alarms.alertingUpdates() {
       ringingAlarmID = id
+      // **A COMPLAINT ABOUT SILENCING OUTLIVES THE ALARM IT WAS ABOUT.**
+      //
+      // `.alarmSilenceFailed` says "use the alert on the Lock Screen". If somebody
+      // does exactly that, the alarm stops but nothing clears the message: the
+      // only clears are `start()`, `stop()`, `boundaryReached()` and a completed
+      // `handleDismiss()`, and none of those has to happen next. The screen was
+      // then left telling them to do a thing they had already done, until the
+      // next Start.
+      //
+      // The alarm going quiet is the event that makes it untrue, so that is where
+      // it is withdrawn — and only that one message, never somebody else's.
+      if id == nil, lastFailure == .alarmSilenceFailed {
+        lastFailure = nil
+      }
     }
   }
 
