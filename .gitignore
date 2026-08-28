@@ -171,4 +171,11 @@ DerivedData-release/
 # **Ignored because they were sitting untracked at the repository root**, where
 # one `git add -A` would have put a 16 MB untrimmed WAV into a public repo.
 docs/sounds/sources/
-*.wav
+
+# SCOPED TO THAT DIRECTORY, NOT `*.wav`.
+#
+# An unscoped `*.wav` also swallows `ZenTomato/Resources/`, so a future .wav
+# alert sound would work on the author's machine, be skipped by `git add`, and
+# never reach CI or another clone — the silent-install shape project.yml already
+# records three instances of.
+docs/sounds/sources/*.wav

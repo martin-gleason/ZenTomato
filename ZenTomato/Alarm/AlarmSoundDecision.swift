@@ -34,8 +34,26 @@ enum AlarmSoundDecision: Equatable, Sendable {
   /// resolves to nothing — see `AlertSound.isPlayable`, where a missing file is
   /// silence rather than a fallback.
   static func decide(soundEnabled: Bool, choice: AlertSound) -> AlarmSoundDecision {
+    decide(soundEnabled: soundEnabled, choice: choice, isPlayable: choice.isPlayable)
+  }
+
+  /// The same rule with the bundle lookup handed in.
+  ///
+  /// **THE SEAM EXISTS BECAUSE THE INTERESTING CASE CANNOT OTHERWISE HAPPEN.**
+  /// Every sound in the catalogue ships a file today, so `AlertSound.playable`
+  /// equals `allCases` and a test written as *"for every unplayable sound…"* runs
+  /// zero times. It passes, and it asserts nothing — which is worse than no test,
+  /// because the suite counts it.
+  ///
+  /// The unplayable path is the one the whole bundle-derived design rests on: a
+  /// file dropped from the target, or a name stored by a build that shipped a
+  /// sound this one does not. It has to be reachable from a test on a day when no
+  /// sound is actually missing.
+  static func decide(
+    soundEnabled: Bool, choice: AlertSound, isPlayable: Bool
+  ) -> AlarmSoundDecision {
     guard soundEnabled else { return .silent }
-    guard choice.isPlayable, let fileName = choice.fileName else { return .systemDefault }
+    guard isPlayable, let fileName = choice.fileName else { return .systemDefault }
     return .bundled(fileName)
   }
 }

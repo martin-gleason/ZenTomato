@@ -277,7 +277,8 @@ make_licence_repo() {
   git -C "$dir" config user.email t@example.com
   git -C "$dir" config user.name test
   printf 'placeholder\n' > "${dir}/README.md"
-  git -C "$dir" add README.md
+  printf 'GNU General Public License\n' > "${dir}/LICENSE"
+  git -C "$dir" add README.md LICENSE
   git -C "$dir" commit --quiet -m init
 }
 
@@ -335,6 +336,25 @@ test_licence_check_catches_the_binary_phrasing() {
 # And the other half, which is what keeps it alive: a check that fires on the
 # word "commit" gets deleted within a week. `MIT` is a substring of both words
 # below and neither is a licence claim.
+# **A CHECK THAT REPORTS OK ON AN EMPTY READ CAN BE SWITCHED OFF BY SUCCEEDING.**
+# Pointed at a directory that is not this repository, it must refuse rather than
+# find nothing and pass. This is the seam's own risk, tested.
+test_licence_check_refuses_an_empty_read() {
+  local name="licenceCheckRefusesAnEmptyRead"
+  local dir="${work_dir}/licence-empty"
+  mkdir -p "$dir"
+  git -C "$dir" init --quiet
+  git -C "$dir" config user.email t@example.com
+  git -C "$dir" config user.name test
+
+  if ( LICENCE_CHECK_ROOT="$dir" "$CHECK_LICENCE" >/dev/null 2>&1 ); then
+    fail "$name" "the check passed on a directory with nothing in it" \
+      "an env var that makes a guard succeed is an env var that disables it"
+    return
+  fi
+  pass "$name"
+}
+
 test_licence_check_allows_ordinary_prose() {
   local name="licenceCheckAllowsOrdinaryProse"
   local dir="${work_dir}/licence-prose"
@@ -442,6 +462,7 @@ test_rewrite_hook_ignores_a_new_file
 test_licence_check_catches_a_disjunction
 test_licence_check_catches_a_per_channel_grant
 test_licence_check_catches_the_binary_phrasing
+test_licence_check_refuses_an_empty_read
 test_licence_check_allows_ordinary_prose
 test_licence_check_allows_the_pledge
 

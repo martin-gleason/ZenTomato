@@ -63,7 +63,28 @@ cd "${LICENCE_CHECK_ROOT:-$(dirname "$0")/..}"
 allow='^(LICENSE|LICENSE-EXCEPTION\.md|docs/chores/C18\.md|\.claude/agents/adversarial-reviewer\.md)$'
 files=$(git ls-files '*.md' 'LICENSE*' '.claude/**' 2>/dev/null | grep -vE "$allow" || true)
 
-[ -z "$files" ] && { echo "check-licence-wording.sh: OK — nothing to read."; exit 0; }
+# **AN EMPTY READ IS A FAILURE, NOT A PASS.**
+#
+# This used to report OK and exit 0 when it found nothing, which meant
+# `LICENCE_CHECK_ROOT=/tmp` — or a broken `cd`, or a repository with no tracked
+# markdown — disabled the check by *succeeding*. A guard whose null result is
+# green is a guard that can be switched off without anybody reading a diff.
+#
+# `LICENSE` is the one file this repository certainly has, so its absence means
+# the root is wrong rather than that there is nothing to check.
+if [ ! -f LICENSE ]; then
+  echo "check-licence-wording.sh: FAIL — no LICENSE at $(pwd)."
+  echo
+  echo "  This check reads a repository, and it is not looking at one. If"
+  echo "  LICENCE_CHECK_ROOT is set, it is set wrong; that variable exists only"
+  echo "  so scripts/tests/run-script-tests.sh can point the check at a fixture."
+  exit 1
+fi
+
+[ -z "$files" ] && {
+  echo "check-licence-wording.sh: FAIL — a LICENSE is here but no tracked markdown is."
+  exit 1
+}
 
 # A GPL name and an MIT name separated by a disjunction, in either order, within
 # a single line. Case-insensitive, and tolerant of the ways people write GPLv3.
