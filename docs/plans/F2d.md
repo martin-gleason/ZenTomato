@@ -156,11 +156,10 @@ Three previews were added with it, including one at `.accessibility5`.
 
 ## Evidence
 
-**Regenerated after the seventh adversarial pass, from that run and no other.**
+**Regenerated after the eighth adversarial pass, from that run and no other.**
 The lines are taken from that log; the `swiftlint` banner and the timing are
 trimmed and `check-release-build` is shown last, so this is a faithful summary
-rather than a verbatim paste — said plainly because an earlier version of this
-sentence claimed to be a paste and was not.
+rather than a verbatim paste.
 
 ```
 $ make ci
@@ -171,8 +170,9 @@ check-licence-wording.sh: OK — no disjunctive licence wording.
 check-open-register.sh: OK — the register renders as tables.
 run-script-tests.sh: 15 passed, 0 failed
 check-release-build.sh: OK — Release compiles with no warnings of ours.
-✔ Test run with 560 tests in 85 suites passed
+✔ Test run with 562 tests in 85 suites passed
 ```
+
 
 
 

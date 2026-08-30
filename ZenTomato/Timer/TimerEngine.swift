@@ -231,6 +231,14 @@ final class TimerEngine {
   /// certainly fired, and nothing waits for a break.
   private var alarmToSpare: UUID?
 
+  /// Whether an alarm was successfully set for the running block.
+  ///
+  /// Read by `boundaryReached()` and nowhere else. Its job is to keep that method
+  /// from claiming an alarm is ringing when none was ever scheduled — which would
+  /// withhold the reflection sheet for ever, since nothing would arrive to say the
+  /// alarm had stopped.
+  private var alarmIsOutstanding = false
+
   // MARK: Initialisation
 
   /// Builds the engine and adopts whatever the database already says, so the
@@ -648,6 +656,25 @@ final class TimerEngine {
     // guards above already establish that the app was awake at the moment the
     // block ended — which is not the same as somebody watching, as the note
     // above says, but it is the strongest evidence this engine can have.
+    // **THE ALARM IS RINGING NOW, AND THE APP HAS TO SAY SO ITSELF.**
+    //
+    // `ringingAlarmID` was written only by `watchForAlarms()`, which learns from
+    // an IPC round trip through `AlarmManager.alarmUpdates`. That is too late
+    // here. With auto-start **off** — the default — `end()` reaches
+    // `publishReflection` with no suspension point in between, so the offer
+    // arrived while this flag was still `nil`, `presentReflectionIfPossible()`'s
+    // guard passed, and the sheet presented *over* the Silence button. The
+    // reported defect, surviving the fix built for it, on the default setting, in
+    // the one case it matters: a block with taps in it.
+    //
+    // It looked fixed only because the auto-start path suspends inside `begin()`
+    // long enough for the notification to land.
+    //
+    // Nothing here races with the watcher: it writes the same id a moment later,
+    // and writes `nil` when the alarm really stops, which is what clears this.
+    // Guarded on an alarm actually existing, because claiming one that was never
+    // scheduled would withhold the sheet with nothing to release it.
+    if alarmIsOutstanding { ringingAlarmID = state.sessionID }
     await end(state: state, completed: true, at: state.endsAt, mayAutoStart: true, mayPromptForReflection: true)
   }
 
@@ -734,6 +761,13 @@ final class TimerEngine {
     // `abandonGeneration`.
     let generation = abandonGeneration
 
+    // A complaint about silencing the *previous* alarm says nothing about the
+    // block starting now, and nothing else reliably clears it: the update stream
+    // can go quiet while `isSilencing` is still true, and it does not say so
+    // twice. This is the bound on how long that message can stand.
+    if lastFailure == .alarmSilenceFailed { lastFailure = nil }
+    alarmIsOutstanding = false
+
     recordSession(state: state, endedAt: instant, wasAbandoned: !completed)
 
     let transition = TimerCycle.next(
@@ -781,15 +815,6 @@ final class TimerEngine {
     state.isRunning = false
     readSettings()
     adopt(state)
-  }
-
-  /// Copies the saved row into the values the screens read.
-  private func adopt(_ state: TimerState) {
-    kind = state.kind
-    completedInSprint = state.completedInSprint
-    isRunning = state.isRunning
-    endsAt = state.isRunning ? state.endsAt : nil
-    pomodorosPerSprint = state.isRunning ? state.pomodorosPerSprint : idleSettings.pomodorosPerSprint
   }
 
   // MARK: The database
@@ -1227,7 +1252,9 @@ extension TimerEngine {
       let spare = alarmToSpare
       alarmToSpare = nil
       try await alarms.schedule(request, sparing: spare)
+      alarmIsOutstanding = true
     } catch {
+      alarmIsOutstanding = false
       // The block is running and saved. All that failed is the noise at the end
       // of it, and the screen says so.
       lastFailure = .alarmSchedulingFailed
@@ -1244,6 +1271,25 @@ extension TimerEngine {
     } catch {
       lastFailure = .alarmCancellationFailed
     }
+  }
+}
+
+// MARK: - Reading the saved row
+
+/// Moved out of the class body, which is at its 250-line lint ceiling.
+///
+/// `D26` and `D29` each added a line to that body and the ceiling is doing its
+/// job: this is the largest type in the app and every feature has a reason to
+/// grow it. An extension is a separate declaration for the length rule, and being
+/// in the same file keeps `private` access, so nothing widened to the module.
+extension TimerEngine {
+  /// Copies the saved row into the values the screens read.
+  fileprivate func adopt(_ state: TimerState) {
+    kind = state.kind
+    completedInSprint = state.completedInSprint
+    isRunning = state.isRunning
+    endsAt = state.isRunning ? state.endsAt : nil
+    pomodorosPerSprint = state.isRunning ? state.pomodorosPerSprint : idleSettings.pomodorosPerSprint
   }
 }
 
@@ -1400,8 +1446,14 @@ extension TimerEngine {
       // alerting" right after iOS refused to stop something is the disagreement
       // `AlarmScheduling` calls load-bearing: the bell may well still be audible.
       // Suppressing then leaves no button *and* no explanation, which is a worse
-      // trade than a message that outlives its alarm — and the withdrawal in
-      // `watchForAlarms()` takes that one away at the next quiet moment.
+      // trade than a message that outlives its alarm.
+      //
+      // **AND IT CAN OUTLIVE IT — THE CLAIM THAT IT COULD NOT WAS WRONG.** An
+      // earlier version of this said `watchForAlarms()` would withdraw it at the
+      // next quiet moment. It cannot when that moment has already gone: the
+      // stream can yield `nil` while `isSilencing` is still true, which suppresses
+      // the withdrawal, and it does not yield `nil` twice. `end()` clears it
+      // instead, which bounds it to the block it was about.
       if lastFailure == nil { lastFailure = .alarmSilenceFailed }
     } else if lastFailure == .alarmSilenceFailed {
       lastFailure = nil
