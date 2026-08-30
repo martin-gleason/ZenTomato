@@ -88,6 +88,9 @@ final class SpyAlarmScheduler: AlarmScheduling {
     if let scheduleError {
       throw scheduleError
     }
+    // Outstanding from now until something cancels it — including across a
+    // "relaunch", which in a test is a second engine over the same stand-in.
+    outstandingAlarmIDs.insert(request.id)
     outstanding = request
   }
 
@@ -180,6 +183,18 @@ final class SpyAlarmScheduler: AlarmScheduling {
   /// When set, `currentAlertingAlarmID()` throws it — the "could not ask" case
   /// that must not be read as "nothing is ringing".
   var alertingReadError: (any Error)?
+
+  /// When set, `hasAlarm` throws it.
+  var hasAlarmError: (any Error)?
+
+  /// Alarms this stand-in believes are outstanding, whether or not they have
+  /// begun alerting. Survives a "relaunch" in a test, the way a real one does.
+  var outstandingAlarmIDs: Set<UUID> = []
+
+  func hasAlarm(id: UUID) throws -> Bool {
+    if let hasAlarmError { throw hasAlarmError }
+    return outstandingAlarmIDs.contains(id)
+  }
 
   func currentAlertingAlarmID() throws -> UUID? {
     if let alertingReadError { throw alertingReadError }

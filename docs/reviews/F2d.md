@@ -3,7 +3,7 @@
 **Branch:** `F2d/silence-the-alarm` · **Plan:** `docs/plans/F2d.md` ·
 **Delta:** `D26`
 
-Eight passes. **DO NOT MERGE** every time.
+Nine passes. **DO NOT MERGE** every time.
 
 **This file has been one pass behind the code twice.** It said "three" until the
 fifth pass caught it, with four and five living only in commit messages; it then
@@ -213,6 +213,28 @@ the block it was about.
 
 **The owner set the merge bar at no code-behaviour defects**, with accuracy
 findings filed as `O35`.
+
+## Pass nine — the fix that did not survive a relaunch
+
+**One code-behaviour defect: pass eight's fix worked in one process and nowhere
+else.**
+
+`alarmIsOutstanding` was a `Bool` in memory. An AlarmKit alarm outlives the
+process that set it — `AlarmKitScheduler.cancelOutstanding` documents exactly
+that, *"this object is brand new and remembers nothing, while the alarm it set
+yesterday is still there"* — and the engine was given the opposite treatment. So
+after the app was killed mid-block and relaunched, there was a live alarm and a
+`false` flag: `boundaryReached()` declined to seed, and the sheet went back to
+covering the Silence button.
+
+**Three times now this branch has shipped a guard that was right on the path it
+was written for and absent on one nobody enumerated.** The flag is rebuilt from
+iOS in `synchronize()`, and the boundary seeds from either that or a direct
+alerting read, since neither alone covers both the relaunch and the
+instant-before-iOS-says-so.
+
+The reviewer reproduced it with a temporary test before I wrote the permanent
+one, which now fails without the fix.
 
 ## Verdict and evidence
 

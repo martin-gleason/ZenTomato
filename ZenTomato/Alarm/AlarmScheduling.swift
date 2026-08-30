@@ -96,6 +96,19 @@ protocol AlarmScheduling: AnyObject {
   /// and the de-duplicating update stream never raised it again.
   func currentAlertingAlarmID() throws -> UUID?
 
+  /// Whether this app has an alarm outstanding for that block — scheduled and
+  /// counting down, or already alerting.
+  ///
+  /// **BECAUSE AN ALARM OUTLIVES THE PROCESS THAT SET IT.** `cancelOutstanding`'s
+  /// note already says so: *"after the app has been closed and reopened this
+  /// object is brand new and remembers nothing, while the alarm it set yesterday
+  /// is still there."* The engine kept a `Bool` instead and got the opposite
+  /// treatment — after a cold relaunch mid-block it believed no alarm existed,
+  /// and the reflection sheet went back to covering the Silence button.
+  ///
+  /// So the question is asked of iOS rather than of memory.
+  func hasAlarm(id: UUID) throws -> Bool
+
   /// A stream of that same answer, one value per change.
   ///
   /// **A stream rather than a poll**, because the moment being drawn is the
