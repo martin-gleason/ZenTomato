@@ -3,7 +3,7 @@
 **Branch:** `F2d/silence-the-alarm` · **Plan:** `docs/plans/F2e.md` ·
 **Deltas:** `D27`, `D28`
 
-Reviewed alongside `F2d` across **ten passes**, every one returning DO NOT MERGE.
+Reviewed alongside `F2d` across **eleven passes**, every one returning DO NOT MERGE.
 (This line said "three" until the fifth caught it, then "five" until the seventh did.) **The branch carries two features,
 which `conventions.md` says it should not** — one feature branch, one feature. It
 was raised in pass three and accepted rather than fixed: splitting a branch whose
@@ -57,7 +57,7 @@ straight back. Both now say so.
 
 ## What came back clean
 
-**Scope**, all ten passes. Nothing reaches Watch, Mac, CloudKit, widgets, themes
+**Scope**, all eleven passes. Nothing reaches Watch, Mac, CloudKit, widgets, themes
 or streaks; no Todoist endpoint; no credential; no licence wording.
 
 **`D27`'s lock is one modifier on one `Group`**, and the fence was shown to fail

@@ -151,7 +151,11 @@ struct AlarmKnownRingingTests {
     await engine.start()
     _ = engine.recordDistraction(.externalInterruption)
     clock.advance(by: 25 * 60 + 30)
-    // Nobody is alerting: the alarm was dismissed from the Lock Screen.
+    // Dismissed from the Lock Screen: not alerting, and no longer outstanding.
+    // Both halves matter — an alarm that is merely quiet may not have been
+    // dismissed at all, and the engine is right to keep offering the button for
+    // one that iOS still holds.
+    alarms.outstandingAlarmIDs.removeAll()
 
     let relaunched = TimerEngine(
       context: ModelContext(harness.container), clock: clock, alarms: alarms)
@@ -192,5 +196,54 @@ struct AlarmKnownRingingTests {
     #expect(
       relaunched.ringingAlarmID != nil,
       "The direct read never fired, so the union's second half is doing nothing.")
+  }
+  /// **A refused read is not silence, on the locked-phone path either.**
+  ///
+  /// The eleventh pass proved this one against the old single `try?` read: iOS
+  /// unable to answer became "nothing is ringing", the sheet published, and the
+  /// alarm sounded behind it. The same collapse `silenceAlarm()` spends three
+  /// paragraphs refusing, on the path that publishes the sheet.
+  @Test("aRefusedReadOnTheLockedPhonePathDoesNotReadAsSilence")
+  func aRefusedReadOnTheLockedPhonePathDoesNotReadAsSilence() async throws {
+    await engine.start()
+    _ = engine.recordDistraction(.externalInterruption)
+    let id = try #require(alarms.outstanding?.id)
+    clock.advance(by: 25 * 60 + 30)
+    alarms.ring(id)
+    // iOS cannot be asked, by either route.
+    alarms.alertingReadError = SpyAlarmScheduler.Failure()
+    alarms.hasAlarmError = SpyAlarmScheduler.Failure()
+
+    let relaunched = TimerEngine(
+      context: ModelContext(harness.container), clock: clock, alarms: alarms)
+    await relaunched.synchronize()
+
+    #expect(relaunched.pendingReflection != nil)
+    #expect(
+      relaunched.ringingAlarmID != nil,
+      "A refused read was taken as silence and the sheet published over a ringing alarm.")
+  }
+
+  /// **The window before iOS reports `.alerting`, on the locked-phone path.**
+  ///
+  /// The alarm is outstanding and its end instant has passed, but AlarmKit has
+  /// not flipped it yet. The old single read saw quiet. This is the same window
+  /// the boundary path's union was built for, which is the whole argument for
+  /// both paths asking one question.
+  @Test("theWindowBeforeAlertingIsCoveredOnTheLockedPhonePath")
+  func theWindowBeforeAlertingIsCoveredOnTheLockedPhonePath() async throws {
+    await engine.start()
+    _ = engine.recordDistraction(.externalInterruption)
+    // Outstanding, end instant just passed, and not yet reported as alerting.
+    clock.advance(by: 25 * 60 + 1)
+
+    let relaunched = TimerEngine(
+      context: ModelContext(harness.container), clock: clock, alarms: alarms)
+    await relaunched.synchronize()
+
+    #expect(relaunched.pendingReflection != nil)
+    #expect(
+      relaunched.ringingAlarmID != nil,
+      "The sheet published in the window before iOS reported the alarm as alerting.")
   }
 }
