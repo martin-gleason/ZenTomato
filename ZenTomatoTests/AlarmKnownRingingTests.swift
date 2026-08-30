@@ -99,7 +99,12 @@ struct AlarmKnownRingingTests {
     await engine.start()
 
     // A second engine over the same store and the same alarm system: a relaunch.
-    let relaunched = TimerEngine(context: context, clock: clock, alarms: alarms)
+    // A **fresh** `ModelContext`, so the second engine reads the block back from
+    // the store rather than being handed the live object the first one mutated.
+    // Sharing `mainContext` made this test pass for a weaker reason than its name
+    // claims.
+    let relaunched = TimerEngine(
+      context: ModelContext(harness.container), clock: clock, alarms: alarms)
     await relaunched.synchronize()
     _ = relaunched.recordDistraction(.internalInterruption)
     clock.advance(by: 25 * 60)
@@ -110,5 +115,82 @@ struct AlarmKnownRingingTests {
     #expect(
       relaunched.ringingAlarmID != nil,
       "After a relaunch the app forgot its own alarm, so the sheet would cover the Silence button.")
+  }
+  /// **The `D29` locked-phone path: the block ended while the phone was in a
+  /// pocket, and the alarm is still going when it comes out.**
+  ///
+  /// `synchronize()`'s already-ended branch offers the reflection sheet when the
+  /// wake was prompt — and offered it over the Silence button, because the seed
+  /// added for the two other paths was not on this one. The fourth repetition of
+  /// the same mistake on this branch, and the one that matters most: this is the
+  /// ordinary way the app is used.
+  @Test("aLockedPhonePathKnowsTheAlarmIsStillRinging")
+  func aLockedPhonePathKnowsTheAlarmIsStillRinging() async throws {
+    await engine.start()
+    _ = engine.recordDistraction(.externalInterruption)
+    let id = try #require(alarms.outstanding?.id)
+
+    // The block ends while nobody is looking, and the alarm is sounding.
+    clock.advance(by: 25 * 60 + 30)
+    alarms.ring(id)
+
+    let relaunched = TimerEngine(
+      context: ModelContext(harness.container), clock: clock, alarms: alarms)
+    await relaunched.synchronize()
+
+    #expect(relaunched.pendingReflection != nil, "D29 offers the prompt on a prompt wake.")
+    #expect(
+      relaunched.ringingAlarmID != nil,
+      "The sheet would be offered over a ringing alarm with no Silence button.")
+  }
+
+  /// And when nothing is ringing by the time the phone is unlocked, the sheet is
+  /// not held back.
+  @Test("aQuietLockedPhonePathDoesNotWithholdTheSheet")
+  func aQuietLockedPhonePathDoesNotWithholdTheSheet() async throws {
+    await engine.start()
+    _ = engine.recordDistraction(.externalInterruption)
+    clock.advance(by: 25 * 60 + 30)
+    // Nobody is alerting: the alarm was dismissed from the Lock Screen.
+
+    let relaunched = TimerEngine(
+      context: ModelContext(harness.container), clock: clock, alarms: alarms)
+    await relaunched.synchronize()
+
+    #expect(relaunched.pendingReflection != nil)
+    #expect(
+      relaunched.ringingAlarmID == nil,
+      "A sheet was withheld for an alarm that had already stopped, with nothing to release it.")
+  }
+
+  /// **The direct-read half of the boundary union, which nothing exercised.**
+  ///
+  /// The tenth pass neutered `alreadyAlerting` and the whole suite stayed green —
+  /// then the first version of *this* test stayed green too, because the flag half
+  /// covers everything in a process that scheduled its own alarm. So the flag is
+  /// deliberately cold here: a relaunch that cannot see the alarm through
+  /// `hasAlarm`, with iOS nevertheless reporting it as alerting. Only the read can
+  /// answer.
+  @Test("theBoundarySeedsFromADirectReadWhenTheFlagIsCold")
+  func theBoundarySeedsFromADirectReadWhenTheFlagIsCold() async throws {
+    await engine.start()
+    let id = try #require(alarms.outstanding?.id)
+
+    // A relaunch whose rebuild finds nothing — the flag will be false.
+    alarms.outstandingAlarmIDs.removeAll()
+    let relaunched = TimerEngine(
+      context: ModelContext(harness.container), clock: clock, alarms: alarms)
+    await relaunched.synchronize()
+    _ = relaunched.recordDistraction(.internalInterruption)
+
+    // iOS says it is alerting anyway.
+    clock.advance(by: 25 * 60)
+    alarms.ring(id)
+
+    await relaunched.boundaryReached()
+
+    #expect(
+      relaunched.ringingAlarmID != nil,
+      "The direct read never fired, so the union's second half is doing nothing.")
   }
 }

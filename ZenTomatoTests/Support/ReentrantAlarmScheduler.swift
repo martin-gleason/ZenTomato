@@ -59,6 +59,11 @@ final class ReentrantAlarmScheduler: AlarmScheduling {
 
   func schedule(_ request: BlockAlarmRequest, sparing: UUID?) async throws {
     scheduledRequests.append(request)
+    // Kept in step with `SpyAlarmScheduler`. The two stand-ins used to answer
+    // `hasAlarm` oppositely for the same sequence — one always `true`, the other
+    // always `false` — which is a difference no test could see and every test
+    // would eventually be surprised by.
+    outstandingAlarmIDs.insert(request.id)
     // Taken and cleared before it runs, so a closure that itself causes another
     // block to start cannot call itself again for ever.
     let hook = duringSchedule
@@ -125,7 +130,10 @@ final class ReentrantAlarmScheduler: AlarmScheduling {
   var hasAlarmError: (any Error)?
 
   /// Alarms this stand-in believes are outstanding, whether or not they have
-  /// begun alerting. Survives a "relaunch" in a test, the way a real one does.
+  /// begun alerting. Survives a "relaunch" in a test, the way a real one does —
+  /// and is **emptied by a cancel and by a stop**, because `hasAlarm` must mean
+  /// *is outstanding* rather than *was ever scheduled*. A stand-in that only ever
+  /// grows cannot fail a test about an alarm being called off.
   var outstandingAlarmIDs: Set<UUID> = []
 
   func hasAlarm(id: UUID) throws -> Bool {

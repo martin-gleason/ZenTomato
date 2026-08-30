@@ -400,6 +400,20 @@ final class TimerEngine {
 
     // Ended while the app was suspended or closed. Recorded as completed rather
     // than abandoned: it finished and the alarm fired; the user was not looking.
+    // **ASKED BEFORE THE CANCEL, NOT AFTER, AND THE ORDER IS THE ANSWER.**
+    //
+    // The question is whether a noise was going when the person came back to the
+    // phone. Reading after `cancelAlarm()` asks a different one — whether the
+    // cancel worked — and this codebase deliberately does not claim to know that:
+    // its own protocol note says `cancel(id:)` is for an alarm counting down and
+    // `stop(id:)` for one alerting, and that conflating them makes a method that
+    // sometimes works. A cancel failure is also swallowed into `lastFailure`
+    // while execution carries on to publish the reflection.
+    //
+    // If the cancel does silence it, the watcher yields `nil` a moment later and
+    // the sheet is released. If it does not, the Silence button is there. Both
+    // are right; reading afterwards is right only in one of them.
+    ringingAlarmID = try? alarms.currentAlertingAlarmID()
     cancelAlarm()
     // **`D29` REVERSED THIS, AND THE OLD REASONING IS KEPT BECAUSE HALF OF IT
     // STILL HOLDS.**
