@@ -383,6 +383,14 @@ final class TimerEngine {
     guard clock.now >= state.endsAt else {
       adopt(state)
       armBoundary()
+      // **REBUILT FROM iOS, NOT CARRIED IN MEMORY.** An AlarmKit alarm outlives
+      // the process that set it, so a fresh launch mid-block has a live alarm and
+      // a `false` flag. `boundaryReached()` would then decline to seed
+      // `ringingAlarmID`, and the reflection sheet would present over the Silence
+      // button — the defect this flag exists to prevent, on the one path the flag
+      // could not see. A throw reads as "no alarm", which is the safe direction:
+      // the alternative withholds the sheet with nothing to release it.
+      alarmIsOutstanding = (try? alarms.hasAlarm(id: state.sessionID)) ?? false
       // Still the same block, possibly after hours away. Its taps are read back
       // from the database rather than assumed to still be in memory, because
       // this is also the path a fresh launch takes.
@@ -674,7 +682,12 @@ final class TimerEngine {
     // and writes `nil` when the alarm really stops, which is what clears this.
     // Guarded on an alarm actually existing, because claiming one that was never
     // scheduled would withhold the sheet with nothing to release it.
-    if alarmIsOutstanding { ringingAlarmID = state.sessionID }
+    // Either source will do, and neither alone is enough. The direct read is the
+    // truth when the alarm has already tipped into `.alerting`; the flag covers
+    // the instant before iOS says so, which is exactly the window this whole
+    // seeding exists for.
+    let alreadyAlerting = (try? alarms.currentAlertingAlarmID()) == state.sessionID
+    if alarmIsOutstanding || alreadyAlerting { ringingAlarmID = state.sessionID }
     await end(state: state, completed: true, at: state.endsAt, mayAutoStart: true, mayPromptForReflection: true)
   }
 

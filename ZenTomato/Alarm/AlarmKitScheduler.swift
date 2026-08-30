@@ -267,6 +267,11 @@ final class AlarmKitScheduler: AlarmScheduling {
     func cancel() { task?.cancel() }
   }
 
+  /// See `AlarmScheduling.hasAlarm`.
+  func hasAlarm(id: UUID) throws -> Bool {
+    try AlarmManager.shared.alarms.contains { $0.id == id }
+  }
+
   /// See `AlarmScheduling.stopAlerting`.
   func stopAlerting(id: UUID) throws {
     try AlarmManager.shared.stop(id: id)

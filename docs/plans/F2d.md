@@ -156,7 +156,7 @@ Three previews were added with it, including one at `.accessibility5`.
 
 ## Evidence
 
-**Regenerated after the eighth adversarial pass, from that run and no other.**
+**Regenerated after the ninth adversarial pass, from that run and no other.**
 The lines are taken from that log; the `swiftlint` banner and the timing are
 trimmed and `check-release-build` is shown last, so this is a faithful summary
 rather than a verbatim paste.
@@ -170,7 +170,7 @@ check-licence-wording.sh: OK — no disjunctive licence wording.
 check-open-register.sh: OK — the register renders as tables.
 run-script-tests.sh: 15 passed, 0 failed
 check-release-build.sh: OK — Release compiles with no warnings of ours.
-✔ Test run with 562 tests in 85 suites passed
+✔ Test run with 563 tests in 86 suites passed
 ```
 
 
@@ -179,7 +179,12 @@ check-release-build.sh: OK — Release compiles with no warnings of ours.
 
 
 
-Twenty-two tests across `SilenceAlarmTests`, `SilenceDismissAgreementTests` and `SilenceControlFenceTests`. **One found a real bug before any device did**:
+
+Four suites now: `SilenceAlarmTests`, `SilenceDismissAgreementTests`,
+`SilenceControlFenceTests` and `AlarmKnownRingingTests`. **No count is quoted
+here** — five separate ones have been wrong on this branch, each corrected in the
+commit that made the next one wrong. The suite names are stable; `make ci` prints
+the number. **One found a real bug before any device did**:
 `handleDismiss()` clears `lastFailure` as its first act — correctly, so a new
 block does not inherit the last one's complaint — which meant a failure to
 silence was being written and then wiped a line later. Somebody would have been
