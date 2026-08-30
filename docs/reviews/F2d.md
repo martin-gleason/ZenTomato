@@ -3,7 +3,7 @@
 **Branch:** `F2d/silence-the-alarm` · **Plan:** `docs/plans/F2d.md` ·
 **Delta:** `D26`
 
-Seven passes. **DO NOT MERGE** every time.
+Eight passes. **DO NOT MERGE** every time.
 
 **This file has been one pass behind the code twice.** It said "three" until the
 fifth pass caught it, with four and five living only in commit messages; it then
@@ -179,6 +179,40 @@ never-run-anything state, where no alarm has ever been scheduled. Deriving from 
 model faithfully does not make the flipped flag producible. It now comes from
 `previewSprintComplete` — a long break that has just ended, which is precisely
 when a sprint's last alarm rings and the timer waits.
+
+## Pass eight — and the one that mattered most
+
+**One code-behaviour defect, and it had survived seven passes because the thing
+guarding it could not see it.**
+
+`presentReflectionIfPossible()` withholds the reflection sheet while an alarm
+rings, so the sheet cannot cover the Silence button. That guard was added in pass
+four and fenced in pass five — by a **source-text grep**, which asserts the guard
+*exists*. It cannot see whether the flag is set in time, and it was not.
+
+`ringingAlarmID` was written only by `watchForAlarms()`, which learns from an IPC
+round trip through `AlarmManager.alarmUpdates`. With auto-start **off** — the
+default — `end()` reaches `publishReflection` with no suspension point in between,
+so the offer arrived first and the sheet presented over the button. **It looked
+fixed only because the auto-start path suspends inside `begin()` long enough for
+the notification to land**, and every test and every reading of the code had gone
+down that path.
+
+`boundaryReached()` now sets the flag itself, guarded on an alarm actually being
+outstanding — claiming one that was never scheduled would withhold the sheet with
+nothing ever arriving to release it. The behavioural test fails without it.
+
+**The lesson this branch keeps teaching, in its clearest form yet:** a fence over
+source text proves a line is present. It proves nothing about when a value
+arrives. Four of this branch's fences are of that kind, and this is the one that
+was load-bearing.
+
+Also fixed: `.alarmSilenceFailed` could strand after all — pass seven repeated a
+mitigation pass six had already disproved. `end()` clears it, which bounds it to
+the block it was about.
+
+**The owner set the merge bar at no code-behaviour defects**, with accuracy
+findings filed as `O35`.
 
 ## Verdict and evidence
 
