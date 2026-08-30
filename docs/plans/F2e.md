@@ -180,7 +180,7 @@ feature built so nobody has to choose a sound blind.
 
 ## Evidence
 
-**Regenerated after the ninth adversarial pass, from that run and no other.**
+**Regenerated after the tenth adversarial pass, from that run and no other.**
 The lines are taken from that log; the `swiftlint` banner and the timing are
 trimmed and `check-release-build` is shown last, so this is a faithful summary
 rather than a verbatim paste.
@@ -194,8 +194,9 @@ check-licence-wording.sh: OK — no disjunctive licence wording.
 check-open-register.sh: OK — the register renders as tables.
 run-script-tests.sh: 15 passed, 0 failed
 check-release-build.sh: OK — Release compiles with no warnings of ours.
-✔ Test run with 563 tests in 86 suites passed
+✔ Test run with 566 tests in 86 suites passed
 ```
+
 
 
 

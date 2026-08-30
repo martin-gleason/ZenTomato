@@ -124,6 +124,13 @@ final class SpyAlarmScheduler: AlarmScheduling {
     }
     outstanding = nil
     isAlerting = false
+    // **THE THREE FACTS ARE KEPT IN STEP.** They used to drift: `isAlerting` was
+    // cleared here while `alertingAlarmIDValue` was left set, so the stand-in
+    // reported "not alerting" and "this id is alerting" at the same time, and
+    // `outstandingAlarmIDs` only ever grew. A stand-in that contradicts itself
+    // cannot fail a test that matters.
+    alertingAlarmIDValue = nil
+    outstandingAlarmIDs.removeAll()
   }
 
   // MARK: An alarm that is ringing right now
@@ -188,7 +195,10 @@ final class SpyAlarmScheduler: AlarmScheduling {
   var hasAlarmError: (any Error)?
 
   /// Alarms this stand-in believes are outstanding, whether or not they have
-  /// begun alerting. Survives a "relaunch" in a test, the way a real one does.
+  /// begun alerting. Survives a "relaunch" in a test, the way a real one does —
+  /// and is **emptied by a cancel and by a stop**, because `hasAlarm` must mean
+  /// *is outstanding* rather than *was ever scheduled*. A stand-in that only ever
+  /// grows cannot fail a test about an alarm being called off.
   var outstandingAlarmIDs: Set<UUID> = []
 
   func hasAlarm(id: UUID) throws -> Bool {
@@ -204,6 +214,7 @@ final class SpyAlarmScheduler: AlarmScheduling {
   func stopAlerting(id: UUID) throws {
     if let stopAlertingError { throw stopAlertingError }
     silenced.append(id)
+    outstandingAlarmIDs.remove(id)
     if alertingAlarmIDValue == id { alertingAlarmIDValue = nil }
   }
 }

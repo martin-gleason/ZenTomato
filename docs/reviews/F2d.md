@@ -3,7 +3,7 @@
 **Branch:** `F2d/silence-the-alarm` · **Plan:** `docs/plans/F2d.md` ·
 **Delta:** `D26`
 
-Nine passes. **DO NOT MERGE** every time.
+Ten passes. **DO NOT MERGE** every time.
 
 **This file has been one pass behind the code twice.** It said "three" until the
 fifth pass caught it, with four and five living only in commit messages; it then
@@ -235,6 +235,35 @@ instant-before-iOS-says-so.
 
 The reviewer reproduced it with a temporary test before I wrote the permanent
 one, which now fails without the fix.
+
+## Pass ten — the fourth path
+
+**One code-behaviour defect: the same one again, on the `D29` locked-phone path.**
+
+`synchronize()`'s *already ended* branch — phone in a pocket, block ends, alarm
+sounds, phone unlocked thirty seconds later — offered the reflection sheet without
+ever seeding `ringingAlarmID`. The seed added in pass eight was on the boundary
+path; the rebuild added in pass nine was on the *not yet ended* branch. This is
+the third branch of the same function and nobody enumerated it.
+
+**Four times now**: a guard right on the path it was written for, silently absent
+on one nobody listed. The fix reads what iOS reports as alerting — **before** the
+`cancelAlarm()` on that path, because the question is whether a noise was going
+when the person came back, not whether the cancel worked. This codebase's own
+protocol note says `cancel(id:)` is for an alarm counting down and `stop(id:)` for
+one alerting; a cancel failure is swallowed and execution publishes the reflection
+anyway.
+
+**The stand-ins were part of why this kept happening.** `SpyAlarmScheduler`
+modelled `hasAlarm` as *was ever scheduled* — nothing removed from the set — while
+`ReentrantAlarmScheduler` never added to it, so the two answered the same sequence
+oppositely. The spy also reported *not alerting* and *this id is alerting* at once
+after a cancel. Three facts, kept in step now.
+
+**And a test that could not fail.** The pass proved `alreadyAlerting` could be
+neutered with the suite still green; the first replacement test stayed green too,
+because in a process that scheduled its own alarm the flag half covers everything.
+It now runs against a deliberately cold flag, and fails without the read.
 
 ## Verdict and evidence
 
