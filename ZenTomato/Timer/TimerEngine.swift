@@ -413,7 +413,7 @@ final class TimerEngine {
     // If the cancel does silence it, the watcher yields `nil` a moment later and
     // the sheet is released. If it does not, the Silence button is there. Both
     // are right; reading afterwards is right only in one of them.
-    ringingAlarmID = try? alarms.currentAlertingAlarmID()
+    ringingAlarmID = alarmIsRinging(for: state) ? state.sessionID : nil
     cancelAlarm()
     // **`D29` REVERSED THIS, AND THE OLD REASONING IS KEPT BECAUSE HALF OF IT
     // STILL HOLDS.**
@@ -696,12 +696,7 @@ final class TimerEngine {
     // and writes `nil` when the alarm really stops, which is what clears this.
     // Guarded on an alarm actually existing, because claiming one that was never
     // scheduled would withhold the sheet with nothing to release it.
-    // Either source will do, and neither alone is enough. The direct read is the
-    // truth when the alarm has already tipped into `.alerting`; the flag covers
-    // the instant before iOS says so, which is exactly the window this whole
-    // seeding exists for.
-    let alreadyAlerting = (try? alarms.currentAlertingAlarmID()) == state.sessionID
-    if alarmIsOutstanding || alreadyAlerting { ringingAlarmID = state.sessionID }
+    if alarmIsRinging(for: state) { ringingAlarmID = state.sessionID }
     await end(state: state, completed: true, at: state.endsAt, mayAutoStart: true, mayPromptForReflection: true)
   }
 
@@ -1317,6 +1312,59 @@ extension TimerEngine {
     isRunning = state.isRunning
     endsAt = state.isRunning ? state.endsAt : nil
     pomodorosPerSprint = state.isRunning ? state.pomodorosPerSprint : idleSettings.pomodorosPerSprint
+  }
+}
+
+// MARK: - Is an alarm ringing
+
+/// Kept out of the class body, which is at its 250-line lint ceiling.
+extension TimerEngine {
+  /// **THE ONE ANSWER TO "IS AN ALARM OF OURS RINGING FOR THIS BLOCK".**
+  ///
+  /// Four review passes found the same defect — the reflection sheet presenting
+  /// over the Silence button — on four different paths, because three places each
+  /// answered this question their own way and one of them was always weaker. The
+  /// set of places a reflection can be published is closed at three, and this is
+  /// what all of them now ask.
+  ///
+  /// Three sources, because no one of them is enough:
+  ///
+  /// - **What iOS says is alerting.** The truth once the alarm has tipped over,
+  ///   and useless in the instant before it does.
+  /// - **`alarmIsOutstanding`.** Covers that instant, and is cold in a process
+  ///   that did not schedule the alarm.
+  /// - **`hasAlarm`.** Covers the cold process, since an AlarmKit alarm outlives
+  ///   the one that set it.
+  ///
+  /// **A REFUSED READ IS NOT SILENCE.** `try?` on either query would turn "the
+  /// alarm subsystem is unwell" into "nothing is ringing" — the collapse
+  /// `AlarmScheduling` calls load-bearing and `silenceAlarm()` refuses by name.
+  /// When nothing can be asked, what is already known is kept rather than
+  /// overwritten with a guess.
+  fileprivate func alarmIsRinging(for state: TimerState) -> Bool {
+    if alarmIsOutstanding { return true }
+
+    // **`do`/`catch`, NOT `try?`, AND THE REASON IS SUBTLE ENOUGH TO HAVE CAUGHT
+    // THIS ONCE ALREADY.** `try?` on a call returning `UUID?` flattens: a
+    // successful answer of *nothing is alerting* and a refusal to answer are both
+    // `nil`, and the whole point here is that those two are different.
+    var answered = false
+    do {
+      if try alarms.currentAlertingAlarmID() == state.sessionID { return true }
+      answered = true
+    } catch {}
+    do {
+      if try alarms.hasAlarm(id: state.sessionID) { return true }
+      answered = true
+    } catch {}
+
+    // **NOTHING COULD BE ASKED, SO ASSUME IT IS RINGING.** An alarm was set for a
+    // block that has just ended; the prior is strongly that it is sounding. The
+    // two mistakes are not the same size. Wrongly withholding the sheet shows a
+    // Silence button that ends up dismissing itself — one tap, and the sheet
+    // arrives. Wrongly publishing puts the sheet over the only control that stops
+    // a noise, which is the defect four review passes were spent on.
+    return answered ? false : true
   }
 }
 

@@ -88,8 +88,12 @@ final class SpyAlarmScheduler: AlarmScheduling {
     if let scheduleError {
       throw scheduleError
     }
-    // Outstanding from now until something cancels it — including across a
-    // "relaunch", which in a test is a second engine over the same stand-in.
+    // **CANCEL-BEFORE-SCHEDULE, LIKE THE REAL ONE.** `AlarmKitScheduler.schedule`
+    // calls `cancelOutstanding` first, so only the new alarm and the spared one
+    // survive. This stand-in used to accumulate every alarm a run ever scheduled,
+    // which made `hasAlarm` mean *was ever scheduled* — and a stand-in that only
+    // grows cannot fail a test about an alarm being called off.
+    outstandingAlarmIDs = outstandingAlarmIDs.filter { $0 == sparing }
     outstandingAlarmIDs.insert(request.id)
     outstanding = request
   }
@@ -124,12 +128,15 @@ final class SpyAlarmScheduler: AlarmScheduling {
     }
     outstanding = nil
     isAlerting = false
-    // **THE THREE FACTS ARE KEPT IN STEP.** They used to drift: `isAlerting` was
-    // cleared here while `alertingAlarmIDValue` was left set, so the stand-in
-    // reported "not alerting" and "this id is alerting" at the same time, and
-    // `outstandingAlarmIDs` only ever grew. A stand-in that contradicts itself
-    // cannot fail a test that matters.
-    alertingAlarmIDValue = nil
+    // **A CANCEL DOES NOT SILENCE AN ALERTING ALARM, AND THIS STAND-IN MUST NOT
+    // PRETEND IT DOES.** `AlarmScheduling.stopAlerting`'s own note says
+    // `cancel(id:)` is for an alarm counting down and `stop(id:)` for one already
+    // alerting, and refuses to claim the first does the second. A stand-in more
+    // generous than iOS makes every test that relies on "the cancel released it"
+    // pass for a reason the device will not honour.
+    //
+    // So the outstanding set is emptied — the alarm is called off — and
+    // `alertingAlarmIDValue` is left exactly as it was.
     outstandingAlarmIDs.removeAll()
   }
 

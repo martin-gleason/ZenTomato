@@ -3,7 +3,7 @@
 **Branch:** `F2d/silence-the-alarm` · **Plan:** `docs/plans/F2d.md` ·
 **Delta:** `D26`
 
-Ten passes. **DO NOT MERGE** every time.
+Eleven passes. **DO NOT MERGE** every time.
 
 **This file has been one pass behind the code twice.** It said "three" until the
 fifth pass caught it, with four and five living only in commit messages; it then
@@ -264,6 +264,46 @@ after a cancel. Three facts, kept in step now.
 neutered with the suite still green; the first replacement test stayed green too,
 because in a process that scheduled its own alarm the flag half covers everything.
 It now runs against a deliberately cold flag, and fails without the read.
+
+## Pass eleven — the set is closed, and the design changed
+
+**The question this pass was asked was not "find defects" but "enumerate every
+path by which a reflection can be published, and say whether the set is closed."**
+Four passes had each found the same defect on a new path, and patching a fifth
+would have meant the invariant was spread too thin to hold by inspection.
+
+**The set is closed at three.** `pendingReflection` is written in one place;
+`publishReflection` has two call sites, both in `end()`; `end()` has three
+callers — `boundaryReached()`, `handleDismiss()` and `synchronize()`'s
+already-ended branch. There is no fourth.
+
+**So the finding was not a new path but an inconsistency between two of them.**
+The seed added on the locked-phone path was a single `try?` read: it collapsed
+"iOS could not be asked" into "nothing is ringing" — the exact collapse
+`AlarmScheduling` calls load-bearing and `silenceAlarm()` spends three paragraphs
+refusing — and it was not unioned with `hasAlarm`, so it missed the window before
+AlarmKit flips an alarm to `.alerting`. Both reproduced.
+
+**One function now answers the question and all the paths ask it.**
+`alarmIsRinging(for:)` consults the in-memory flag, what iOS reports as alerting,
+and whether iOS still holds the alarm — because no one of the three covers a cold
+process, the pre-`.alerting` instant, and a live one at once. It uses `do`/`catch`
+rather than `try?`, since `try?` on an optional-returning call flattens and makes
+a refusal indistinguishable from a negative answer. **That flattening had already
+caught this code once**, and the first version of this helper repeated it.
+
+When nothing can be asked at all, it assumes ringing. The two mistakes are not the
+same size: wrongly withholding shows a Silence button that dismisses itself in one
+tap, while wrongly publishing puts the sheet over the only control that stops a
+noise.
+
+**The stand-ins were most of why this class kept reaching review instead of a
+test.** `SpyAlarmScheduler.schedule` never cancelled, so `hasAlarm` meant *was
+ever scheduled*; `ReentrantAlarmScheduler.cancelOutstanding` did nothing while its
+`schedule` recorded, so it answered `hasAlarm` `true` for ever; and the spy modelled
+`cancel` as silencing an alerting alarm, which this codebase's own protocol note
+refuses to claim. All three corrected — the spy now cancels-before-schedules like
+the real one, and leaves `alertingAlarmIDValue` alone on a cancel.
 
 ## Verdict and evidence
 

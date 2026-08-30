@@ -76,7 +76,12 @@ final class ReentrantAlarmScheduler: AlarmScheduling {
   }
 
   func cancelOutstanding(sparingAlerting: Bool) throws {
-    // Nothing to cancel: this stand-in never holds an alarm. Cancellation order
+    // **IT DOES HOLD ONE NOW**, since `schedule` records it — the comment below
+    // was true until `hasAlarm` arrived and was left behind, so this stand-in
+    // answered `hasAlarm` `true` for ever while `SpyAlarmScheduler` answered it
+    // correctly. Two stand-ins for one protocol, disagreeing.
+    outstandingAlarmIDs.removeAll()
+    // Cancellation order
     // is `SpyAlarmScheduler`'s subject, not this one's.
   }
 
@@ -149,6 +154,7 @@ final class ReentrantAlarmScheduler: AlarmScheduling {
   func stopAlerting(id: UUID) throws {
     if let stopAlertingError { throw stopAlertingError }
     silenced.append(id)
+    outstandingAlarmIDs.remove(id)
     if alertingAlarmIDValue == id { alertingAlarmIDValue = nil }
   }
 }
