@@ -3,6 +3,7 @@
 iOS Pomodoro timer. Todoist is the task store; Apple Music is the audio; the distraction log is the point. Spec: `docs/specs/SPEC.md` (the contract). Plans: `docs/plans/F<N>.md`, one per feature, written at the gate.
 
 @docs/conventions.md
+@docs/conventions-local.md
 
 ## Non-negotiable
 
