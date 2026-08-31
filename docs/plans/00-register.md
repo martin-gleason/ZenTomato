@@ -9,27 +9,27 @@ Extracted from ZenPom's `OPEN.md`, `00-deltas.md`, `docs/chores/` and plans.
 
 ## Owner items (O)
 
-| ID | Title | P | Status | Mode | TD |
-|---|---|---|---|---|---|
-| O1 | One real day's export, read beside the Rhodia | P0 | open | @? | td:6hPjPhcfpH8Qwqvj |
-| O3 | A full sprint with the screen locked, uninterrupted | P0 | open | @verify | td:6hPjPhm5fjP2GGpC |
-| O4 | Headphones, CarPlay, and an incoming phone call | P0 | closed | @? |  |
-| O5 | A playlist short enough to reach its end, to prove looping | P1 | closed | @? |  |
-| O8 | VoiceOver on hardware | P0 | open | @verify | td:6hPjPhpX9fjRm99C |
-| O9 | The merged stop sheet with taps in it, at AX5 | P1 | open | @? | td:6hPjPhxG7MHrQ8jj |
-| O12 | Three Todoist API facts, against a live token | P1 | open | @verify | td:6hPjPj3MCrjqcvrC |
-| O15 | F7's device check — three wrist taps, phone in another room | P0 | open | @verify | td:6hPjPj6Gg79fqFMj |
-| O20 | No choice of alarm sound (needs a delta — D24 proposed) | P1 | open | @Review | td:6hPjPj968h93gQqC |
-| O23 | Progress bars appear full rather than filling | P1 | open | @verify | td:6hPjPj9hGXXcM34C |
-| O24 | A block heard end-to-end on a chosen bell — and, separately, the dual-licensing report fetchable by SHA | — | closed | — | — |
-| O25 | docs/chores/C18.md needs splitting so it can leave the licence allowlist | P2 | open | @Review | td:6hPjPjFj3JC8GGXC |
-| O29 | The Silence button, on a phone — HALF ANSWERED 2026-08-28 | P0 | open | @verify | td:6hPjPjMCH3QJ3CVj |
-| O30 | The locked settings screen and the sound preview, on a phone | P0 | open | @verify | td:6hPjPjRMRR7H6CWC |
-| O31 | The watch alarm's button says Stop, and ours says Done — PARKED 2026-08-28 | P3 | open | @Review | td:6hPjPjVHpGxqW3Rj |
-| O32 | A watch-face complication does not exist | P1 | open | @Review | td:6hPjPjc6HwRXpcxC |
-| O33 | The watch makes a noise when the phone is told not to | P1 | open | @verify | td:6hPjPjj3VJ8mjvmC |
-| O34 | From the lock screen, slide-to-stop worked | P1 | open | @? | td:6hPjPjqC3rxq24gC |
-| O35 | Documentation accuracy left over from F2d/F2e's eight review passes | P2 | open | @? | td:6hPjPjw7qVxgWPmC |
+| ID | Title | P | Status | Mode | Why | TD |
+|---|---|---|---|---|---|---|
+| O1 | One real day's export, read beside the Rhodia | P0 | open | @? | SPEC.md's Done when for F6, and the only judgement of "readable without translation". The golden file is a for | td:6hPjPhcfpH8Qwqvj |
+| O3 | A full sprint with the screen locked, uninterrupted | P0 | open | @verify | SPEC.md's Done when for F4. Every transition has been seen individually and a 4-pomodoro sprint completed, but | td:6hPjPhm5fjP2GGpC |
+| O4 | Headphones, CarPlay, and an incoming phone call | P0 | closed | @? |  |  |
+| O5 | A playlist short enough to reach its end, to prove looping | P1 | closed | @? |  |  |
+| O8 | VoiceOver on hardware | P0 | open | @verify | The countdown was coarsened to whole minutes to cut announcement spam; whether iOS re-announces at all is runt | td:6hPjPhpX9fjRm99C |
+| O9 | The merged stop sheet with taps in it, at AX5 | P1 | open | @? | The single surface D14 was written for. Three chained sheets on one view, and the switched-off confirm button, | td:6hPjPhxG7MHrQ8jj |
+| O12 | Three Todoist API facts, against a live token | P1 | open | @verify | scripts/check-todoist-facts.sh. Whether an archived project resolves by id, whether sync reports deletions as  | td:6hPjPj3MCrjqcvrC |
+| O15 | F7's device check — three wrist taps, phone in another room | P0 | open | @verify | D2's Done when, and the only thing that can close F7. Then the harder half: taps made genuinely out of range,  | td:6hPjPj6Gg79fqFMj |
+| O20 | No choice of alarm sound (needs a delta — D24 proposed) | P1 | open | @Review | The owner: "the default alarm sucks, and will be quite jarring to folks using an app with Zen in the name." A  | td:6hPjPj968h93gQqC |
+| O23 | Progress bars appear full rather than filling | P1 | open | @verify | Owner's note during sprint 2: "progress bars should fill up, not just appear full." Cosmetic, and not looked a | td:6hPjPj9hGXXcM34C |
+| O24 | A block heard end-to-end on a chosen bell — and, separately, the dual-licensing report fetchable by SHA | — | closed | — |  | — |
+| O25 | docs/chores/C18.md needs splitting so it can leave the licence allowlist | P2 | open | @Review | C18 holds both the superseded MIT design and the arrangement that shipped, so it must quote a phrase the licen | td:6hPjPjFj3JC8GGXC |
+| O29 | The Silence button, on a phone — HALF ANSWERED 2026-08-28 | P0 | open | @verify | App in the foreground: passes. Build 202608281343, the owner's words: "with app open, silence button was amazi | td:6hPjPjMCH3QJ3CVj |
+| O30 | The locked settings screen and the sound preview, on a phone | P0 | open | @verify | F2e's Done when, unrun. Three checks: the customization rows locked during a block with music and Todoist stil | td:6hPjPjRMRR7H6CWC |
+| O31 | The watch alarm's button says Stop, and ours says Done — PARKED 2026-08-28 | P3 | open | @Review | This app sets that label to "Done"; the watch app's own source has no Stop button at all. So watchOS is drawin | td:6hPjPjVHpGxqW3Rj |
+| O32 | A watch-face complication does not exist | P1 | open | @Review | Requested 2026-08-28: "make sure zenpom can be installed as a complication on a ultra watch face." SPEC.md lin | td:6hPjPjc6HwRXpcxC |
+| O33 | The watch makes a noise when the phone is told not to | P1 | open | @verify | Reported 2026-08-28 on build 202608281553: "focus screen on, bell sound OFF: no sound from phone, but the watc | td:6hPjPjj3VJ8mjvmC |
+| O34 | From the lock screen, slide-to-stop worked | P1 | open | @? | Same run. The accompanying note — "but the bell sound was turned on" — is ambiguous between the sound setting  | td:6hPjPjqC3rxq24gC |
+| O35 | Documentation accuracy left over from F2d/F2e's eight review passes | P2 | open | @? | Filed rather than fixed, at the owner's explicit direction: the merge bar for that branch was no code-behaviou | td:6hPjPjw7qVxgWPmC |
 
 ## Decisions (D)
 
@@ -42,19 +42,19 @@ Extracted from ZenPom's `OPEN.md`, `00-deltas.md`, `docs/chores/` and plans.
 **No chore in ZenPom carries a status field.** Every row below is `unknown`;
 the dry run surfaces them for the owner to rule on rather than guessing.
 
-| ID | Title | P | Status | TD |
-|---|---|---|---|---|
-| C6 | Correction pass | P1 | closed |  |
-| C8 | Turn on Developer Mode on the watch, and provision it | P1 | closed |  |
-| C9 | TestFlight runbook | P1 | unknown | td:6hPjPm8wMpv6Jc7j |
-| C10 | GPL-3.0 and the App Store: a decision, not a task | P1 | unknown | td:6hPjPm9qhGwvjW7j |
-| C11 | An explicit App ID with MusicKit (O14) | P1 | closed |  |
-| C12 | the configuration that ships is now built by the gate | P1 | unknown | td:6hPjPmJGQhpvJw5C |
-| C14 | three findings from the first real sprint on ZenPom 0.9.0 (2) | P1 | unknown | td:6hPjPmJRwGXHJ9WC |
-| C16 | the app is killed by the watchdog reading whether music is playing | P1 | unknown | td:6hPjPmQWJfv9536C |
-| C18 | GPL-3.0 for the repository, and an App Store exception for the app | P1 | unknown | td:6hPjPmRVXw9jMrPj |
-| C19 | the alarm that could not be silenced | P1 | unknown | td:6hPjPmcWqr8g39Hj |
-| C20 | the alarm that sounded with sound off | P1 | unknown | td:6hPjPmj2fvvqmWqj |
+| ID | Title | P | Status | Why | TD |
+|---|---|---|---|---|---|
+| C6 | Correction pass | P1 | closed |  |  |
+| C8 | Turn on Developer Mode on the watch, and provision it | P1 | closed |  |  |
+| C9 | TestFlight runbook | P1 | unknown | Owner: both. The agent can write the runbook and prepare the build; only the owner can hold the Apple Develope | td:6hPjPm8wMpv6Jc7j |
+| C10 | GPL-3.0 and the App Store: a decision, not a task | P1 | unknown | Owner: the owner. It is a licensing decision about their own work. | td:6hPjPm9qhGwvjW7j |
+| C11 | An explicit App ID with MusicKit (O14) | P1 | closed |  |  |
+| C12 | the configuration that ships is now built by the gate | P1 | unknown | Owner: the agent. No user-visible change. | td:6hPjPmJGQhpvJw5C |
+| C14 | three findings from the first real sprint on ZenPom 0.9.0 (2) | P1 | unknown | Owner: both. The agent triaged; two of the three need the owner's ratification before any code is written. | td:6hPjPmJRwGXHJ9WC |
+| C16 | the app is killed by the watchdog reading whether music is playing | P1 | unknown | Owner: the agent. A defect, not a feature. No delta. | td:6hPjPmQWJfv9536C |
+| C18 | GPL-3.0 for the repository, and an App Store exception for the app | P1 | unknown | Owner: both. The agent drafts the files; only the owner can license their own work. | td:6hPjPmRVXw9jMrPj |
+| C19 | the alarm that could not be silenced | P1 | unknown | Owner: the agent. Diagnosis only. No fix is proposed here, because the mechanism has not been established and  | td:6hPjPmcWqr8g39Hj |
+| C20 | the alarm that sounded with sound off | P1 | unknown | Owner: both. The agent narrows it; one short device test decides it. | td:6hPjPmj2fvvqmWqj |
 
 ## Closed in prose, not by a strike
 
@@ -79,4 +79,4 @@ number.
 - `O24` — 2 closed, 0 open
 - `O25` — 1 closed, 1 open
 
-*Extracted 16 open owner items, 1 proposed deltas, 8 chores — 25 syncable. Emitted 30 rows in all. 3 reused IDs flagged, 2 closed in prose, 0 closed since the last extract, 0 retained with no source row, 25 td: links preserved. Gates: not inferable.*
+*Extracted 16 open owner items, 1 proposed deltas, 8 chores — 25 syncable. 3 reused IDs flagged, 2 closed in prose, 0 closed since the last extract, 0 retained with no source row, 26 td: links preserved. Gates: not inferable.*
