@@ -21,6 +21,7 @@ Extracted from ZenPom's `OPEN.md`, `00-deltas.md`, `docs/chores/` and plans.
 | O15 | F7's device check — three wrist taps, phone in another room | P0 | open | @verify | td:6hPjPj6Gg79fqFMj |
 | O20 | No choice of alarm sound (needs a delta — D24 proposed) | P1 | open | @Review | td:6hPjPj968h93gQqC |
 | O23 | Progress bars appear full rather than filling | P1 | open | @verify | td:6hPjPj9hGXXcM34C |
+| O24 | A block heard end-to-end on a chosen bell — and, separately, the dual-licensing report fetchable by SHA | — | closed | — | — |
 | O25 | docs/chores/C18.md needs splitting so it can leave the licence allowlist | P2 | open | @Review | td:6hPjPjFj3JC8GGXC |
 | O29 | The Silence button, on a phone — HALF ANSWERED 2026-08-28 | P0 | open | @verify | td:6hPjPjMCH3QJ3CVj |
 | O30 | The locked settings screen and the sound preview, on a phone | P0 | open | @verify | td:6hPjPjRMRR7H6CWC |
