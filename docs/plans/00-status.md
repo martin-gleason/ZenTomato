@@ -46,14 +46,17 @@ Status is what the unit's own plan header declares. What has landed in git is de
 
 Counted from the register itself. A register with no rows still gets a line.
 
-| Register | Rows | Open | Closed |
-|---|---|---|---|
-| Decisions (`D`) | 1 | 1 | 0 |
-| Risks (`RR`) | 0 | 0 | 0 |
-| Owner items (`O`) | 19 | 16 | 3 |
-| Hooks (`H`) | 0 | 0 | 0 |
-| Mutations (`M`) | 0 | 0 | 0 |
-| Other (C) (`C`) | 11 | 8 | 3 |
+| Register | Rows | Open | Unknown | Closed |
+|---|---|---|---|---|
+| Decisions (`D`) | 1 | 1 | 0 | 0 |
+| Risks (`RR`) | 0 | 0 | 0 | 0 |
+| Owner items (`O`) | 19 | 16 | 0 | 3 |
+| Hooks (`H`) | 0 | 0 | 0 | 0 |
+| Mutations (`M`) | 0 | 0 | 0 | 0 |
+| Other (C) (`C`) | 11 | 0 | 8 | 3 |
+
+`Unknown` is not a third kind of open. It means the source document said nothing about status, so the page will not guess — the row is a question for the owner (`RR37`).
+
 
 ### By status
 
@@ -63,7 +66,7 @@ Counted from the register itself. A register with no rows still gets a line.
 | `O` | closed | 3 |
 | `O` | open | 16 |
 | `C` | closed | 3 |
-| `C` | open | 8 |
+| `C` | unknown | 8 |
 
 ## Hooks
 
@@ -95,14 +98,14 @@ Every open row in the register. Owner is the row's Owner column where the table 
 | owner | O33 | P1 | open | The watch makes a noise when the phone is told not to |
 | owner | O34 | P1 | open | From the lock screen, slide-to-stop worked |
 | owner | O35 | P2 | open | Documentation accuracy left over from F2d/F2e's eight review passes |
-| unassigned | C9 | P1 | open | TestFlight runbook |
-| unassigned | C10 | P1 | open | GPL-3.0 and the App Store: a decision, not a task |
-| unassigned | C12 | P1 | open | the configuration that ships is now built by the gate |
-| unassigned | C14 | P1 | open | three findings from the first real sprint on ZenPom 0.9.0 (2) |
-| unassigned | C16 | P1 | open | the app is killed by the watchdog reading whether music is playing |
-| unassigned | C18 | P1 | open | GPL-3.0 for the repository, and an App Store exception for the app |
-| unassigned | C19 | P1 | open | the alarm that could not be silenced |
-| unassigned | C20 | P1 | open | the alarm that sounded with sound off |
+| unassigned | C9 | P1 | unknown | TestFlight runbook |
+| unassigned | C10 | P1 | unknown | GPL-3.0 and the App Store: a decision, not a task |
+| unassigned | C12 | P1 | unknown | the configuration that ships is now built by the gate |
+| unassigned | C14 | P1 | unknown | three findings from the first real sprint on ZenPom 0.9.0 (2) |
+| unassigned | C16 | P1 | unknown | the app is killed by the watchdog reading whether music is playing |
+| unassigned | C18 | P1 | unknown | GPL-3.0 for the repository, and an App Store exception for the app |
+| unassigned | C19 | P1 | unknown | the alarm that could not be silenced |
+| unassigned | C20 | P1 | unknown | the alarm that sounded with sound off |
 
 ---
 
