@@ -3,11 +3,9 @@
 
 # Status — code-process-review
 
-Generated from `docs/plans/00-register.md`, the plan files in `docs/plans/`, `docs/specs/SPEC.md`, and git, by `scripts/gen_status.py`. Hand edits are reverted by the next run and fail CI in the meantime (`D13`, `H1`).
+Generated from `docs/plans/00-register.md`, the plan files in `docs/plans/` and `docs/specs/SPEC.md`, by `scripts/gen_status.py`. Hand edits are reverted by the next run and fail CI in the meantime (`D13`, `H1`).
 
-**There is no date on this page.** A generated file that embeds the time it ran can never compare equal to a regeneration of itself, so the freshness check would fail forever and get switched off. Anything read from git here is chosen to be slow-moving for the same reason.
-
-Branch: `F2d/silence-the-alarm`.
+**Nothing on this page comes from git, and there is no date.** A generated file that embeds anything which moves on its own can never compare equal to a regeneration of itself. This page once reported which task IDs had appeared in a commit scope, so the commit that first shipped `F3-T1` was the thing that made `F3-T1` appear — the page was stale by the act of committing it, and one project collected five regeneration commits in a day, none of which carried information (`RR11`). Everything here is derived from the register, so it changes only when the register changes, and regenerating is part of that same edit.
 
 ## The vision sentence
 
@@ -23,45 +21,26 @@ Named, never numbered (`D2`). **No source read here marks a milestone as the cur
 
 ## Features and chores
 
-Status is what the unit's own plan header declares. *In git* is which task IDs have appeared in a commit scope — presence, never a commit count, so this page does not go stale by the act of committing to it.
+Status is what the unit's own plan header declares. What has landed in git is deliberately not here — see the note above.
 
-| ID | Kind | Status | Milestone | P | Owner | Plan | Tasks | In git |
-|---|---|---|---|---|---|---|---|---|
-| C1 | chore | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| C6 | chore | no plan file — seen only in git | — | — | — | — | — | C6-T0, C6-T1, C6-T2, C6-T3, C6-T5, C6-T6 |
-| C8 | chore | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| C8b | chore | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| C9 | chore | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| C9b | chore | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| C10 | chore | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| C11 | chore | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| C12 | chore | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| C13 | chore | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| C14 | chore | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| C15 | chore | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| C16 | chore | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| C18 | chore | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| C19 | chore | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| C20 | chore | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| F1 | feature | — | — | — | — | `docs/plans/F1.md` | 9 planned | F1-T1, F1-T2, F1-T3, F1-T4, F1-T5, F1-T7, F1-T8, F1-T9 |
-| F2 | feature | — | — | — | — | `docs/plans/F2.md` | 6 planned | F2-T1, F2-T2, F2-T3, F2-T4, F2-T5, F2-T6 |
-| F2b | feature | — | — | — | — | `docs/plans/F2b.md` | 0 planned | yes (no task IDs) |
-| F2c | feature | — | — | — | — | `docs/plans/F2c.md` | 0 planned | F2c-T1, F2c-T2, F2c-T3, F2c-T4, F2c-T5 |
-| F2d | feature | — | — | — | — | `docs/plans/F2d.md` | 0 planned | F2d-T1, F2d-T2, F2d-T3 |
-| F2e | feature | — | — | — | — | `docs/plans/F2e.md` | 0 planned | F2e-T1, F2e-T2, F2e-T3, F2e-T4, F2e-T5 |
-| F3 | feature | — | — | — | — | `docs/plans/F3.md` | 5 planned | F3-T1, F3-T2, F3-T3, F3-T4, F3-T5 |
-| F3b | feature | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| F3c | feature | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| F4 | feature | — | — | — | — | `docs/plans/F4.md` | 4 planned | yes (no task IDs) |
-| F4b | feature | no plan file — seen only in git | — | — | — | — | — | yes (no task IDs) |
-| F4c | feature | — | — | — | — | `docs/plans/F4c.md` | 0 planned | yes (no task IDs) |
-| F4d | feature | — | — | — | — | `docs/plans/F4d.md` | 0 planned | yes (no task IDs) |
-| F4e | feature | — | — | — | — | `docs/plans/F4e.md` | 0 planned | F4e-T1, F4e-T2, F4e-T3, F4e-T4, F4e-T5 |
-| F4f | feature | — | — | — | — | `docs/plans/F4f.md` | 0 planned | yes (no task IDs) |
-| F5 | feature | — | — | — | — | `docs/plans/F5.md` | 4 planned | F5-T0, F5-T1, F5-T2 |
-| F6 | feature | — | — | — | — | `docs/plans/F6.md` | 5 planned | F6-T0, F6-T1, F6-T2, F6-T3, F6-T4 |
-| F6b | feature | — | — | — | — | `docs/plans/F6b.md` | 7 planned | F6b-T0, F6b-T1, F6b-T2, F6b-T3, F6b-T4, F6b-T5, F6b-T6 |
-| F7 | feature | — | — | — | — | `docs/plans/F7.md` | 5 planned | F7-T1, F7-T2, F7-T3, F7-T4, F7-T5 |
+| ID | Kind | Status | Milestone | P | Owner | Plan | Tasks |
+|---|---|---|---|---|---|---|---|
+| F1 | feature | — | — | — | — | `docs/plans/F1.md` | 9 planned |
+| F2 | feature | — | — | — | — | `docs/plans/F2.md` | 6 planned |
+| F2b | feature | — | — | — | — | `docs/plans/F2b.md` | 0 planned |
+| F2c | feature | — | — | — | — | `docs/plans/F2c.md` | 0 planned |
+| F2d | feature | — | — | — | — | `docs/plans/F2d.md` | 0 planned |
+| F2e | feature | — | — | — | — | `docs/plans/F2e.md` | 0 planned |
+| F3 | feature | — | — | — | — | `docs/plans/F3.md` | 5 planned |
+| F4 | feature | — | — | — | — | `docs/plans/F4.md` | 4 planned |
+| F4c | feature | — | — | — | — | `docs/plans/F4c.md` | 0 planned |
+| F4d | feature | — | — | — | — | `docs/plans/F4d.md` | 0 planned |
+| F4e | feature | — | — | — | — | `docs/plans/F4e.md` | 0 planned |
+| F4f | feature | — | — | — | — | `docs/plans/F4f.md` | 0 planned |
+| F5 | feature | — | — | — | — | `docs/plans/F5.md` | 4 planned |
+| F6 | feature | — | — | — | — | `docs/plans/F6.md` | 5 planned |
+| F6b | feature | — | — | — | — | `docs/plans/F6b.md` | 7 planned |
+| F7 | feature | — | — | — | — | `docs/plans/F7.md` | 5 planned |
 
 ## Registers
 
