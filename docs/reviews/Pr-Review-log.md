@@ -39,3 +39,26 @@ Fable research was a good call as it saved a lot of extra work.
 
 ## what i'd do differently:
 Work with a real software person to discuss licensees. 
+
+#[ PR-33](https://github.com/martin-gleason/ZenTomato/pull/33)
+
+## Description:
+A catch up pr containing clarification and commits that were not captured previously. this includes work that was done that should have been approved.
+
+## What I learned
+I ran the turing review on this project, and I learned this seems to be working to keep the project on track.
+
+## what I would do differently
+More regular reviews.
+
+# [PR-34](https://github.com/martin-gleason/ZenTomato/pull/34)
+
+## Description
+This feature unblocks the fence around the work -- the limitations put in place when I was supposed to be studying. This also fixed items brought about by theturing review.
+
+## What I would do differently:
+If the education dial was turned up, I would do a lot of this work on my own.
+
+## what I learned
+The turing review is working.
+
