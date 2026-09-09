@@ -1,247 +1,206 @@
-# zenpom — v1.5 Spec (DRAFT for ratification)
+# zenpom — v1.5 Spec
 
-**Status:** DRAFT. The agent proposes; Marty ratifies. Until ratified, nothing here may be built.
+**Status:** DRAFT for ratification. The agent proposes; Marty ratifies.
 **Baseline:** `docs/specs/SPEC.md` (v0.1) remains the contract for everything it covers. This file
 adds to it and never edits it. Where the two disagree, v0.1 wins until a `D<n>` says otherwise.
-**Source:** `docs/plans/parked.md`, which holds the decisions this milestone is assembled from.
-**Supersedes:** the v1.1 / v1.5 split in `parked.md`. v1.1 is absorbed (owner, 2026-09-09).
+**Vocabulary:** `docs/specs/definitions.md`, ratified 2026-09-09, governs every word used here.
+**Sources:** `docs/plans/parked.md`, the open register, and the owner's gate of 2026-09-09.
+**Supersedes:** the v1.1 / v1.5 split in `parked.md`. v1.1 is absorbed.
 
 ## The vision sentence — unchanged
 
 > A focus timer that works with the fixed toolset so that study and work blocks run without a second
 > app to vacuum — whose actual reason for existing is the distraction log.
 
-**v1.5 does not change what zenpom is for**, and that is the test to re-read at this gate. Every item
-below either serves the log or gets a sentence saying why it earns space beside it.
+**v1.5 does not change what zenpom is for.** Every item below either serves the log or says why it
+earns space beside it.
 
 ---
 
-## Why this milestone exists, and the risk it carries
+## The fence: v1.5 is polish, v2.0 is platform
 
-v0.1 was fenced by an exam. The exam was cancelled on 2026-09-08, and **the fence came down with
-it.** The handoff names the pattern plainly: this project's owner starts bounded and expands
-mid-sprint, sometimes as avoidance, and the mechanism that held it is gone.
+**Ratified 2026-09-09.** The milestone boundary is an architectural line rather than a number:
 
-So this milestone is written with the fence stated **first**, before the feature list, and the list
-is capped before it is filled. The one argument that does not count for admitting an item is
-*"there's more time available now"* — that is a statement about capacity, not value.
+- **v1.5 — polish.** Everything that changes the app that already exists.
+- **v2.0 — platform.** Everything that adds a **platform** or a **provider**.
 
-### The four things this gate must produce
+**Why a line and not a cap.** The v0.1 fence was a date, anchored to an exam that was cancelled. A
+number replacing it would have been arbitrary and defended arbitrarily. A line can be applied to an
+item nobody has thought of yet, which is what a fence is for.
 
-| # | Required | State |
-|---|---|---|
-| 1 | A new hard stop | **proposed below — needs Marty's yes** |
-| 2 | A capped feature list, number decided before filling | **proposed: 4 features + 2 chores** |
-| 3 | An earned-entry test for every item admitted | **written below, one per candidate** |
-| 4 | A restated Phase 3 fence | **written below** |
+**And the honest caveat, recorded at the moment it was noticed.** Of eleven candidates assessed at
+this gate, only three fell on the platform side. **The line admitted almost everything**, so it is
+doing less fencing work than its shape suggests. What actually holds v1.5 is the stop condition
+below, which does not care how long the list is.
 
 ---
 
-## 1. The hard stop
+## The hard stop
 
-**Proposed, shipped-artifact rather than a date** (Marty's choice, 2026-09-09):
+> **v1.5 ends when zenpom has driven four consecutive fortnightly Rhodia reviews from its own export.**
 
-> **v1.5 is done when a two-hour arrival has been planned by the app and run to completion on the
-> device on three different days, and the distraction log from each was read in the Rhodia without
-> translation.**
+Not a date. Ratified 2026-09-09.
 
-Three runs, three days, because one run can succeed by luck and two can share a mood. It ties the
-release to the feature that justifies it: if the planner is not being used on real two-hour gaps,
-v1.5 did not ship, whatever is merged.
+**It is feature-independent on purpose.** An earlier draft tied the stop to `F8` shipping, which made
+the milestone hostage to its largest feature — if `F8` slipped, v1.5 could never end. This measures
+the thing the app exists for instead, and stays reachable whatever gets cut.
 
-**It also has a precondition.** v0.1 is not landed — `O1` has never been run, and the export that is
-the whole point of the app has never been read beside the Rhodia. **v1.5 opens when v0.1 lands**,
-which means `O1` plus the outstanding device checks. Speccing is fine now; building is not.
+**Four, not one.** One export can be readable by luck and two can share a mood. Four is roughly two
+months of real use — long enough that the polish either helped or it didn't, and long enough to tell
+which.
 
----
-
-## 2. The cap
-
-**Four features and two chores. Decided before the list was filled.**
-
-The number comes from observed throughput, not ambition: v0.1's six features needed nine retrofits
-(`F2b`–`F2e`, `F4c`–`F4f`, `F6b`) and one branch took eleven adversarial passes. A milestone of four
-features is a milestone of roughly ten units once retrofits are counted honestly.
-
-**Nine candidates were assessed. Five did not make it.** The list below is complete; nothing was
-dropped silently.
+**It absorbs `O1`.** The first of the four *is* `O1`, v0.1's outstanding *Done when* for `F6`, which
+has never been run. **The log has never once been read for its purpose.** That is the single most
+important fact about this project's state and the stop condition now depends on fixing it.
 
 ---
 
-## 3. The candidates, each against the earned-entry test
+## The work
+
+**Ten features and two chores.** Larger than all of v0.1, which was six features — and those six
+needed nine retrofits and a branch that took eleven adversarial review passes.
+
+**The list is not expected to finish, and that is by design.** v1.5 ends on four Rhodia reviews,
+whatever has shipped by then. So **order is the real decision**, not membership.
+
+### Order — cheapest first, with `F8` first among equals
+
+**Ratified 2026-09-09.** Two items cost no build time at all and go first. `F8` follows, because
+deferring the feature the owner called *"the one that makes the app worth using"* behind six small
+ones would be following a rule off a cliff. Everything after that is cheapest-first.
+
+| # | ID | Item | Size | Delta owed? |
+|---|---|---|---|---|
+| 1 | `C21` | zenpom Focus runbook | zero code | no |
+| 2 | `C22` | Which licence the binaries carry | a decision | no |
+| 3 | `F8` | **Fit a sprint to the time you have** | L | no |
+| 4 | `F12` | Themes | S | **yes** |
+| 5 | `F13` | Todoist, with Todoist's flair | S | no |
+| 6 | `F11` | About screen | S | no |
+| 7 | `F14` | The watch can launch a pom | S/M | probably not |
+| 8 | `F10` | A "start a sprint" App Intent | S/M | no |
+| 9 | `F9` | Instructions and the explainer | M | no |
+| 10 | `F15` | The graphics pass | M | no |
+| 11 | `F16` | The tomato garden | M | **yes** |
+| 12 | `F17` | A watch-face complication | M/L | **yes — `D30`** |
+
+**The constraint that sets the pace is not build time.** At the 5% dial the owner reviews every PR in
+one fixed afternoon slot. **Review capacity is the bottleneck**, and an order that front-loads small
+PRs is an order that keeps that queue moving.
+
+---
+
+## Earned entry, one per item
 
 > *What does this let me do that v0.1 doesn't?*
 
-### ADMITTED
+`C21` · **A sprint that is actually undistracted.** Written instructions for an iOS Focus that allows
+zenpom and silences everything else. Pure documentation, works on the already-shipped build. The app
+cannot set a Focus and no app can — verified in the SDK; the one Focus API an app gets runs the other
+way.
 
-#### F8 — Divide a stretch of time into a plan
+`C22` · **Nothing on its own — it unblocks `F11`.** An About screen naming a licence before this is
+settled would state a claim that might have to be corrected in a binary already on people's phones.
+Admitting `F11` is what gives this chore a consumer; without it, it would not belong here.
 
-**Earns entry:** it lets you start from *"I have two hours before a meeting"*, which is the input you
-actually arrive with. v0.1 requires the opposite — you state the parts and the total falls out. You
-rarely have "four pomodoros"; you have the gap before the next thing.
+`F8` · **Lets you start from "I have two hours before a meeting"**, which is the input you actually
+arrive with. v0.1 requires the inverse: state the parts, and the total falls out. Fully specified in
+`docs/plans/F8.md` — four rulings, floors, caps, and worked test data across seven budgets.
 
-Marty overruled the agent's v1.5 recommendation on this one when it was parked, on the grounds that
-it is *"the feature that makes the app worth using."* That reading holds, and it is why this feature
-is the spine of the milestone rather than one item on it.
+`F12` · **Lets the app look like something you chose.** Admitted partly on cost: the design system is
+two-layer with 42 semantic colour roles, **zero** hardcoded colours in any view, and a SwiftLint rule
+failing the build if `Palette.` appears outside the token layer. A theme is a swap of primitives
+behind roles that already exist.
 
-**It is a change to the timer, not a screen on top of one**, and `parked.md` names four decisions it
-cannot be built without. They are gate questions for `docs/plans/F8.md`, not spec questions, with one
-exception noted under `F9`:
+`F13` · **Lets you recognise your own projects at a glance.** Todoist's project colours and priority
+flags are already fetched and cached, and currently thrown away. The picker is bland because it
+discards data it already holds.
 
-1. Does it write the six settings, or run one plan the engine follows without touching them?
-2. Two hours does not divide evenly. *"I will fill your two hours"* and *"I will not overrun your two
-   hours"* cannot both be kept — which promise does zenpom make?
-3. It presses on `autoStartNextBlock`, which defaults off for a stated reason: *a timer that starts a
-   work block while you are still away from the desk is a timer that lies about how long you worked.*
-   A wall-clock plan drifts the moment somebody dawdles.
-4. It forces the vocabulary to be settled. **This one is not deferrable — see `F9`.**
+`F11` · **Ships the sound attribution the owner ruled is required** *regardless of what the licences
+demand*. That makes it an obligation rather than a feature, and it is the reason this is not deferred
+with the other small screens.
 
-#### F9 — Instructions, and an explainer of the Pomodoro technique
+`F14` · **Lets a pom start from the wrist**, so the phone can stay in another room — which is the
+condition `O15` already asks the watch to work under. **Launching is not independence:** the phone
+still runs the only timer engine, so `D2` is untouched. The independent watch app remains v2.0.
 
-**Earns entry twice over.**
+`F10` · **Lets a Shortcut turn on Do Not Disturb and start a sprint together.** Its value over `C21`
+is precisely the step you would otherwise forget during the sprint that needed it most.
+`DismissBlockIntent` already proves the mechanism.
 
-First: the app currently explains nothing. Every control is legible to the person who built it and to
-nobody else. That is acceptable for an instrument of one and disqualifying for anything else.
+`F9` · **Lets anybody but the builder use the app**, and settles the vocabulary. `F9-T1` is already
+complete — `definitions.md` is ratified — and it was the only part `F8` waited on.
 
-Second, and the reason it is sequenced **before** `F8`: **it settles the vocabulary `F8` would
-otherwise settle by force.** Marty's own request said *"3 sprints over 120 minutes"* — but a sprint
-in this app is a whole set of pomodoros, so three of them is five hours, not two. Draft one of the
-v1.1 copy has the mirror-image slip, calling a whole set *"a Pomodoro"*
-(`docs/verbiage/NOTES-on-draft-one.md`). Neither is careless; the words are genuinely unsettled, and
-a planner screen that prints *"3 × 25 minutes with two 5-minute breaks"* has to name what it prints.
+`F15` · **Lets the app look professional rather than built.** The owner's words: *sharper,
+professional grade*. Its input exists: `docs/ZenTomato redesign scope.zip`, tracked deliberately
+because it was destroyed twice in one morning by ordinary git operations. **This answers the earned-
+entry question the previous draft left open and refused the item over.**
 
-**Division of labour, as the owner set it — and it is a departure from the dial:**
+`F16` · **Lets finished work show up as something that accumulates.** Poms grow the garden.
 
-| Who | What |
+> **Ratified 2026-09-09: the garden accumulates and nothing is ever lost. No streaks, no badges, no
+> broken chains.** A streak rewards an unbroken record; the log's value is honest tallying,
+> *including bad days*. Once a streak is on screen there is a reason not to log the distraction that
+> breaks it, or not to open the app at all on a bad day — and the instrument starts measuring the
+> wish to protect a number. The standing rule is *if a scope decision threatens the log, the log
+> wins*. **The incentive problem is the streak, not the reward**, so the reward is kept.
+
+`F17` · **Lets a block be seen and started from the watch face.** Requested by the owner 2026-08-28.
+Largest of the small items: it needs a separate watchOS widget extension that does not exist — the
+only `WidgetKit` code in the tree is the iOS Live Activity. Pairs naturally with `F14`.
+
+---
+
+## Deltas this milestone owes
+
+**Three items contradict the ratified v0.1 contract and cannot be built until each has a `D<n>`.**
+Recorded here rather than discovered at a review.
+
+| Item | What it contradicts |
 |---|---|
-| Owner | Writes the verbiage |
-| Claude design | Places and animates it |
-| Agent | Completes the execution |
+| `F12` Themes | `SPEC.md`'s out-of-scope list names **themes** explicitly |
+| `F16` Garden | The same list names *"streaks, badges, or any gamification"*. The delta must argue the **accumulate-only** form specifically, not gamification in general |
+| `F17` Complication | `SPEC.md` line 58 — *"widgets beyond the Lock Screen Live Activity"*. `D30` is already proposed and unratified |
 
-The learning dial says the agent authors everything. Here it does not author the copy. That is the
-owner's ruling and is recorded rather than quietly reconciled.
+**`F14` probably owes nothing**, and the reasoning is recorded so it is checked rather than assumed:
+`D2` says the watch never runs a timer of its own, and a launch command where the phone still runs
+everything does not violate that. Confirm at its gate.
 
-**Its open design question, for the gate:** an explainer is a surface, and this app deliberately has
-almost none. *"First run"* is the answer that most easily becomes an onboarding flow nobody wanted.
-The `no capture surface` rule is not threatened; the calm-screen rule is.
+---
 
-#### F10 — A "start a sprint" App Intent
+## v2.0 — platform
 
-**Earns entry:** it lets a sprint actually be undistracted, which is the precondition for the log
-measuring anything. Today you can start a sprint only by opening the app and tapping.
+Deferred by the line, not refused. Each keeps its reasoning.
 
-The app already declares `DismissBlockIntent`, so the mechanism exists. A second intent lets a
-Shortcut **the owner builds** run *Turn On Do Not Disturb* alongside starting a sprint.
-
-**Honest framing, carried over from `parked.md`:** this is a capability the owner *assembles*, not
-one zenpom grants. The app still never touches Focus. It cannot — verified in the SDK: nothing in
-`Intents`, `AppIntents` or `UserNotifications` sets a Focus or suppresses another app's
-notifications, and the one Focus API an app gets (`SetFocusFilterIntent`) runs the other way. An app
-that could silence your other notifications is an app Apple would not ship.
-
-#### F11 — RESERVED, and deliberately empty
-
-**The fourth slot is unfilled on purpose.** Two candidates below have real merit and an unanswered
-question each; one of them takes this slot once its question is answered. A cap filled to the brim on
-day one is a cap that has already failed — the slot exists so the milestone can absorb one thing it
-learns while building, without reopening scope.
-
-### CHORES
-
-#### C21 — A zenpom Focus runbook
-
-**No user-visible change, therefore a chore, not a feature.** Written instructions for building a
-Focus in iOS Settings that allows zenpom and silences the rest. Pure documentation, works on the
-shipped build, could be written today. Its only cost is that the person has to turn it on.
-
-**Owner: agent.** It pairs with `F10` — same goal, two routes, and `parked.md` records that the owner
-wants both.
-
-#### C22 — Settle which licence the binaries carry
-
-**Blocks the About screen and nothing else.** `C10` ruled dual licensing but never settled *which*
-licence the binaries carry. An About screen naming a licence before that is answered states a claim
-that may have to be corrected in a binary already on people's phones — the one kind of mistake a
-licence notice must not make.
-
-**Owner: human.** It is a decision, not a task.
-
-### NOT ADMITTED — Phase 3
-
-Each with the reason, so none is re-litigated.
-
-| Candidate | Why not |
+| Item | Note |
 |---|---|
-| **An About screen** | Blocked on `C22`, and blocked for a good reason. Small once unblocked; a strong claimant for `F11` if `C22` closes early. Version and build already ship as a plain Settings row — the useful half was deliberately split out and is done. |
-| **The redesign** (`docs/ZenTomato redesign scope.zip`) | **Fails the earned-entry test as written** — it does not let you do anything you cannot do now. That may be a failure of the *statement* rather than the work; see the open question below. |
-| **Spotify** | Fails outright. The toolset is fixed and Apple Music is in it. `D16` is the standing guard, and `F4c`'s review upheld it: there is no provider abstraction anywhere and there must not be one until this is a gate of its own. |
-| **A more independent watch app** | Contradicts ratified `D2` — the phone is the source of truth and runs the only timer engine. Loosening that is a large conversation, and a large conversation is exactly what a cap exists to defer. |
-| **A watch-face complication** (`D30`, proposed) | Excluded by `SPEC.md` line 58 by name — *"widgets beyond the Lock Screen Live Activity"*. Needs `D30` ratified before it is even a candidate. Also a claimant for `F11`. |
+| **A macOS client** | A platform. Genuinely wanted; genuinely v2.0. |
+| **iCloud / CloudKit sync** | A platform, and **the highest-risk item on either list.** The log is local-only today with no conflict resolution to get wrong. Sync is where the crown jewel would be lost. |
+| **Spotify** | A provider. `D16` is the standing guard and `F4c`'s review upheld it: there is no provider abstraction anywhere and there must not be one until this is a gate of its own. |
+| **YouTube Music** | A provider — **and a claim about someone else's system.** Whether it can be played from a third-party iOS app at all must be verified by something that runs before this is ratifiable. |
+| **A more independent watch app** | Contradicts ratified `D2`. `F14` delivers the useful half without reopening it. |
 
----
+## Never — not deferred
 
-## 4. The Phase 3 fence
+**No capture surface, and no Todoist task creation.** A property of the owner's productivity system,
+not a scope decision. It is not a feature request; it is a rule change, and it would need its own
+argument.
 
-**Phase 3 is: Spotify · a more independent watch app · macOS · CloudKit sync · playlist creation ·
-any capture surface of any kind · themes · streaks, badges or gamification.**
+## Standing rules — untouched
 
-Restated with the same discipline the Phase 2 fence had, minus the dependency on a cancelled exam.
-**A feature request that is not on the admitted list above gets one question — *is this v1.5 or
-Phase 3?* — and the answer is written here before anything is built.**
+Todoist writes are limited to completing a task · Todoist owns the hierarchy · secrets never enter the
+tree · local only, no analytics · **the agent never edits `SPEC.md`**.
 
-**Task creation is not on either list, and that is deliberate.** It collides with the no-capture-
-surface standing rule, which is a property of the owner's productivity system rather than a scope
-decision. It is not a feature request; it is a rule change, and it would need its own argument.
+## Hook intentions
 
----
+Existing hooks carry forward. Two are added:
 
-## Standing rules — untouched by this milestone
-
-Reopening scope does not reopen these. They are properties of the app.
-
-- **No capture surface.** zenpom never accepts a new task from the user.
-- **Todoist writes are limited to completing a task.** Enforced by hook, not prose.
-- **Todoist owns the hierarchy.**
-- **Secrets never enter the tree.**
-- **Local only.** No analytics; no network except Todoist and MusicKit.
-- **The agent never edits `SPEC.md`.**
-
----
-
-## Hook intentions for v1.5
-
-Existing hooks carry forward. Two are added, and both exist because this milestone's shape invites a
-specific failure:
-
-1. **The vocabulary stays settled.** Once `F9` names the words, a check that fails the build when
-   shipped Swift uses the retired ones. `PolishFenceTests` already does this for parked vocabulary
-   and is the model.
-2. **The planner does not silently rewrite settings.** Whichever way question 1 of `F8` is answered,
-   a test asserts it — because "it wrote my defaults because I once had a two-hour gap" is a defect
-   nobody would notice until their next ordinary sprint ran wrong.
-
----
-
-## Open questions for Marty — these block ratification
-
-1. **The cap: is four the right number?** Four features and two chores, with the fourth slot held
-   empty. Say a different number and the list is re-cut to it.
-
-2. **The hard stop: is three runs on three days the right condition?** It is the piece of this
-   document most worth arguing with, because it is the only thing that ends the milestone.
-
-3. **The redesign — what does it let you do?** It is in `parked.md` as v1.5's input, with a tracked
-   zip and a stated history of being destroyed twice, so it clearly matters. But no sentence anywhere
-   says what problem it solves, and I will not invent one to justify admitting it. Answer that and it
-   is a strong claimant for `F11`.
-
-4. **`F9` before `F8` — agreed?** The vocabulary argument says the explainer must come first. That
-   inverts the obvious order, since `F8` is the exciting one, and putting the writing task first is
-   the sort of sequencing that quietly slips.
-
-5. **Does the learning dial move?** The handoff flags this as legitimately reopenable now that this
-   is a dedicated coding project rather than a bounded sprint. `F9` already breaks the 5% floor by
-   having the owner write the copy. Propose; do not change silently.
+1. **The vocabulary stays settled.** `F9-T2` — shipped Swift may not use a retired word.
+   `definitions.md` holds the list.
+2. **The garden cannot grow a streak.** A test that fails if any user-facing surface counts
+   consecutive days or renders an unbroken chain. `F16`'s ruling is only real if something enforces
+   it, and this is the one place a later change would quietly undo a decision made on the log's
+   behalf.
 
 -----
 September 9, 2026
