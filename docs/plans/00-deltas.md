@@ -51,8 +51,9 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D28** | ratified | yes, applied | — | The alert sound can be previewed from Settings |
 | **D29** | ratified | yes, applied | — | A locked phone is somebody being there |
 | **D30** | proposed | yes, pending | — | A watch-face complication |
+| **D31** | ratified | no | — | C22 is struck; the licence question was already answered |
 
-*24 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*33 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
