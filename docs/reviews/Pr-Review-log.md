@@ -62,3 +62,16 @@ If the education dial was turned up, I would do a lot of this work on my own.
 ## what I learned
 The turing review is working.
 
+# [PR-35](https://github.com/martin-gleason/ZenTomato/pull/35)
+
+# Description
+the runbook -- which I can't read due to the agents coding other features.
+
+## what i would do differently:
+- merge the runbook so i could see it
+
+## What I learned
+- I remembered that git files are on their branches. whoops.
+
+
+
