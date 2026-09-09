@@ -1,10 +1,12 @@
 # zenpom — v1.5 Spec
 
-**Status:** DRAFT for ratification. The agent proposes; Marty ratifies.
+**Status:** **RATIFIED by the owner, 2026-09-09.** This is the contract for v1.5.
 **Baseline:** `docs/specs/SPEC.md` (v0.1) remains the contract for everything it covers. This file
 adds to it and never edits it. Where the two disagree, v0.1 wins until a `D<n>` says otherwise.
 **Vocabulary:** `docs/specs/definitions.md`, ratified 2026-09-09, governs every word used here.
 **Sources:** `docs/plans/parked.md`, the open register, and the owner's gate of 2026-09-09.
+**Ratified as a baseline**, the way `SPEC.md` and `definitions.md` were. From here it is not edited to
+match reality: a change to scope, order or the stop condition is a `D<n>`.
 **Supersedes:** the v1.1 / v1.5 split in `parked.md`. v1.1 is absorbed.
 
 ## The vision sentence — unchanged
