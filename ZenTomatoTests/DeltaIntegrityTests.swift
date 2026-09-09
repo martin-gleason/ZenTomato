@@ -149,7 +149,23 @@ struct DeltaIntegrityTests {
   }
 
   /// The files allowed to cite a delta: the app, its tests, and the documents.
-  private static func citingFiles() throws -> [URL] {
+  /// The two files whose `D<N>` tokens are not citations of *this* project's register.
+  ///
+  /// `00-deltas.md` defines the IDs rather than citing them.
+  ///
+  /// `docs/conventions.md` is the **vendored upstream baseline**, and `D24` is the delta saying this
+  /// project never edits it. Upstream keeps its own register, so the file legitimately carries five
+  /// decision IDs that mean nothing here — deliberately not named in this comment, because this file
+  /// is itself walked and naming them would recreate the failure the exclusion fixes. Checking the
+  /// file and pinning it are mutually exclusive, and the pin wins.
+  ///
+  /// The exclusion stays narrow: `conventions-local.md` is this project's own and stays checked.
+  static let notACitationSurface = [
+    "docs/plans/00-deltas.md",
+    "docs/conventions.md"
+  ]
+
+  static func citingFiles() throws -> [URL] {
     let roots = ["ZenTomato", "ZenTomatoTests", "docs"]
     var files: [URL] = []
     for root in roots {
@@ -157,7 +173,7 @@ struct DeltaIntegrityTests {
       guard let walk = FileManager.default.enumerator(at: base, includingPropertiesForKeys: nil)
       else { continue }
       for case let url as URL in walk where ["swift", "md"].contains(url.pathExtension) {
-        if url.path.hasSuffix("docs/plans/00-deltas.md") { continue }
+        if Self.notACitationSurface.contains(where: { url.path.hasSuffix($0) }) { continue }
         files.append(url)
       }
     }
