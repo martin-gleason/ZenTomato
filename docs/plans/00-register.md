@@ -12,9 +12,9 @@ Extracted from ZenPom's `OPEN.md`, `00-deltas.md`, `docs/chores/` and plans.
 | ID | Title | P | Status | Mode | Why | TD |
 |---|---|---|---|---|---|---|
 | O1 | One real day's export, read beside the Rhodia | P0 | open | @? | SPEC.md's Done when for F6, and the only judgement of "readable without translation". The golden file is a for | td:6hPjPhcfpH8Qwqvj |
-| O3 | A full sprint with the screen locked, uninterrupted | P0 | open | @verify | SPEC.md's Done when for F4. Every transition has been seen individually and a 4-pomodoro sprint completed, but | td:6hPjPhm5fjP2GGpC |
-| O4 | Headphones, CarPlay, and an incoming phone call | P0 | closed | @? |  |  |
-| O5 | A playlist short enough to reach its end, to prove looping | P1 | closed | @? |  |  |
+| O3 | A full sprint with the screen locked, uninterrupted | P0 | closed | @verify | CLOSED 2026-09-09 on 0.9.0 (202608281553). Run at last as the single uninterrupted sprint the spec describes, with O4 and O5 in the same run. The owner: "O3, O4, and O5 were one and succeeded. each passed the test." This closes SPEC.md's Done when for F4 — the standing objection was that the pieces had been seen individually and never as one run. | td:6hPjPhm5fjP2GGpC |
+| O4 | Headphones, CarPlay, and an incoming phone call | P0 | closed | @verify | CLOSED 2026-09-09 on 0.9.0 (202608281553), in the same run as O3 and O5. The row was already marked closed with no evidence recorded; this fills it. NOT ITEMISED: the owner reported the run passing as a whole and the three interruption paths were not confirmed individually, so this records one run rather than three per-path results. |  |
+| O5 | A playlist short enough to reach its end, to prove looping | P1 | closed | @verify | CLOSED 2026-09-09 on 0.9.0 (202608281553), in the same run as O3 and O4. A real playlist reached its end, which is the half no test could reach — the loop had only ever been asserted against a stand-in. |  |
 | O8 | VoiceOver on hardware | P0 | open | @verify | The countdown was coarsened to whole minutes to cut announcement spam; whether iOS re-announces at all is runt | td:6hPjPhpX9fjRm99C |
 | O9 | The merged stop sheet with taps in it, at AX5 | P1 | open | @? | The single surface D14 was written for. Three chained sheets on one view, and the switched-off confirm button, | td:6hPjPhxG7MHrQ8jj |
 | O12 | Three Todoist API facts, against a live token | P1 | open | @verify | scripts/check-todoist-facts.sh. Whether an archived project resolves by id, whether sync reports deletions as  | td:6hPjPj3MCrjqcvrC |

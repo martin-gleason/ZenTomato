@@ -50,7 +50,7 @@ Counted from the register itself. A register with no rows still gets a line.
 |---|---|---|---|---|
 | Decisions (`D`) | 1 | 1 | 0 | 0 |
 | Risks (`RR`) | 0 | 0 | 0 | 0 |
-| Owner items (`O`) | 19 | 16 | 0 | 3 |
+| Owner items (`O`) | 19 | 15 | 0 | 4 |
 | Hooks (`H`) | 0 | 0 | 0 | 0 |
 | Mutations (`M`) | 0 | 0 | 0 | 0 |
 | Other (C) (`C`) | 11 | 0 | 8 | 3 |
@@ -63,8 +63,8 @@ Counted from the register itself. A register with no rows still gets a line.
 | Register | Status | Count |
 |---|---|---|
 | `D` | proposed | 1 |
-| `O` | closed | 3 |
-| `O` | open | 16 |
+| `O` | closed | 4 |
+| `O` | open | 15 |
 | `C` | closed | 3 |
 | `C` | unknown | 8 |
 
@@ -83,7 +83,6 @@ Every open row in the register. Owner is the row's Owner column where the table 
 |---|---|---|---|---|
 | owner | D30 | P0 | proposed | A watch-face complication |
 | owner | O1 | P0 | open | One real day's export, read beside the Rhodia |
-| owner | O3 | P0 | open | A full sprint with the screen locked, uninterrupted |
 | owner | O8 | P0 | open | VoiceOver on hardware |
 | owner | O9 | P1 | open | The merged stop sheet with taps in it, at AX5 |
 | owner | O12 | P1 | open | Three Todoist API facts, against a live token |
@@ -109,4 +108,4 @@ Every open row in the register. Owner is the row's Owner column where the table 
 
 ---
 
-25 open register rows.
+24 open register rows.
