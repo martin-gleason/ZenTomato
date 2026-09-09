@@ -170,8 +170,15 @@ check-licence-wording.sh: OK — no disjunctive licence wording.
 check-open-register.sh: OK — the register renders as tables.
 run-script-tests.sh: 15 passed, 0 failed
 check-release-build.sh: OK — Release compiles with no warnings of ours.
-✔ Test run with 568 tests in 86 suites passed
+✔ Test run with 569 tests in 87 suites passed
 ```
+
+**Re-captured 2026-09-09**, on the branch tip that is actually merging. The
+earlier block in this file read `568 tests in 86 suites` and was taken before the
+conventions re-pin, so it described a tree that no longer existed — the fourth
+arrival of a finding the second, third and sixth review passes had already made.
+The re-pin turned `DeltaIntegrityTests` red, and the fix for it added the suite
+and the test that account for the difference.
 
 
 
