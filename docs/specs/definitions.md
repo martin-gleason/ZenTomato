@@ -1,11 +1,12 @@
 # zenpom — definitions
 
-**Status:** DRAFT, awaiting one ruling. See *The open ruling* at the foot.
+**Status:** **RATIFIED by the owner, 2026-09-09.** This is the contract for what the words mean.
 **Purpose:** one place that says what each word means, so the app, the copy, the export and the plans
 cannot drift apart. Cited by `docs/plans/F8.md` and `docs/plans/F9.md`.
 
-**This file is a baseline.** Once ratified it is not edited to match reality; a change to a definition
-is a `D<n>`.
+**This file is a baseline**, ratified directly by the owner as `SPEC.md` was. It is not edited to
+match reality: **a change to any definition below is a `D<n>`**, proposed by the agent and ratified by
+the owner, never a tidy-up.
 
 ---
 
@@ -79,20 +80,39 @@ Not to be used in shipped copy, UI strings, or new code. `F9-T2` builds the fenc
 
 ---
 
-## The open ruling
+## The ruling, and the alternative that was refused
 
-**One question, and everything above depends on it.** The owner proposed on 2026-09-09 that a pom is
-*"a full cycle of focus and break"*, which conflicts with the ruling made earlier the same day — that
-a pom is one focus block — and with the method.
+**Ratified 2026-09-09.** The owner proposed that a pom is *"a full cycle of focus and break"*, asked
+for it to be checked against the method, and — on the evidence below — ratified the table above
+instead. Recorded here so it is not re-litigated, and so the reasoning survives the decision.
 
-**This draft keeps the method's definition and gives the owner's unit the name `cycle`**, so nothing
-is lost and nothing is misnamed. It is a recommendation, not a decision.
+**The evidence, five sources, unanimous.** A pomodoro is the work interval; the break follows it.
 
-**If the owner rules the other way** — that a pom *is* focus plus break — then it is ratifiable, and
-the cost is written here rather than discovered later: `pomodorosPerSprint`, `BlockKind`, the stats
-counts and the export's historical meaning all shift, the help screen must stop citing a source that
-disagrees with it, and every past export silently changes meaning. That is a real price and it is the
-owner's to pay or refuse. It is not a reason he cannot choose it.
+| Source | Wording |
+|---|---|
+| Wikipedia | *"For the purposes of the technique, a pomodoro is an interval of work time."* |
+| Cirillo, the technique's author | *"A Pomodoro is indivisible… marks 25 minutes of pure work."* |
+| TechTarget | *"Each work interval is called a pomodoro."* |
+| Todoist — **the page this app's own help copy links to** | *"When your session ends, mark off one Pomodoro… **Then** enjoy a five-minute break."* |
+| Emory University Libraries | the same |
+
+**Two details settle it beyond a preference.** The *indivisibility* rule only parses if the break is
+outside — a unit you are already resting inside cannot be abandoned, and this app already implements
+that distinction, with a `Stopped early` section in the export. And the *counting* only parses if the
+break is outside: every source says a long break comes after four pomodoros, which would mean four
+breaks followed by a fifth if a pomodoro already contained one.
+
+**The proposal was not invented, and it was not discarded.** *"A pomodoro is thirty minutes"* is
+common usage in timer apps and blogs — but the unit those descriptions are reaching for is the one
+that tiles the clock, and the canonical vocabulary leaves it unnamed. That gap is real, and `F8`
+walks straight into it: two hours divides neatly by thirty and badly by twenty-five. So the unit is
+kept and named **cycle**. The owner's arithmetic survives; only the label changed.
+
+**What ruling the other way would have cost**, kept on the record because a refused option should
+show its price: `pomodorosPerSprint`, `BlockKind`, the stats counts and the export's historical
+meaning would all have shifted; the help screen would have had to stop citing a source that
+contradicts it; and **every past export would silently have changed meaning** — the one artefact that
+must stay readable across time, since it is what the fortnightly Rhodia review is read from.
 
 -----
 September 9, 2026
