@@ -1673,3 +1673,46 @@ convenience on a surface the spec has excluded from the start.
 
 If the owner ratifies this anyway, it should be its own feature after the current
 branch merges, and it should not be squeezed in beside `D29`.
+## D31 — C22 is struck; the licence question was answered on 2026-08-27
+
+**Proposed 2026-09-09. Ratified by the owner 2026-09-09.**
+
+**Currently**, `docs/specs/zenpom-v1.5.md` lists `C22` — *"which licence the binaries carry"* — as
+item 2 of v1.5, and states that `F11`, the About screen, is blocked on it.
+
+**Both claims are false, and were false before the spec was written.**
+
+`C18` settled the licence on 2026-08-27 and shipped it: **one licence, GPL-3.0-or-later**, plus a
+non-enforcement pledge in `LICENSE-EXCEPTION.md` covering the one known conflict with the App Store
+terms. There is no second licence and no unanswered question about what the binaries carry.
+
+**The text is already inside the app.** `ZenTomato/App/AppLicence.swift` holds the GPL notice and the
+App Store pledge as compile-time constants — deliberately constants rather than bundled files, so a
+missing notice fails to compile instead of surprising somebody at runtime — and `LicenceFenceTests`
+asserts the words are really there. The GPL requires the notice to travel *inside the binary*; that
+requirement is met and tested.
+
+**How the error got in.** `docs/plans/parked.md` records the About screen as *"blocked, and only partly
+on effort … `C10` ruled dual licensing but has not yet settled which licence the binaries carry."*
+That was true when written and was superseded the same week by `C18`. The v1.5 spec inherited the
+sentence without checking it against the tree.
+
+**This is the failure the immutable-spec rule exists to catch**, arriving from an unusual direction: not
+a spec edited to match reality, but a spec that recorded a blocker which reality had already removed. A
+claim was carried forward because it was written down, which is the thing `conventions.md` says
+promotion is not.
+
+**Therefore:**
+
+1. **`C22` is struck.** It is not work, it is not a chore, and it has no consumer because it has no
+   content. The v1.5 order becomes eleven items, not twelve.
+2. **`F11` is unblocked.** What remains of the About screen is a surface that displays two constants
+   that already exist and passes tests that already run, plus the bundled alert-sound attribution the
+   owner ruled is required regardless of what the licences demand.
+3. **`F11` keeps its place in the cheapest-first order** rather than moving up. It was ordered on its
+   own size, not on `C22`'s position, and removing a blocker does not make a screen smaller.
+
+**One documentation defect found alongside, not fixed here.** `docs/chores/C18.md`'s banner says *"no
+`AppLicence` type exists in the app."* It does. The banner was written the day the MIT design was
+superseded and was never revised when the type landed. Filed rather than fixed, because it is a
+correction to a shipped chore's record and belongs with `O35`'s documentation list.
