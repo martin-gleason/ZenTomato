@@ -52,8 +52,10 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D29** | ratified | yes, applied | — | A locked phone is somebody being there |
 | **D30** | proposed | yes, pending | — | A watch-face complication |
 | **D31** | ratified | no | — | C22 is struck; the licence question was already answered |
+| **D32** | proposed | no | — | A shape is stored, in one file, outside SwiftData |
+| **D33** | proposed | no | — | v1.5 admits two more units, and the order is restated |
 
-*33 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*35 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
@@ -1717,3 +1719,72 @@ promotion is not.
 `AppLicence` type exists in the app."* It does. The banner was written the day the MIT design was
 superseded and was never revised when the type landed. Filed rather than fixed, because it is a
 correction to a shipped chore's record and belongs with `O35`'s documentation list.
+
+## D32 — A shape is stored, in one file, outside SwiftData
+
+**Proposed 2026-09-09.** Owed by `F8-T2`, which cannot land until this is ratified or refused.
+
+**Currently**, `SPEC.md`'s locked decisions say *"Data: Local only (SwiftData). Todoist token in
+Keychain. No analytics, no accounts, no server."* Two stores are named and no third is.
+`PolishFenceTests.noNewPersistentSurface` enforces that.
+
+**The problem this answers.** `F8-T4` requires a shape to survive a block being abandoned and
+relaunched, and to outlive the app being killed. Nothing in the ratified plan said where it lives —
+the cross-plan review found it unowned with `F8` second in the build order.
+
+**Proposed:** a shape is persisted as one small `Codable` value in `UserDefaults`, in exactly one
+shipped file, and `noNewPersistentSurface` is amended to admit that file by name and nothing else.
+
+**Why not the two obvious alternatives.** Both were refused for reasons that are about *this*
+milestone rather than taste:
+
+- **An eighth `AppSettings` column** contradicts Ruling B inside the same feature. Ruling B's whole
+  protection is that running a shape never writes `AppSettings`; putting the running shape *in*
+  `AppSettings` makes that fence carve out the one column it exists to watch. A fence with an
+  exception for the thing it guards is not a fence. It also collides with `F12`, which moves the
+  same property count from 7 to 8 for the theme — whichever lands first consumes the other's
+  evidence.
+- **A thirteenth `@Model`** destroys `F16`'s named mutation, which *is* the 12→13 move.
+
+**The trade being bought.** A third store is a real cost and this delta is where it is paid rather
+than discovered. The argument for paying it: a shape is one sprint's worth of intent, not history.
+The history is already written block by block on the finished-block rows, and `SessionPlan`'s own doc
+comment makes this exact argument for the neighbouring case — a stored thing that outlives its
+session becomes a second, competing account of the same day.
+
+**If refused:** `F8` pays a `TimerState` migration instead, and `F12` and `F16` must re-derive the
+counts their mutations depend on.
+
+## D33 — v1.5 admits two more units, and the order is restated
+
+**Proposed 2026-09-09.** Owed because `docs/specs/zenpom-v1.5.md` is a ratified baseline and its
+order table names eleven units.
+
+**Currently**, that table reads: `C21`, `F8`, `F12`, `F13`, `F11`, `F14`, `F10`, `F9`, `F15`, `F16`,
+`F17` — ten features and one chore.
+
+**The problem this answers.** Two units were added at the owner's direction on 2026-09-09 and
+neither is in the table. **No plan proposed this delta**: `F17` raised it and punted to `F18`'s gate,
+`F18` ruled *"delta owed: none"*, and `F19` owes one for its undo only. The single change that is
+unambiguously a change to a ratified baseline had no owner, which is why it is written here.
+
+**Proposed:** the milestone becomes **thirteen units**, and the order becomes
+
+> `C21` · `F8` · `F12` · `F13` · **`F19` search** · `F11` · `F14` · `F10` · **`F18`** · `F9` ·
+> **`F19` undo** · `F15` · `F16` · `F17`
+
+**`F18` — a watch-side App Intent.** It earns v1.5 on its own terms rather than as preparation:
+`F17`'s complication cannot start a block without it, because a widget extension is a third process
+and cannot drive the watch app's `WCSession`. `CLAUDE.md` forbids preparing for work outside the
+milestone and `D16`'s test is whether it would be written the same way if the parked feature were
+never coming. It would. That v2.0 inherits it is a consequence of building it properly, not a reason.
+
+**`F19` — Todoist searched cleanly, and undoable.** Split, because its halves have different costs:
+the search half owes nothing and ships early; the undo half owes its own delta and waits on `O12`'s
+live-token run, which is what makes that delta ratifiable at all.
+
+**Nothing already ordered moves relative to anything else.** Search is pulled forward because it is
+the only piece in the batch that ships without ratifying anything, and the pacing constraint on this
+project is review capacity rather than build time. `F18` sits after `F10` so that one seam is built,
+then exercised by the cheap door before the expensive one — and its spike lands *before* `F17` is
+scheduled, so a "no" there reshapes `F17-T5` at planning time rather than mid-build.
