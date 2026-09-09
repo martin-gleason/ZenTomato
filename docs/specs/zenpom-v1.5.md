@@ -59,7 +59,7 @@ important fact about this project's state and the stop condition now depends on 
 
 ## The work
 
-**Ten features and two chores.** Larger than all of v0.1, which was six features — and those six
+**Ten features and one chore** (`D31` struck the second). Larger than all of v0.1, which was six features — and those six
 needed nine retrofits and a branch that took eleven adversarial review passes.
 
 **The list is not expected to finish, and that is by design.** v1.5 ends on four Rhodia reviews,
@@ -67,24 +67,23 @@ whatever has shipped by then. So **order is the real decision**, not membership.
 
 ### Order — cheapest first, with `F8` first among equals
 
-**Ratified 2026-09-09.** Two items cost no build time at all and go first. `F8` follows, because
+**Ratified 2026-09-09**, amended by `D31`. One item costs no build time at all and goes first. `F8` follows, because
 deferring the feature the owner called *"the one that makes the app worth using"* behind six small
 ones would be following a rule off a cliff. Everything after that is cheapest-first.
 
 | # | ID | Item | Size | Delta owed? |
 |---|---|---|---|---|
 | 1 | `C21` | zenpom Focus runbook | zero code | no |
-| 2 | `C22` | Which licence the binaries carry | a decision | no |
-| 3 | `F8` | **Fit a sprint to the time you have** | L | no |
-| 4 | `F12` | Themes | S | **yes** |
-| 5 | `F13` | Todoist, with Todoist's flair | S | no |
-| 6 | `F11` | About screen | S | no |
-| 7 | `F14` | The watch can launch a pom | S/M | probably not |
-| 8 | `F10` | A "start a sprint" App Intent | S/M | no |
-| 9 | `F9` | Instructions and the explainer | M | no |
-| 10 | `F15` | The graphics pass | M | no |
-| 11 | `F16` | The tomato garden | M | **yes** |
-| 12 | `F17` | A watch-face complication | M/L | **yes — `D30`** |
+| 2 | `F8` | **Fit a sprint to the time you have** | L | no |
+| 3 | `F12` | Themes | S | **yes** |
+| 4 | `F13` | Todoist, with Todoist's flair | S | no |
+| 5 | `F11` | About screen | S | no |
+| 6 | `F14` | The watch can launch a pom | S/M | probably not |
+| 7 | `F10` | A "start a sprint" App Intent | S/M | no |
+| 8 | `F9` | Instructions and the explainer | M | no |
+| 9 | `F15` | The graphics pass | M | no |
+| 10 | `F16` | The tomato garden | M | **yes** |
+| 11 | `F17` | A watch-face complication | M/L | **yes — `D30`** |
 
 **The constraint that sets the pace is not build time.** At the 5% dial the owner reviews every PR in
 one fixed afternoon slot. **Review capacity is the bottleneck**, and an order that front-loads small
@@ -101,9 +100,9 @@ zenpom and silences everything else. Pure documentation, works on the already-sh
 cannot set a Focus and no app can — verified in the SDK; the one Focus API an app gets runs the other
 way.
 
-`C22` · **Nothing on its own — it unblocks `F11`.** An About screen naming a licence before this is
-settled would state a claim that might have to be corrected in a binary already on people's phones.
-Admitting `F11` is what gives this chore a consumer; without it, it would not belong here.
+`C22` · **STRUCK by `D31`, ratified 2026-09-09.** The licence question was answered by `C18` on
+2026-08-27 and the text already ships inside the binary as tested constants. The chore recorded a
+blocker that reality had already removed.
 
 `F8` · **Lets you start from "I have two hours before a meeting"**, which is the input you actually
 arrive with. v0.1 requires the inverse: state the parts, and the total falls out. Fully specified in
