@@ -104,21 +104,26 @@ struct PolishFenceTests {
 
   /// `noNewPersistentSurface` — no cache arrives quietly.
   ///
-  /// **The app uses `UserDefaults` nowhere at all** — the single mention in the tree is a
-  /// sentence in a doc comment explaining that `AppSettings` is a database row instead. Every
-  /// piece of state that outlives a launch is in SwiftData, in one container, made once in the
-  /// composition root.
+  /// **This used to say `UserDefaults` appears nowhere at all, and `D32` changed what it says.**
+  /// `F8` stores a sprint's shape as one small encoded value outside SwiftData, and amending a
+  /// fence to admit the thing it forbids is exactly what a delta is for. The claim is now about
+  /// *where* rather than *how many*, and it is stricter for it.
   ///
-  /// That is a stronger fact than "one use", and worth pinning as such: new persistent state
-  /// is the first thing a sync layer needs and the last thing a repair pass should produce.
+  /// **A count would not have survived the mutation this is written against.** `F8-M5` adds one
+  /// `UserDefaults` read to `TimerEngine` and deletes one from the store so the total is unchanged
+  /// — the edit a well-meaning person actually makes, *"the engine needs to know the preset, I'll
+  /// just read it here"*. `== 3` stays green under it. A set of filenames does not: a second file
+  /// reaching for `UserDefaults` makes the array two elements, and removing the store's own use to
+  /// compensate makes it `["TimerEngine.swift"]`. Both fail, which is the point.
   ///
-  /// If a measurement genuinely demands a cache, this test failing is the correct outcome: it
-  /// stops the pass and moves the argument to a delta, where it belongs.
+  /// Everything else that outlives a launch is still SwiftData, in one container, made once in the
+  /// composition root. If a measurement genuinely demands a cache, this test failing is still the
+  /// correct outcome: it stops the pass and moves the argument to a delta, where it belongs.
   @Test("noNewPersistentSurface")
   func noNewPersistentSurface() throws {
     #expect(
-      try Self.countAcrossApp("UserDefaults") == 0,
-      "A repair pass has reached for a second kind of persistence.")
+      try Self.filesAcrossApp(matching: "UserDefaults") == ["ShapeStore.swift"],
+      "UserDefaults belongs to the shape store and to nothing else. See D32.")
     // One container, made once, in the composition root.
     #expect(try Self.countAcrossApp("ModelContainer\\(") <= 1)
   }
@@ -166,6 +171,24 @@ struct PolishFenceTests {
       }
     }
     return total
+  }
+
+  /// The names of the shipped files that contain `pattern`, sorted, with comments removed.
+  ///
+  /// **Filenames rather than a total, because a total can be satisfied by moving code.** That is
+  /// the same correction `noNewStoredShape` above already had to make when a property moved to a
+  /// second file and a regex went on counting the old one.
+  private static func filesAcrossApp(matching pattern: String) throws -> [String] {
+    var names: [String] = []
+    for directory in ["ZenTomato", "ZenTomatoWatch", "ZenTomatoActivity"] {
+      guard let walk = FileManager.default.enumerator(
+        at: root.appending(path: directory), includingPropertiesForKeys: nil) else { continue }
+      for case let url as URL in walk where url.pathExtension == "swift" {
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else { continue }
+        if matches(pattern, in: stripped(text)) > 0 { names.append(url.lastPathComponent) }
+      }
+    }
+    return names.sorted()
   }
 
   /// Comments removed before searching, for the reason `StatsFenceTests` gives: a fence that
