@@ -23,18 +23,24 @@ import Testing
 /// be silent.
 @Suite("PrivacyManifest")
 struct PrivacyManifestTests {
-  /// `nothingIsTrackedOrCollected` — the three empty arrays, asserted as empty.
+  /// `nothingIsTrackedOrCollected` — the two empty arrays, asserted as empty.
   ///
   /// **An empty array is a statement; a missing key is a silence.** Both read the
   /// same to a careless eye and mean different things to App Store Connect, so
   /// each key is checked for presence *and* for emptiness.
+  ///
+  /// **`NSPrivacyAccessedAPITypes` used to be checked here as a third empty array and is now
+  /// checked below as an exact declaration.** `D32` put one required-reason API into the app, and
+  /// an assertion that the array is empty would have had to be deleted to let it land. Deleting a
+  /// fence is how a claim stops being checked; replacing "empty" with "exactly this, and nothing
+  /// else" keeps the same instrument pointed at the same file.
   @Test("nothingIsTrackedOrCollected")
   func nothingIsTrackedOrCollected() throws {
     let manifest = try Self.manifest()
 
     #expect(manifest["NSPrivacyTracking"] as? Bool == false, "The app declares that it tracks.")
 
-    for key in ["NSPrivacyTrackingDomains", "NSPrivacyCollectedDataTypes", "NSPrivacyAccessedAPITypes"] {
+    for key in ["NSPrivacyTrackingDomains", "NSPrivacyCollectedDataTypes"] {
       let value = try #require(
         manifest[key] as? [Any],
         "\(key) is missing, which says nothing rather than nothing-collected.")
@@ -42,24 +48,51 @@ struct PrivacyManifestTests {
     }
   }
 
+  /// `theOneAccessedAPIIsTheShapeStore` — one declaration, named, with its reason code.
+  ///
+  /// The app reaches for exactly one required-reason API: `UserDefaults`, holding the shape of the
+  /// sprint you are in. CA92.1 is Apple's code for an app reading its own defaults for its own use,
+  /// which is the whole of what the shape store does.
+  ///
+  /// Asserted as a **whole array of one** rather than by looking for the entry, because "contains
+  /// the declaration we expect" stays green while a second declaration arrives beside it.
+  @Test("theOneAccessedAPIIsTheShapeStore")
+  func theOneAccessedAPIIsTheShapeStore() throws {
+    let manifest = try Self.manifest()
+    let declared = try #require(
+      manifest["NSPrivacyAccessedAPITypes"] as? [[String: Any]],
+      "NSPrivacyAccessedAPITypes is missing, which says nothing rather than none.")
+
+    #expect(declared.count == 1, "The app declares \(declared.count) required-reason APIs; it uses one.")
+    let entry = try #require(declared.first)
+    #expect(entry["NSPrivacyAccessedAPIType"] as? String == "NSPrivacyAccessedAPICategoryUserDefaults")
+    #expect(entry["NSPrivacyAccessedAPITypeReasons"] as? [String] == ["CA92.1"])
+  }
+
   /// `theManifestAndTheCodeAgree` — the claim is checked against the tree.
   ///
-  /// The manifest declaring no required-reason APIs is only worth something if no
-  /// required-reason API is used. This checks the five categories Apple names,
-  /// with comments stripped first — the only `UserDefaults` in this repository is
-  /// a word inside a comment explaining why SwiftData was chosen instead, and a
-  /// fence that cannot tell a mention from a use is one somebody switches off.
+  /// A manifest that declares one required-reason API is only worth something if exactly that one
+  /// is used. The four the manifest is silent about must not appear at all; `UserDefaults` must
+  /// appear in the shape store and nowhere else, which `PolishFenceTests.noNewPersistentSurface`
+  /// states as a set of filenames and this states as a location.
+  ///
+  /// Comments are stripped first, because a fence that cannot tell a mention from a use is one
+  /// somebody switches off — `AppSettings.swift` still carries a paragraph naming `UserDefaults` to
+  /// explain why the settings row is not one.
   @Test("theManifestAndTheCodeAgree")
   func theManifestAndTheCodeAgree() throws {
-    for api in ["UserDefaults", "systemUptime", "\\.creationDate", "\\.modificationDate",
+    for api in ["systemUptime", "\\.creationDate", "\\.modificationDate",
                 "volumeAvailableCapacity", "activeInputModes"] {
       #expect(
         try Self.usesInShippedCode(api) == 0,
         """
-        \(api) is a required-reason API and the manifest declares none. Either \
+        \(api) is a required-reason API and the manifest declares only UserDefaults. Either \
         add it to NSPrivacyAccessedAPITypes with its reason code, or stop using it.
         """)
     }
+    #expect(
+      try Self.usesInShippedCode("UserDefaults", outside: "ShapeStore.swift") == 0,
+      "UserDefaults is declared for the shape store. A second user of it is a second store.")
   }
 
   // MARK: Private
@@ -78,12 +111,16 @@ struct PrivacyManifestTests {
   }
 
   /// Occurrences across the shipped Swift, with comment lines removed.
-  private static func usesInShippedCode(_ pattern: String) throws -> Int {
+  ///
+  /// - Parameter exempt: one filename the pattern is permitted to appear in. Named rather than
+  ///   counted: an allowance of "one occurrence somewhere" is satisfied by moving the occurrence.
+  private static func usesInShippedCode(_ pattern: String, outside exempt: String? = nil) throws -> Int {
     var total = 0
     for directory in ["ZenTomato", "ZenTomatoWatch", "ZenTomatoActivity"] {
       guard let walk = FileManager.default.enumerator(
         at: root.appending(path: directory), includingPropertiesForKeys: nil) else { continue }
       for case let url as URL in walk where url.pathExtension == "swift" {
+        guard url.lastPathComponent != exempt else { continue }
         guard let text = try? String(contentsOf: url, encoding: .utf8) else { continue }
         let code = text
           .components(separatedBy: "\n")
