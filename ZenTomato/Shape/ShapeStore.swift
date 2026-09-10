@@ -1,5 +1,41 @@
 import Foundation
 
+/// The substrate a shape is stored in — three operations and no more.
+///
+/// **WHY THIS EXISTS, STATED HONESTLY.** It is not here because a test needed a stand-in; the shape
+/// store is perfectly testable against a disposable `UserDefaults` suite, and that is still how most
+/// of its tests run. It is here because the owner chose, deliberately, to buy sync-readiness now —
+/// see the sync-medium delta in `docs/plans/00-deltas.md`. `CLAUDE.md` forbids preparing for work
+/// outside the milestone and `D16`'s test asks whether this would be written the same way if the
+/// parked feature were never coming. It would not. That is recorded rather than disguised, because
+/// the alternative — calling it a testability extraction — is the exact wording
+/// `PolishFenceTests.noNewProtocol` names as the drift it watches for.
+///
+/// **Why the medium and not the store.** Abstracting `ShapeStore` itself would mean writing a second
+/// whole implementation for iCloud, duplicating the codec and the cursor. Abstracting the *substrate*
+/// leaves `ShapeStore` as the single place that knows what a stored shape is, and
+/// `NSUbiquitousKeyValueStore` — the iCloud counterpart, whose API is nearly identical to
+/// `UserDefaults` but which is not a `UserDefaults` and so cannot be passed where one is expected —
+/// conforms with the same three-line shim below.
+///
+/// **Deliberately minimal.** Three operations, exactly what a shape store needs, and no generic
+/// `Any?` accessor. A wider protocol would become the app's general storage abstraction by
+/// gravity, which is a different decision nobody has made.
+protocol KeyValueMedium {
+  func data(forKey key: String) -> Data?
+  func write(_ data: Data, forKey key: String)
+  func removeValue(forKey key: String)
+}
+
+/// **The app's own medium, and the only place `UserDefaults` is named in shipped code.**
+///
+/// `data(forKey:)` already matches; the other two are renamed because `UserDefaults.set` takes
+/// `Any?` and a protocol witness must match its requirement exactly.
+extension UserDefaults: KeyValueMedium {
+  func write(_ data: Data, forKey key: String) { set(data, forKey: key) }
+  func removeValue(forKey key: String) { removeObject(forKey: key) }
+}
+
 /// Where a shape lives between the moment it is calculated and the moment its sprint ends.
 ///
 /// **THIS IS THE ONLY FILE IN THE APP THAT MAY NAME `UserDefaults`, AND A TEST ENFORCES IT.**
@@ -29,12 +65,12 @@ struct ShapeStore {
   /// The one key. Namespaced because a preferences domain is shared with the system.
   static let key = "zentomato.shape"
 
-  private let defaults: UserDefaults
+  private let medium: KeyValueMedium
 
   /// - Parameter defaults: the medium. Defaults to the app's own, which is what the composition
   ///   root wants and what no test should ever be given.
-  init(defaults: UserDefaults = .standard) {
-    self.defaults = defaults
+  init(medium: KeyValueMedium = UserDefaults.standard) {
+    self.medium = medium
   }
 
   // MARK: Reading
@@ -45,7 +81,7 @@ struct ShapeStore {
   /// A later edit that wants a default has to change a signature, which is visible in a diff,
   /// rather than change an operator, which is not. `F8-M4` is the mutation that proves it.
   func load() -> StoredShape? {
-    guard let data = defaults.data(forKey: Self.key) else { return nil }
+    guard let data = medium.data(forKey: Self.key) else { return nil }
     return try? JSONDecoder().decode(StoredShape.self, from: data)
   }
 
@@ -59,7 +95,7 @@ struct ShapeStore {
   /// Replaces everything the store holds.
   func save(_ value: StoredShape) {
     guard let data = try? JSONEncoder().encode(value) else { return }
-    defaults.set(data, forKey: Self.key)
+    medium.write(data, forKey: Self.key)
   }
 
   /// Writes a freshly calculated shape, keeping the controls that are remembered between shapes.
@@ -94,7 +130,7 @@ struct ShapeStore {
   /// again what it means — and it already decided: nothing.
   func clearRun() {
     guard var value = load() else {
-      defaults.removeObject(forKey: Self.key)
+      medium.removeValue(forKey: Self.key)
       return
     }
     guard value.run != nil else { return }

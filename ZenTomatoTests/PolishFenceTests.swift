@@ -99,7 +99,7 @@ struct PolishFenceTests {
   /// catch, in its most plausible disguise.
   @Test("noNewProtocol")
   func noNewProtocol() throws {
-    #expect(try Self.countAcrossApp("^(public |internal )?protocol ") == 10)
+    #expect(try Self.countAcrossApp("^(public |internal )?protocol ") == 11)
   }
 
   /// `noNewPersistentSurface` — no cache arrives quietly.
