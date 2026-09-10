@@ -64,6 +64,15 @@ final class TimerEngine {
   /// drift, less than any real clock change, which is at minimum a minute.
   static let clockSkewTolerance: TimeInterval = 5
 
+  /// Whether a shape outlives its sprint being stopped early.
+  ///
+  /// **`docs/plans/F8.md`'s third open question, and it is unruled.** Ruling C's doctrine — a long
+  /// break is earned — points at clearing the shape with the timer; the person who hit Stop by
+  /// accident points the other way. `T2` must not settle that silently in either direction, so it
+  /// ships as one named constant with the question attached: the owner's answer is a one-line
+  /// change here, not a hunt through `stop(reason:)`.
+  static let shapeSurvivesBeingStoppedEarly = false
+
   // MARK: What the screens read
 
   /// The block that is running, or — when idle — the one `start()` would begin.
@@ -185,6 +194,15 @@ final class TimerEngine {
   /// the next block will be started with.
   private var idleSettings: TimerSettingsSnapshot
 
+  /// Where the sprint's shape is kept, or `nil` when this engine has no shape store at all.
+  ///
+  /// **`nil` and "an empty store" behave identically, and the option exists so that the acceptance
+  /// condition is structural rather than asserted.** `F8-T2` promises that with no shape present
+  /// the app is byte-for-byte what it was; every engine built before this feature — the previews
+  /// included — is handed nothing, so there is no path by which one of them can read a shape,
+  /// rather than a promise that none of them will.
+  private let shapes: ShapeStore?
+
   /// The running block's deadline on the monotonic clock, held **in memory
   /// only**. See `correctForClockSkew` for what it is for and why it must never
   /// be saved or rebuilt from `endsAt`.
@@ -248,11 +266,13 @@ final class TimerEngine {
     context: ModelContext,
     clock: any TimerClock,
     alarms: any AlarmScheduling,
-    attachments: (any SessionAttaching)? = nil) {
+    attachments: (any SessionAttaching)? = nil,
+    shapes: ShapeStore? = nil) {
     self.context = context
     self.clock = clock
     self.alarms = alarms
     self.attachments = attachments
+    self.shapes = shapes
 
     let fallback = TimerSettingsSnapshot.fallback
     idleSettings = fallback
@@ -265,7 +285,7 @@ final class TimerEngine {
     do {
       let row = try TimerState.current(in: context)
       state = row
-      idleSettings = try TimerSettingsSnapshot(clamping: AppSettings.current(in: context))
+      idleSettings = try resolvedSettings()
       adopt(row)
       // The taps for a block that is still running were written to the database
       // by whatever process recorded them, which may well have been a previous
@@ -342,6 +362,9 @@ final class TimerEngine {
     // gets dismissed is the one that mattered. The rows themselves are
     // untouched; only the offer to annotate them is withdrawn.
     pendingReflection = nil
+    // The sprint is over, so the shape for it is too — and it goes before `goIdle`, which re-reads
+    // a length for the block Start would begin next.
+    abandonShape()
     goIdle(kind: .work, completedInSprint: 0)
     persist()
   }
@@ -795,6 +818,9 @@ final class TimerEngine {
     let transition = TimerCycle.next(
       after: state.kind, completedInSprint: state.completedInSprint, completed: completed, settings: finished)
     lastCompletedSprintSize = transition.endsSprint ? finished.pomodorosPerSprint : nil
+    // Before either way out of this method, because both of them read a length for what comes
+    // next: the auto-start path through `begin`, and `goIdle`'s re-read for the idle screen.
+    advanceShape()
 
     // Auto-start carries you through a sprint, not into the next one: when a
     // long break ends the timer stops and waits, even with the setting on.
@@ -840,18 +866,6 @@ final class TimerEngine {
   }
 
   // MARK: The database
-
-  /// Re-reads the settings row. Called only at a boundary and while idle, never
-  /// while a block runs — the rule this whole design rests on.
-  @discardableResult
-  private func readSettings() -> TimerSettingsSnapshot {
-    do {
-      idleSettings = try TimerSettingsSnapshot(clamping: AppSettings.current(in: context))
-    } catch {
-      lastFailure = .persistenceFailed
-    }
-    return idleSettings
-  }
 
   /// Writes the finished-block row. Saving is left to the caller so the row and
   /// the new timer state are written in one go.
@@ -1293,6 +1307,71 @@ extension TimerEngine {
     } catch {
       lastFailure = .alarmCancellationFailed
     }
+  }
+}
+
+// MARK: - Where a block's length comes from
+
+/// The seam, kept out of the class body — which is at its 250-line lint ceiling — and kept in one
+/// place for a reason of its own.
+///
+/// **EVERY LENGTH THE ENGINE USES ARRIVES THROUGH `resolvedSettings()`, AND THAT IS THE DESIGN.**
+/// The alternative was to read the shape inside `begin`, where the block's end instant is
+/// calculated. It would have been wrong in a way nobody would have seen for a week: `begin` is not
+/// the only reader of a length. The idle screen shows the next block's countdown from
+/// `idleSettings`, and so does the sprint-dot row — so a shape resolved only at the boundary would
+/// have announced the settings length and then started a differently-sized block. One funnel, three
+/// callers, no way to apply the seam by halves.
+///
+/// **The two snapshot constructions that do not come through here are accounted for rather than
+/// missed.** `TimerSettingsSnapshot.fallback` is reached only when the database cannot be read at
+/// all, and a shape is deliberately *not* applied on top of it: the store is readable when SwiftData
+/// is not, so that state is "a shape, but no database", and running a shaped sprint over a failed
+/// store would put shaped lengths on a screen that is already telling the person their data is
+/// unreachable. `TimerState.snapshot` rebuilds a running block from its own frozen columns, which
+/// were written from a resolved snapshot when the block began — so a kill and a relaunch mid-block
+/// restore the shaped block without the store being consulted at all.
+extension TimerEngine {
+  /// Re-reads the settings row. Called only at a boundary and while idle, never
+  /// while a block runs — the rule this whole design rests on.
+  @discardableResult
+  fileprivate func readSettings() -> TimerSettingsSnapshot {
+    do {
+      idleSettings = try resolvedSettings()
+    } catch {
+      lastFailure = .persistenceFailed
+    }
+    return idleSettings
+  }
+
+  /// The saved settings, with the shape's next block resolved into them if there is a shape.
+  ///
+  /// **It reads the store and never writes it.** Ruling B's whole protection is that running a
+  /// shape leaves `AppSettings` untouched — settings are written by the explicit *Save to settings*
+  /// control and by nothing else — and the direction of this function is what makes that true by
+  /// construction rather than by anybody remembering it.
+  fileprivate func resolvedSettings() throws -> TimerSettingsSnapshot {
+    let saved = try TimerSettingsSnapshot(clamping: AppSettings.current(in: context))
+    guard let run = shapes?.runningShape(), let block = run.currentBlock else { return saved }
+    return saved.overriding(minutes: block.minutes, for: block.kind, pomodorosPerSprint: run.pomCount)
+  }
+
+  /// Moves the shape on by one block, and clears it when the shape is spent.
+  ///
+  /// **Called once per boundary, from `end`, before anything reads a length for the block that
+  /// follows.** It advances whether or not the block that ended was completed, so that the shape
+  /// and the cycle stay in step: a skipped focus block leads to a short break, which is the shape's
+  /// next slot too. The consequence — a skipped pom costs its slot rather than repeating it, and
+  /// the sprint therefore ends one pom light rather than overrunning the budget — is `T4`'s named
+  /// edge and is written down here because it is decided here.
+  fileprivate func advanceShape() {
+    shapes?.advance()
+  }
+
+  /// Forgets the shape when the sprint is abandoned. See `shapeSurvivesBeingStoppedEarly`.
+  fileprivate func abandonShape() {
+    guard !Self.shapeSurvivesBeingStoppedEarly else { return }
+    shapes?.clearRun()
   }
 }
 

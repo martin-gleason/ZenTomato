@@ -101,7 +101,11 @@ struct ZenTomatoApp: App {
         // The one thing the timer knows about Todoist, and it is a read: at
         // the start of each focus block it asks the plan for the next item.
         // The timer never sees a request, a token or a cached row.
-        attachments: plan)
+        attachments: plan,
+        // F8. The one place in the app where a real shape store is made: every
+        // other engine — the previews, every test — is handed none, and reads
+        // no shape because there is nothing to read one from.
+        shapes: ShapeStore())
 
       // F7. Made after the engine because it holds a weak reference to it: a tap
       // arriving during its own block is offered to the engine so the

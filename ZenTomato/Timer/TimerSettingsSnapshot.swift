@@ -106,6 +106,37 @@ struct TimerSettingsSnapshot: Equatable, Sendable {
     }
   }
 
+  // MARK: Resolving a shape into the snapshot
+
+  /// The same settings with one block kind's length replaced, and the sprint resized to match.
+  ///
+  /// **THIS IS HOW A SHAPE REACHES THE ENGINE, AND WHY NOTHING DOWNSTREAM CHANGED.** A shape could
+  /// have been threaded through `begin` as its own type, and then every consumer of a length — the
+  /// block's frozen columns, the cycle deciding when the long break is earned, the alarm's Lock
+  /// Screen metadata, the "sprint complete" line — would have needed to learn about it. Resolving
+  /// the shape into the snapshot the engine already reads means each of those stays correct with no
+  /// edit at all, and the restore path stays free: the row's own frozen columns already hold the
+  /// shaped numbers, so a kill and a relaunch mid-block restore the shaped block without the store
+  /// being consulted.
+  ///
+  /// **`pomodorosPerSprint` moves with the length and that is not optional.** A shape of three poms
+  /// whose sprint size still said four would take a short break where the shape says long, announce
+  /// "4 pomodoros done" when four were never asked for, and tell the Lock Screen "2 of 4" in a
+  /// separate process that cannot see this database to be corrected.
+  ///
+  /// The values are still clamped by the initialiser, so a shape cannot put an out-of-range length
+  /// into the engine by a route the settings screen is not allowed to use.
+  func overriding(minutes: Int, for kind: BlockKind, pomodorosPerSprint sprint: Int) -> TimerSettingsSnapshot {
+    TimerSettingsSnapshot(
+      workMinutes: kind == .work ? minutes : workMinutes,
+      shortBreakMinutes: kind == .shortBreak ? minutes : shortBreakMinutes,
+      longBreakMinutes: kind == .longBreak ? minutes : longBreakMinutes,
+      pomodorosPerSprint: sprint,
+      soundEnabled: soundEnabled,
+      alertSound: alertSound,
+      autoStartNextBlock: autoStartNextBlock)
+  }
+
   /// How long a block of this kind lasts, as a measured span of time.
   ///
   /// `Duration` is Swift's type for "an amount of time" as distinct from "a
