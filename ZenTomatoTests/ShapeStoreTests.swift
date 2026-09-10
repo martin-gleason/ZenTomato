@@ -192,4 +192,37 @@ struct ShapeStoreTests {
     #expect(stored.preset == .moreFocus)
     #expect(stored.endsWithLongBreak == false)
   }
+
+  // MARK: The medium is a real seam
+
+  /// **The only test that proves `KeyValueMedium` is an abstraction rather than a decoration.**
+  ///
+  /// The medium protocol was added to buy sync-readiness: `NSUbiquitousKeyValueStore` should drop in
+  /// for v2.0 without the store being rewritten. Every other test here hands the real store a
+  /// disposable `UserDefaults` suite, so all of them would still pass if `ShapeStore` had
+  /// `UserDefaults` welded into it. This one drives the whole round trip — encode, store, decode,
+  /// advance, clear — through a conformer that is not `UserDefaults` and shares no code with it.
+  ///
+  /// If this test is ever deleted, the delta that bought the protocol has no evidence left.
+  @Test("theStoreWorksThroughAMediumThatIsNotUserDefaults")
+  func theStoreWorksThroughAMediumThatIsNotUserDefaults() throws {
+    let medium = InMemoryMedium()
+    let store = ShapeStore(medium: medium)
+    let shape = try #require(SprintShaper.shape(budgetMinutes: 120, settings: Self.settings))
+
+    #expect(store.load() == nil, "a fresh medium holds no shape")
+
+    store.start(shape)
+    #expect(medium.writes == 1, "the save reached the medium rather than being swallowed")
+
+    let readBack = try #require(store.runningShape())
+    #expect(readBack.pomCount == shape.pomCount)
+    #expect(readBack.cursor == 0)
+
+    store.advance()
+    #expect(try #require(store.runningShape()).cursor == 1, "the cursor survives a round trip")
+
+    store.clearRun()
+    #expect(store.runningShape() == nil, "clearing reaches the medium too")
+  }
 }

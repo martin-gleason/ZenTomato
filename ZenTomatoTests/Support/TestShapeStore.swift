@@ -20,7 +20,7 @@ struct TestShapeStore {
   let defaults: UserDefaults
 
   /// The store under test, over the private suite.
-  var store: ShapeStore { ShapeStore(defaults: defaults) }
+  var store: ShapeStore { ShapeStore(medium: defaults) }
 
   /// A private, empty defaults suite for one test's exclusive use.
   static func make() throws -> TestShapeStore {

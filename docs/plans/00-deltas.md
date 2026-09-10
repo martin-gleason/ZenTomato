@@ -54,8 +54,9 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D31** | ratified | no | — | C22 is struck; the licence question was already answered |
 | **D32** | ratified | no | — | A shape is stored, in one file, outside SwiftData |
 | **D33** | ratified | no | — | v1.5 admits two more units, and the order is restated |
+| **D34** | ratified | no | — | The shape store speaks to a medium, to buy sync-readiness now |
 
-*35 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*36 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
@@ -1788,3 +1789,49 @@ the only piece in the batch that ships without ratifying anything, and the pacin
 project is review capacity rather than build time. `F18` sits after `F10` so that one seam is built,
 then exercised by the cheap door before the expensive one — and its spike lands *before* `F17` is
 scheduled, so a "no" there reshapes `F17-T5` at planning time rather than mid-build.
+
+## D34 — The shape store speaks to a medium, to buy sync-readiness now
+
+**Proposed 2026-09-10. Ratified by the owner 2026-09-10**, who directed it and chose this framing
+over the alternative described below.
+
+**Currently**, `PolishFenceTests.noNewProtocol` pins the protocol count at ten, and its doc comment
+says why: *"The ten that exist are all seams for testing… Each was written because a test had to hand
+the app a stand-in. An eleventh arriving during a polish pass would almost certainly be 'extracted
+for testability' and mean 'made swappable for the sync engine' — which is the drift this fence exists
+to catch, in its most plausible disguise."*
+
+**This delta is that eleventh, and it is the disguised case with the disguise removed.**
+
+**The honest reason.** No test needs a stand-in. `ShapeStore` is testable against a disposable
+`UserDefaults` suite and most of its tests still run that way. The protocol exists because the owner
+chose to buy **sync-readiness for v2.0 now** rather than refactor later. `CLAUDE.md` says of anything
+outside the milestone: *do not build it, stub it, or prepare for it*, and `D16`'s test asks whether
+this would be written the same way if the parked feature were never coming. **It would not.** That is
+a rule the owner is entitled to override, and this row is the override, on the record.
+
+**The alternative that was refused**, so it is not re-proposed: framing it as the eleventh testability
+protocol. It reads as conventional and it is the exact wording the fence names. A future reader
+finding an unused testability wrapper would be right to delete it; a future reader finding *this*
+knows it is load-bearing for sync.
+
+**What was built, and why the medium rather than the store.** `KeyValueMedium` — three operations,
+`data(forKey:)`, `write(_:forKey:)`, `removeValue(forKey:)`. Abstracting `ShapeStore` itself would
+have meant a second whole implementation for iCloud, duplicating the codec and the cursor.
+Abstracting the **substrate** leaves `ShapeStore` as the single place that knows what a stored shape
+is, and `NSUbiquitousKeyValueStore` — whose API is nearly identical to `UserDefaults` but which is
+**not** a `UserDefaults`, and so cannot be passed where one is expected — conforms with the same
+three-line shim.
+
+**Deliberately minimal**: no generic `Any?` accessor. A wider protocol becomes the app's general
+storage abstraction by gravity, which is a different decision nobody has made.
+
+**The evidence this delta owes, and it is one test.** A protocol nothing but the original
+implementation has ever been driven through is a claim, not an abstraction — every other shape-store
+test would still pass with `UserDefaults` welded in. `InMemoryMedium` is a conformer sharing no code
+with `UserDefaults`, and `theStoreWorksThroughAMediumThatIsNotUserDefaults` drives the whole round
+trip through it. **If that test is deleted, this delta has no evidence left.**
+
+**`noNewProtocol` moves from 10 to 11**, and no further. `NSUbiquitousKeyValueStore` is not added
+here — conforming it would be building v2.0, which is the thing this delta is careful to admit it is
+only *preparing* for.
