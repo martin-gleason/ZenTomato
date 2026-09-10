@@ -74,12 +74,18 @@ struct TimerScreen: View {
   /// Start the music again for this block.
   var onResumeBlock: () -> Void = { }
 
+  /// Open the screen that fits a sprint to the time you have (`F8`). Idle only — see
+  /// `shapeControl`.
+  var onOpenShape: () -> Void = { }
+
   var body: some View {
     VStack(spacing: Spacing.none) {
       centreColumn
 
       controls
         .accessibilitySortPriority(1)
+
+      shapeControl
     }
     .padding(.horizontal, Spacing.md)
     .padding(.bottom, Spacing.lg)
@@ -531,6 +537,38 @@ struct TimerScreen: View {
         .buttonStyle(SecondaryButtonStyle(emphasis: .quiet))
         .accessibilityLabel(Text("Stop the timer"))
         .accessibilityHint(Text("Asks why, then ends the block and the sprint."))
+    }
+  }
+
+  /// The way into *fit a sprint to the time I have* (`F8`).
+  ///
+  /// **ABSENT WHILE A BLOCK RUNS, RATHER THAN DISABLED.** This app's idiom for "only while idle" is
+  /// a value that is not there — `Capture.forBlock` returns `nil` off a focus block,
+  /// `Attachment.isTappable` is false while running, `MusicRowModel.isTogglable` likewise — and it
+  /// is stronger than `.disabled` for a reason specific to this control: the shape store holds one
+  /// slot, so a screen reached mid-sprint is a screen that can rewrite the blocks of the sprint
+  /// already running. A greyed-out button is still in the accessibility tree and still one bug away
+  /// from being pressable. `TimerView` guards the same thing again on the way in, so a future caller
+  /// cannot do it either.
+  ///
+  /// **Derived from `controls`, not from a new field on the model.** `isRunning` on the model is
+  /// derived the same way and says why: a second source for "is the timer idle" is a second thing
+  /// that can disagree with what the bottom of the screen is drawing.
+  ///
+  /// **The one movement it causes is at Start**, the instant the capture pair appears and Start
+  /// becomes Stop — the one shift `D19` permits, in the one state where it is attributable. While
+  /// the alarm rings it is gone too, because the primary control is already swapping to Silence at
+  /// that same instant and a sheet opened over a ringing alarm is exactly what `D26` fought.
+  @ViewBuilder
+  private var shapeControl: some View {
+    if model.alarmIsRinging == false, case .start = model.controls {
+      Button(ShapeScreenModel.title) { onOpenShape() }
+        .buttonStyle(SecondaryButtonStyle(emphasis: .quiet))
+        .padding(.top, Spacing.sm)
+        .accessibilityLabel(Text("Fit a sprint to the time you have"))
+        .accessibilityHint(Text("Shows the shape before anything starts. Nothing here starts a timer."))
+        // After Stop and the history glyph, before the gear. The timer is still the point.
+        .accessibilitySortPriority(0.6)
     }
   }
 

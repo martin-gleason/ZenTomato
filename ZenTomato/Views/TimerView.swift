@@ -90,6 +90,12 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
   /// The remembered library, so the music sheet opens at once.
   let musicCache: MusicLibraryCache
 
+  /// Where a sprint's shape lives (`D32`). Handed down from the composition root, which is the one
+  /// place in the app that makes a real one — this screen never reaches for a defaults domain, and
+  /// a fence asserts that the word `UserDefaults` appears in the shape store's own file and nowhere
+  /// else.
+  let shapes: ShapeStore
+
   var body: some View {
     screen
       .sheet(isPresented: $showingSettings, onDismiss: settingsSheetClosed) {
@@ -159,6 +165,13 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       // from. Reached from the music row's line, which is a control only while
       // the timer is idle — D19 says music is set before a sprint, and a screen
       // offering a choice it will not honour is worse than one offering none.
+      // F8's shape sheet: how long have you got, and the shape that answers it. It shows; it
+      // starts nothing. `onDismiss` is `presentReflectionIfPossible` for the reason every other
+      // sheet here carries it — D14: a block can end behind a modal, and the offer has to be taken
+      // again when the screen is free.
+      .sheet(isPresented: $showingShape, onDismiss: presentReflectionIfPossible) {
+        ShapeSheet(shapes: shapes)
+      }
       .sheet(isPresented: $showingMusic) {
         MusicPickerSheet(
           music: music,
@@ -402,6 +415,9 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
   /// Whether the pomodoro history sheet is up.
   @State private var showingHistory = false
 
+  /// Whether F8's shape sheet is up.
+  @State private var showingShape = false
+
   /// The tasks ticked off since this sprint began (D21b).
   ///
   /// Optional so this screen can be looked at in a preview with nothing behind
@@ -469,7 +485,8 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       // transport control this app has.
       onSkipTrack: { self.music.skipForward() },
       onSilenceBlock: { self.music.silenceThisBlock() },
-      onResumeBlock: { self.music.resumeThisBlock() })
+      onResumeBlock: { self.music.resumeThisBlock() },
+      onOpenShape: { self.openShape() })
   }
 
   // MARK: Turning the engine into something to draw
@@ -1001,12 +1018,25 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
   /// to ask; presenting a second modal over somebody who has just decided to quit
   /// is the exact thing D14 exists to prevent. Its offer is left unconsumed and
   /// is harmlessly replaced when the next block ends.
+  /// Opens the shape sheet, and only while nothing is running.
+  ///
+  /// **The second of two guards, and the one that holds for callers rather than for eyes.** The
+  /// control itself is structurally absent while a block runs; this is what makes the rule true for
+  /// a future caller who wires the sheet to something else. The shape store has a single slot, so a
+  /// shape written mid-sprint would silently rewrite the remaining blocks of the sprint already
+  /// going — the engine reads the running shape at every boundary.
+  private func openShape() {
+    guard engine.isRunning == false, engine.ringingAlarmID == nil else { return }
+    showingShape = true
+  }
+
   private func presentReflectionIfPossible() {
     guard
       engine.pendingReflection != nil,
       isAskingWhyStopping == false,
       showingSettings == false,
       showingHistory == false,
+      showingShape == false,
       reflection == nil,
       // **AND NOT WHILE THE ALARM IS RINGING.** `D26`'s whole complaint was that
       // a noise this app started had no off switch inside the app; presenting
@@ -1145,7 +1175,10 @@ private struct TimerViewPreviewHost: View {
         completion: running.completion,
         music: running.music,
         library: running.library,
-        musicCache: running.musicCache)
+        musicCache: running.musicCache,
+        // A throwaway medium. `ShapeStore()`'s default is the app's own defaults domain, so a
+        // preview built without this would read and write the real one.
+        shapes: ShapeStore(medium: PreviewMedium()))
         .modelContainer(running.container)
         .environment(running.engine)
         .preferredColorScheme(appearance)
@@ -1209,6 +1242,16 @@ private struct TimerViewPreviewHost: View {
       library: library,
       musicCache: MusicLibraryCache(context: container.mainContext, library: library))
   }
+}
+
+/// A shape store's substrate that lives in memory only, for the previews. Never part of what ships,
+/// and it is what makes "no preview touches the real defaults" a property of the code.
+private final class PreviewMedium: KeyValueMedium {
+  private var storage: [String: Data] = [:]
+
+  func data(forKey key: String) -> Data? { storage[key] }
+  func write(_ data: Data, forKey key: String) { storage[key] = data }
+  func removeValue(forKey key: String) { storage.removeValue(forKey: key) }
 }
 
 /// A token box that holds nothing, for the previews. Never part of what ships.

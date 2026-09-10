@@ -89,6 +89,8 @@ struct ZenTomatoApp: App {
         library: library,
         preferences: MusicPreferenceStore(context: container.mainContext))
 
+      let shapes = ShapeStore()
+
       // Named rather than built inline, because two things now need it: the app
       // hands it to the screen, and the music observer subscribes to it.
       let engine = TimerEngine(
@@ -105,7 +107,13 @@ struct ZenTomatoApp: App {
         // F8. The one place in the app where a real shape store is made: every
         // other engine — the previews, every test — is handed none, and reads
         // no shape because there is nothing to read one from.
-        shapes: ShapeStore())
+        //
+        // Named rather than built inline since F8-T3, because two things now
+        // need the same one: the engine reads the running shape at every
+        // boundary, and the shape screen reads and writes the two remembered
+        // controls. Two `ShapeStore()`s would be two views of one slot, which
+        // is the kind of thing that reads as working until it does not.
+        shapes: shapes)
 
       // F7. Made after the engine because it holds a weak reference to it: a tap
       // arriving during its own block is offered to the engine so the
@@ -116,6 +124,7 @@ struct ZenTomatoApp: App {
       return RunningApp(
         container: container,
         engine: engine,
+        shapes: shapes,
         tokens: credentials,
         cache: TodoistCacheStore(context: container.mainContext, client: client),
         plan: plan,
@@ -173,6 +182,10 @@ struct ZenTomatoApp: App {
   private struct RunningApp {
     let container: ModelContainer
     let engine: TimerEngine
+
+    /// Where a sprint's shape lives (`D32`). The engine reads it at every block
+    /// boundary and the shape screen writes the two remembered controls to it.
+    let shapes: ShapeStore
 
     /// Where the Todoist credential lives.
     let tokens: any TokenStore
@@ -239,7 +252,8 @@ struct ZenTomatoApp: App {
         completion: running.completion,
         music: running.music,
         library: running.library,
-        musicCache: running.musicCache)
+        musicCache: running.musicCache,
+        shapes: running.shapes)
         .modelContainer(running.container)
         .environment(running.engine)
         // Handed down rather than reached for, so the picker, the plan and the
