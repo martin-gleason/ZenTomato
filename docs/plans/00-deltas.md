@@ -52,8 +52,8 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D29** | ratified | yes, applied | — | A locked phone is somebody being there |
 | **D30** | proposed | yes, pending | — | A watch-face complication |
 | **D31** | ratified | no | — | C22 is struck; the licence question was already answered |
-| **D32** | proposed | no | — | A shape is stored, in one file, outside SwiftData |
-| **D33** | proposed | no | — | v1.5 admits two more units, and the order is restated |
+| **D32** | ratified | no | — | A shape is stored, in one file, outside SwiftData |
+| **D33** | ratified | no | — | v1.5 admits two more units, and the order is restated |
 
 *35 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
@@ -1722,7 +1722,7 @@ correction to a shipped chore's record and belongs with `O35`'s documentation li
 
 ## D32 — A shape is stored, in one file, outside SwiftData
 
-**Proposed 2026-09-09.** Owed by `F8-T2`, which cannot land until this is ratified or refused.
+**Proposed 2026-09-09. Ratified by the owner 2026-09-09.** Owed by `F8-T2`, which cannot land until this is ratified or refused.
 
 **Currently**, `SPEC.md`'s locked decisions say *"Data: Local only (SwiftData). Todoist token in
 Keychain. No analytics, no accounts, no server."* Two stores are named and no third is.
@@ -1757,7 +1757,7 @@ counts their mutations depend on.
 
 ## D33 — v1.5 admits two more units, and the order is restated
 
-**Proposed 2026-09-09.** Owed because `docs/specs/zenpom-v1.5.md` is a ratified baseline and its
+**Proposed 2026-09-09. Ratified by the owner 2026-09-09.** Owed because `docs/specs/zenpom-v1.5.md` is a ratified baseline and its
 order table names eleven units.
 
 **Currently**, that table reads: `C21`, `F8`, `F12`, `F13`, `F11`, `F14`, `F10`, `F9`, `F15`, `F16`,
