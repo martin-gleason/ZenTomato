@@ -17,7 +17,7 @@ Named, never numbered (`D2`). **No source read here marks a milestone as the cur
 
 | Milestone | Decisions landing here | Units |
 |---|---|---|
-| — | 0 | F1, F2, F2b, F2c, F2d, F2e, F3, F4, F4c, F4d, F4e, F4f, F5, F6, F6b, F7 |
+| — | 0 | F1, F10, F11, F12, F13, F14, F15, F16, F17, F18, F19, F2, F2b, F2c, F2d, F2e, F3, F4, F4c, F4d, F4e, F4f, F5, F6, F6b, F7, F8, F9 |
 
 ## Features and chores
 
@@ -41,6 +41,18 @@ Status is what the unit's own plan header declares. What has landed in git is de
 | F6 | feature | — | — | — | — | `docs/plans/F6.md` | 5 planned |
 | F6b | feature | — | — | — | — | `docs/plans/F6b.md` | 7 planned |
 | F7 | feature | — | — | — | — | `docs/plans/F7.md` | 5 planned |
+| F8 | feature | plan written, **awaiting the gate.** No code has been written | — | — | — | `docs/plans/F8.md` | 0 planned |
+| F9 | feature | plan written, **awaiting the gate.** No code has been written | — | — | — | `docs/plans/F9.md` | 0 planned |
+| F10 | feature | plan written, **awaiting the gate.** No code has been written | — | — | — | `docs/plans/F10.md` | 0 planned |
+| F11 | feature | plan written, **awaiting the gate | — | — | — | `docs/plans/F11.md` | 0 planned |
+| F12 | feature | plan written, awaiting the gate | — | — | — | `docs/plans/F12.md` | 0 planned |
+| F13 | feature | plan written, awaiting the gate | — | — | — | `docs/plans/F13.md` | 0 planned |
+| F14 | feature | plan written, awaiting the gate | — | — | — | `docs/plans/F14.md` | 0 planned |
+| F15 | feature | plan written, **awaiting the gate.** No code has been written | — | — | — | `docs/plans/F15.md` | 0 planned |
+| F16 | feature | plan written, awaiting the gate | — | — | — | `docs/plans/F16.md` | 0 planned |
+| F17 | feature | plan written, awaiting the gate | — | — | — | `docs/plans/F17.md` | 0 planned |
+| F18 | feature | plan written, awaiting the gate | — | — | — | `docs/plans/F18.md` | 0 planned |
+| F19 | feature | plan written, **awaiting the gate.** No code has been written | — | — | — | `docs/plans/F19.md` | 0 planned |
 
 ## Registers
 
@@ -50,7 +62,7 @@ Counted from the register itself. A register with no rows still gets a line.
 |---|---|---|---|---|
 | Decisions (`D`) | 1 | 1 | 0 | 0 |
 | Risks (`RR`) | 0 | 0 | 0 | 0 |
-| Owner items (`O`) | 19 | 15 | 0 | 4 |
+| Owner items (`O`) | 24 | 20 | 0 | 4 |
 | Hooks (`H`) | 0 | 0 | 0 | 0 |
 | Mutations (`M`) | 0 | 0 | 0 | 0 |
 | Other (C) (`C`) | 11 | 0 | 8 | 3 |
@@ -64,7 +76,7 @@ Counted from the register itself. A register with no rows still gets a line.
 |---|---|---|
 | `D` | proposed | 1 |
 | `O` | closed | 4 |
-| `O` | open | 15 |
+| `O` | open | 20 |
 | `C` | closed | 3 |
 | `C` | unknown | 8 |
 
@@ -97,6 +109,11 @@ Every open row in the register. Owner is the row's Owner column where the table 
 | owner | O33 | P1 | open | The watch makes a noise when the phone is told not to |
 | owner | O34 | P1 | open | From the lock screen, slide-to-stop worked |
 | owner | O35 | P2 | open | Documentation accuracy left over from F2d/F2e's eight review passes |
+| owner | O36 | P1 | open | The zenpom Focus runbook, followed once on the phone |
+| owner | O37 | P1 | open | The shape screen, on a phone — F8-T3's device check |
+| owner | O38 | P2 | open | The two sentences on the shape screen are the agent's words, not the owner's |
+| owner | O39 | P2 | open | Does the absorption preset control earn its place? |
+| owner | O40 | P2 | open | The App Group capability, in the developer portal |
 | unassigned | C9 | P1 | unknown | TestFlight runbook |
 | unassigned | C10 | P1 | unknown | GPL-3.0 and the App Store: a decision, not a task |
 | unassigned | C12 | P1 | unknown | the configuration that ships is now built by the gate |
@@ -108,4 +125,4 @@ Every open row in the register. Owner is the row's Owner column where the table 
 
 ---
 
-24 open register rows.
+29 open register rows.
