@@ -202,11 +202,13 @@ struct ShapeScreenTests {
   /// **A shape's pomodoros are not always all the same length, and the screen says so.**
   ///
   /// Leftover minutes go one at a time to the earliest pomodoros, so 181 minutes comes out as one
-  /// of 31 and three of 30 while `AppSettings` holds a single `workMinutes`. **What should be
-  /// written in that case is a rule nobody has ruled on** — this pins the behaviour that exists
-  /// (the shortest, which every pomodoro in the shape is at least) and, more importantly, pins
-  /// that the screen tells the reader it is doing it. The 120 fixture comes out even and would
-  /// have hidden the whole case.
+  /// of 31 and three of 30 while `AppSettings` holds a single `workMinutes`.
+  ///
+  /// **RULED 2026-09-10 by the owner: the initial pomodoro's length is what gets written.** Because
+  /// the odd minutes go to the earliest blocks, the first pomodoro is always the longest — and it is
+  /// the one the person actually sits through first, which makes it the least surprising thing to
+  /// save. The draft wrote the shortest; 31 and 30 are one apart, which is exactly the size of
+  /// difference a fixture like 120 cannot see, since it divides evenly and the two rules agree.
   @Test("aShapeWhosePomodorosDifferSaysSoBeforeItWrites")
   func aShapeWhosePomodorosDifferSaysSoBeforeItWrites() throws {
     let model = Self.model(181)
@@ -214,7 +216,7 @@ struct ShapeScreenTests {
 
     #expect(poms == [31, 30, 30, 30])
     #expect(model.pomodorosDiffer)
-    #expect(try #require(model.settingsWrite).workMinutes == 30)
+    #expect(try #require(model.settingsWrite).workMinutes == 31, "the initial pomodoro, not the shortest")
     #expect(try #require(model.saveDetail).contains("aren't all the same length"))
 
     // And the even case does not carry the caveat.
