@@ -47,20 +47,21 @@ Extracted from ZenPom's `OPEN.md`, `00-deltas.md`, `docs/chores/` and plans.
 **No chore in ZenPom carries a status field.** Every row below is `unknown`;
 the dry run surfaces them for the owner to rule on rather than guessing.
 
-| ID | Title | P | Status | Why | TD |
-|---|---|---|---|---|---|
-| C6 | Correction pass | P1 | closed |  |  |
-| C8 | Turn on Developer Mode on the watch, and provision it | P1 | closed |  |  |
-| C9 | TestFlight runbook | P1 | unknown | Owner: both. The agent can write the runbook and prepare the build; only the owner can hold the Apple Develope | td:6hPjPm8wMpv6Jc7j |
-| C10 | GPL-3.0 and the App Store: a decision, not a task | P1 | unknown | Owner: the owner. It is a licensing decision about their own work. | td:6hPjPm9qhGwvjW7j |
-| C11 | An explicit App ID with MusicKit (O14) | P1 | closed |  |  |
-| C12 | the configuration that ships is now built by the gate | P1 | unknown | Owner: the agent. No user-visible change. | td:6hPjPmJGQhpvJw5C |
-| C14 | three findings from the first real sprint on ZenPom 0.9.0 (2) | P1 | unknown | Owner: both. The agent triaged; two of the three need the owner's ratification before any code is written. | td:6hPjPmJRwGXHJ9WC |
-| C16 | the app is killed by the watchdog reading whether music is playing | P1 | unknown | Owner: the agent. A defect, not a feature. No delta. | td:6hPjPmQWJfv9536C |
-| C18 | GPL-3.0 for the repository, and an App Store exception for the app | P1 | unknown | Owner: both. The agent drafts the files; only the owner can license their own work. | td:6hPjPmRVXw9jMrPj |
-| C19 | the alarm that could not be silenced | P1 | unknown | Owner: the agent. Diagnosis only. No fix is proposed here, because the mechanism has not been established and  | td:6hPjPmcWqr8g39Hj |
-| C20 | the alarm that sounded with sound off | P1 | unknown | Owner: both. The agent narrows it; one short device test decides it. | td:6hPjPmj2fvvqmWqj |
+| ID | Title | P | Status | Mode | Why | TD |
+|---|---|---|---|---|---|---|
+| C6 | Correction pass | P1 | closed |  |  |  |
+| C8 | Turn on Developer Mode on the watch, and provision it | P1 | closed |  |  |  |
+| C9 | TestFlight runbook | P1 | unknown |  | Owner: both. The agent can write the runbook and prepare the build; only the owner can hold the Apple Develope | td:6hPjPm8wMpv6Jc7j |
+| C10 | GPL-3.0 and the App Store: a decision, not a task | P1 | unknown |  | Owner: the owner. It is a licensing decision about their own work. | td:6hPjPm9qhGwvjW7j |
+| C11 | An explicit App ID with MusicKit (O14) | P1 | closed |  |  |  |
+| C12 | the configuration that ships is now built by the gate | P1 | unknown |  | Owner: the agent. No user-visible change. | td:6hPjPmJGQhpvJw5C |
+| C14 | three findings from the first real sprint on ZenPom 0.9.0 (2) | P1 | unknown |  | Owner: both. The agent triaged; two of the three need the owner's ratification before any code is written. | td:6hPjPmJRwGXHJ9WC |
+| C16 | the app is killed by the watchdog reading whether music is playing | P1 | unknown |  | Owner: the agent. A defect, not a feature. No delta. | td:6hPjPmQWJfv9536C |
+| C18 | GPL-3.0 for the repository, and an App Store exception for the app | P1 | unknown |  | Owner: both. The agent drafts the files; only the owner can license their own work. | td:6hPjPmRVXw9jMrPj |
+| C19 | the alarm that could not be silenced | P1 | unknown |  | Owner: the agent. Diagnosis only. No fix is proposed here, because the mechanism has not been established and  | td:6hPjPmcWqr8g39Hj |
+| C20 | the alarm that sounded with sound off | P1 | unknown |  | Owner: both. The agent narrows it; one short device test decides it. | td:6hPjPmj2fvvqmWqj |
 | C26 | ZenTomato is still the app's name where the store looks | P0 | open | @chores | The App Store rejected ZenTomato. The display name is ALREADY ZenPom on all three targets, so the rejection is not about the home screen and a find-and-replace over 156 files is the wrong response. CFBundleName still expands to the target name, and the App Store Connect record is portal work. DO NOT change the bundle identifier: it is an identity, not a name, and a new one means a new container, which orphans the SwiftData store holding the distraction log — the data O1 needs before O1 has ever been run. docs/chores/C26.md. | td:6hVP9fJ3fh5528rj |
+| C27 | the standing documents, after the rescope | P1 | open |  | Owner: the agent. No user-visible change. A defect fix, no gate: v1.5 was ratified 2026-09-09 and for two days CLAUDE.md, docs/conventions-local.md and the adversarial-reviewer brief went on describing the milestone it replaced - including a scope fence reading "F1-F6 and nothing else" while F8 was in flight, and a reviewer instruction to FAIL themes and widgets, both ratified v1.5 items. Eight lines corrected. NO CHECK SHIPS: a detector was drafted and measured over the 18 governed projects first - 88% false positives broad, 0 of 10 invented scope facts caught when narrowed. The class is that a ratification fires no sweep; the correct sweep is the standing documents only, because the per-feature gate already covers everything else. Also fixed C26's extra cell, which broke the chore table in a strict renderer. docs/chores/C27.md. |  |
 
 ## Closed in prose, not by a strike
 

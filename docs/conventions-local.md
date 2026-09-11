@@ -4,8 +4,10 @@ Rules true of **this project only**. The inherited baseline is the pinned copy i
 `docs/conventions.md`, which is never edited (`D24`).
 
 ZenTomato predates the canonical document layout and keeps its own. That is recorded
-here rather than corrected, because the project is thirteen days from a hard stop and
-its paths are cited across plans, reviews and source comments.
+here rather than corrected, because its paths are cited across plans, reviews and
+source comments. (This paragraph used to rest on "thirteen days from a hard stop."
+That date was lifted when v1.5 was ratified 2026-09-09; the citation argument stands
+on its own, and was always the real reason.)
 
 ---
 
