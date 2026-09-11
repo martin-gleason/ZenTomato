@@ -55,6 +55,7 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D32** | ratified | no | — | A shape is stored, in one file, outside SwiftData |
 | **D33** | ratified | no | — | v1.5 admits two more units, and the order is restated |
 | **D34** | ratified | no | — | The shape store speaks to a medium, to buy sync-readiness now |
+| **D35** | ratified | **yes** | 5 | v1.5 ends at TestFlight; the September 13 date is struck |
 
 *36 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
@@ -1835,3 +1836,68 @@ trip through it. **If that test is deleted, this delta has no evidence left.**
 **`noNewProtocol` moves from 10 to 11**, and no further. `NSUbiquitousKeyValueStore` is not added
 here — conforming it would be building v2.0, which is the thing this delta is careful to admit it is
 only *preparing* for.
+
+## D35 — v1.5 ends at TestFlight, and the September 13 date is formally dead
+
+**Proposed 2026-09-11. Ratified by the owner 2026-09-11**, in their own words: *"The end condition is
+v1.5. We stop when v1.5 is released, approved, and sent via test flight."*
+
+**This supersedes the stop condition in `docs/specs/zenpom-v1.5.md`**, which is a ratified baseline
+and is therefore not edited — this row is the change, per `conventions.md`: *"a change to scope, order
+or the stop condition is a `D<n>`."*
+
+**Currently:** line 5 — `**Hard stop:** the day work resumes or **September 13, 2026**, whichever is
+first. Unmerged work returns to backlog, no forensics.`
+**Proposed:** `**Ends when:** v1.5 is released, approved, and sent via TestFlight (D35). Unmerged work
+returns to backlog, no forensics.`
+
+**The quoting style is load-bearing and was got wrong once here.** This block was first written as a
+triple-backtick fenced code block, and `DeltaIntegrityTests.everyRatifiedSpecAmendmentIsApplied`
+**passed** — because `fragments(of:)` reads single-backtick inline spans and `"quoted"` text and never
+looks inside a fence. The amendment was genuinely outstanding and the instrument reported a clean
+backlog, which its own baseline file calls *"the worst failure available to a test whose whole job is
+to count what is outstanding."* That file already warns about this class in another form — `D18`'s full
+stop against a semicolon. **A second way to be invisible is now on the record: the wrong kind of
+backtick.**
+
+### The two things it settles
+
+**1. The stop condition.**
+
+| | Was (`zenpom-v1.5.md`, ratified 2026-09-09) | Now |
+|---|---|---|
+| Condition | four consecutive fortnightly Rhodia reviews driven from zenpom's own export | **v1.5 released, approved, and sent via TestFlight** |
+| Shape | a usage condition — roughly two months of real use | **a shipping event** |
+
+**2. September 13, 2026 is dead, explicitly.** `SPEC.md:5` still reads *"Hard stop: the day work
+resumes or September 13, 2026, whichever is first."* That date was anchored to an exam that was
+cancelled. `zenpom-v1.5.md` replaced it with a condition but **no delta ever struck the v0.1 line**,
+so for two days the two documents disagreed with nothing resolving them — and `CLAUDE.md`'s
+tiebreaker says v0.1 wins until a `D<n>` says otherwise, which made the dead date authoritative by
+default. **This is that `D<n>`.** Spec text is owed: `SPEC.md:5`.
+
+### What it costs, recorded because the old condition was chosen on purpose
+
+**The four-review condition was feature-independent, and this one is not.** Its own spec says it was
+written that way because an earlier draft tied the stop to `F8` shipping, *"which made the milestone
+hostage to its largest feature."* A TestFlight condition is hostage to the release pipeline instead —
+`C9`'s runbook, `C26`'s App Store Connect record, and the portal work in `O40` all now sit between
+v1.5 and its end.
+
+**And it un-absorbs `O1`.** `zenpom-v1.5.md` states that the first of the four reviews *is* `O1` —
+v0.1's outstanding *Done when* for `F6` — and calls the fact that **the log has never once been read
+for its purpose** the single most important fact about this project's state. The old condition could
+not be met without fixing that. **This one can.** `O1` therefore stops being structurally guaranteed
+and reverts to an ordinary open P0 that can be shipped past.
+
+**That is a consequence, not an objection.** The owner is entitled to choose a shipping gate over a
+usage gate, and shipping to TestFlight is what puts the app in a position to generate the four
+reviews at all. It is recorded here so that the next reader knows `O1` lost its guarantee by a
+decision rather than by drift.
+
+### Therefore
+
+- **v1.5 ends when v1.5 is released, approved, and sent via TestFlight.**
+- `SPEC.md:5`'s hard stop is struck. Amendment owed.
+- `zenpom-v1.5.md`'s *"The hard stop"* section is superseded by this row and is not edited.
+- `O1` is no longer absorbed by the stop condition and stands on its own as an open P0.
