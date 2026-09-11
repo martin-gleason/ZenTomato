@@ -242,6 +242,57 @@ struct ShapeSeamTests {
     try await run(engine, blocks: shape.blocks.count, clock: clock)
 
     #expect(harness.store.runningShape() == nil)
+    // **The assertion this test was written for, and did not carry.** Its sibling twenty lines up
+    // has it; this one did not, which is the "per-theme rule checked once against one theme"
+    // failure `conventions.md` names. Without it the suite is green while the sprint runs 135
+    // minutes on a 120-minute budget: `advanceShape()` spends the cursor before the auto-start
+    // guard, `resolvedSettings()` finds no run and falls back to `AppSettings`, and the engine
+    // starts a 15-minute long break the shape never contained. Ruling D's control 1 — "Off drops
+    // the trailing long break and gives the time back to the shape" — was true on the sheet and
+    // false in the timer. `F8-M7`.
+    #expect(engine.isRunning == false)
+  }
+
+  /// **The same shape with auto-start OFF**, where the defect idles instead of running.
+  ///
+  /// **This test exists because the bug above was caused by exactly the gap it fills.** Its sibling
+  /// twenty lines up asserted `isRunning == false`; the breakless one did not, and that single
+  /// missing line let a 120-minute budget run 135 through 627 green tests. Fixing that without
+  /// adding this one would leave a second unmatched pair behind — the same defect, one toggle over.
+  ///
+  /// With auto-start off the engine does not run past the boundary, so the overrun is not visible
+  /// in `isRunning`. It is visible in what the idle screen offers: before the fix the spent shape
+  /// left `.longBreak` queued from `TimerCycle`, so the next tap would have started a fifteen-minute
+  /// long break out of `AppSettings`. A spent shape ends its sprint, so the screen must offer the
+  /// start of a new one.
+  @Test("aSpentBreaklessShapeLeavesTheIdleScreenAtTheStartOfASprint")
+  func aSpentBreaklessShapeLeavesTheIdleScreenAtTheStartOfASprint() async throws {
+    let harness = try TestShapeStore.make()
+    defer { harness.remove() }
+    let clock = TestClock()
+    let stored = try AppSettings.current(in: context)
+    stored.autoStartNextBlock = false
+    try context.save()
+    let shape = try Self.shape(120, endsWithLongBreak: false)
+    harness.store.start(shape)
+    let engine = engine(harness, clock: clock, alarms: SpyAlarmScheduler())
+
+    // Each block is started by hand, because that is what auto-start off means.
+    for _ in 0..<shape.blocks.count {
+      await engine.start()
+      let endsAt = try #require(engine.endsAt)
+      clock.advance(by: endsAt.timeIntervalSince(clock.now))
+      await engine.boundaryReached()
+    }
+
+    #expect(harness.store.runningShape() == nil)
+    #expect(engine.isRunning == false)
+
+    // ASSERT WHAT THE SCREEN OFFERS, NOT THAT A FLAG IS FALSE. `isRunning == false` is true of the
+    // defect too — it idles on a queued long break. The frozen row is where the difference lives.
+    let state = try TimerState.current(in: context)
+    #expect(state.kind == .work)
+    #expect(state.completedInSprint == 0)
   }
 
   /// Stopping the sprint forgets the shape. See `TimerEngine.shapeSurvivesBeingStoppedEarly`, which
