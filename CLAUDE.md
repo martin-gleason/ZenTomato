@@ -24,7 +24,7 @@ The agent authors everything. The owner reviews every PR and does not write Swif
 
 ## Workflow
 
-1. **Gate → plan.** Before any feature: Ultrathink. Re-read **both specs, `definitions.md`, and `docs/plans/00-register.md`** — never `SPEC.md` alone, and never this file's summary of them. **A ratified `D<n>` can have moved the ground under `CLAUDE.md` itself**, which is how a cancelled deadline stayed on line 15 for two days after v1.5 replaced it. Batch clarifying questions, paraphrase the feature back, write `docs/plans/F<N>.md`. Flag `Deep spec required:` if the gate is decision-dense. Wait for the owner's yes.
+1. **Gate → plan.** Before any feature: Ultrathink. Re-read the ratified documents — `SPEC.md`, `docs/specs/zenpom-v1.5.md`, `docs/specs/definitions.md` — batch clarifying questions, paraphrase the feature back, write `docs/plans/F<N>.md`. Flag `Deep spec required:` if the gate is decision-dense. Wait for the owner's yes.
 2. **Build.** ultracode unless the plan says otherwise. One feature branch `F<N>/<slug>`. Small commits, conventional-commit format, feature ID in scope.
 3. **Adversarial review — mandatory.** Fire `.claude/agents/adversarial-reviewer.md` at the end of every feature and at the start of every session. Never resume blind: open with a review of what shipped and a re-read of the outstanding list in `docs/reviews/OPEN.md` and `docs/plans/00-register.md`.
 4. **Verify with evidence.** A feature is done when a command returns pass and the output is in the PR: `xcodebuild test`, `swiftlint`, and the device check the spec names. Assertions are not evidence.
