@@ -817,15 +817,34 @@ final class TimerEngine {
 
     let transition = TimerCycle.next(
       after: state.kind, completedInSprint: state.completedInSprint, completed: completed, settings: finished)
-    lastCompletedSprintSize = transition.endsSprint ? finished.pomodorosPerSprint : nil
+    // **A SHAPE ENDS ITS OWN SPRINT, AND `TimerCycle` CANNOT KNOW THAT.**
+    //
+    // The cycle raises `endsSprint` only when a long break finishes. A shape whose last block is a
+    // focus block — exactly what Ruling D's control 1 produces, *"off drops the trailing long break
+    // and gives the time back to the shape"* — therefore ended with the cycle asking for a long
+    // break the shape never contained. `advanceShape()` had just spent the cursor, so
+    // `resolvedSettings()` found no run and fell back to `AppSettings`, and the engine started a
+    // fifteen-minute long break out of the settings. **A 120-minute budget ran 135**, and the
+    // feature's central promise was true on the sheet and false in the timer.
+    //
+    // The shape is authoritative about its own length, so being spent ends the sprint the same way
+    // a finished long break does: idle, at `.work`, with the tally reset — which is exactly what
+    // `TimerCycle.next` returns for `case .longBreak`.
+    let shapeWasRunning = shapes?.runningShape() != nil
     // Before either way out of this method, because both of them read a length for what comes
     // next: the auto-start path through `begin`, and `goIdle`'s re-read for the idle screen.
     advanceShape()
+    let shapeJustSpent = shapeWasRunning && shapes?.runningShape() == nil
+
+    let endsSprint = transition.endsSprint || shapeJustSpent
+    let nextKind: BlockKind = shapeJustSpent ? .work : transition.kind
+    let nextTally = shapeJustSpent ? 0 : transition.completedInSprint
+    lastCompletedSprintSize = endsSprint ? finished.pomodorosPerSprint : nil
 
     // Auto-start carries you through a sprint, not into the next one: when a
     // long break ends the timer stops and waits, even with the setting on.
-    guard mayAutoStart, finished.autoStartNextBlock, !transition.endsSprint else {
-      goIdle(kind: transition.kind, completedInSprint: transition.completedInSprint)
+    guard mayAutoStart, finished.autoStartNextBlock, !endsSprint else {
+      goIdle(kind: nextKind, completedInSprint: nextTally)
       persist()
       publishReflection(
         allowed: mayPromptForReflection, sessionID: endedSessionID, prompts: prompts, generation: generation)
@@ -833,7 +852,10 @@ final class TimerEngine {
     }
     // A boundary is where new settings are allowed in, so the next block reads
     // them fresh rather than inheriting the ended block's copy.
-    await begin(kind: transition.kind, completedInSprint: transition.completedInSprint, settings: readSettings())
+    // `nextKind`/`nextTally` rather than the raw transition: this path is only reached when the
+    // sprint is not ending, so the two are identical here — stated once, read the same way on both
+    // exits, so a later edit cannot make only one of them shape-aware.
+    await begin(kind: nextKind, completedInSprint: nextTally, settings: readSettings())
     // THE LAST STATEMENT ON BOTH WAYS OUT OF THIS METHOD, AND THAT IS D4.
     // By the time the sheet can possibly be presented, the break has already
     // been written down and its end instant is already fixed — measured from
