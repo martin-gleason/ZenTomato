@@ -182,16 +182,28 @@ struct ShapeScreenModel: Equatable, Sendable {
   ///
   /// **The pomodoros in a shape are not always all the same length.** Leftover minutes go one at a
   /// time to the earliest pomodoros, so a shape can hold blocks of 22 and 23 minutes while
-  /// `AppSettings` holds a single `workMinutes`. **What should be written in that case is a rule
-  /// nobody has ruled on**, and this does not invent one quietly: it writes the length every
-  /// pomodoro in the shape is *at least*, and `pomodorosDiffer` is true so the screen can say what
-  /// it is about to do. Reported to the owner rather than settled here.
+  /// `AppSettings` holds a single `workMinutes`, and a shape's pomodoros need not all be the same
+  /// length — 181 minutes yields 31 / 30 / 30 / 30.
+  ///
+  /// **RULED 2026-09-10 by the owner: write the initial pomodoro's length.** The shipped draft wrote
+  /// the shortest, which was a placeholder pending this ruling.
+  ///
+  /// It is the right answer for a reason the shortest does not have: the remainder is handed out by
+  /// giving every pomodoro `remainder / poms` and then one further minute each to the *earliest*
+  /// ones, so **the first pomodoro is always the longest**, and it is the one the person actually
+  /// sits through first. Saving the length you just watched is less surprising than saving a length
+  /// that only some of the later blocks had.
+  ///
+  /// `pomodorosDiffer` stays true so the screen still says what it is about to write before the
+  /// press — the value changed, the obligation to be explicit about it did not.
   var settingsWrite: SettingsWrite? {
     guard let shape else { return nil }
     let poms = shape.blocks.filter { $0.kind == .work }.map(\.minutes)
-    guard let shortest = poms.min() else { return nil }
+    // `first`, not `min()`. The two agree whenever the shape divides evenly, which is why a fixture
+    // like 120 cannot tell them apart — 181 can, and the tests use it.
+    guard let initial = poms.first else { return nil }
     return SettingsWrite(
-      workMinutes: shortest,
+      workMinutes: initial,
       shortBreakMinutes: shape.blocks.first(where: { $0.kind == .shortBreak })?.minutes,
       longBreakMinutes: shape.blocks.first(where: { $0.kind == .longBreak })?.minutes)
   }

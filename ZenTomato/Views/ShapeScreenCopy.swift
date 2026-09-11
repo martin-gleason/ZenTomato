@@ -127,7 +127,7 @@ extension ShapeScreenModel {
     if let long = write.longBreakMinutes { parts.append("the long break to \(long) min") }
     let list = parts.formatted(.list(type: .and))
     let caveat = pomodorosDiffer
-      ? " This shape's pomodoros aren't all the same length; the shortest is what's written."
+      ? " This shape's pomodoros aren't all the same length; the first one's length is what's written."
       : ""
     return "Sets \(list).\(caveat)"
   }
