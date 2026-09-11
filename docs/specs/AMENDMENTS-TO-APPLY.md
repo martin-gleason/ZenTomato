@@ -251,3 +251,29 @@ ratified.
 
 Same sequence as `A8`: paste, add `D24` to `## Amendments applied`, tell the agent,
 and the delta is stamped in the commit that begins the build.
+
+---
+
+## `D35` — the stop condition (ratified 2026-09-11)
+
+**Line 5**, the hard-stop line. **This is the only outstanding amendment, and it is one line.**
+
+Current:
+```
+**Hard stop:** the day work resumes or **September 13, 2026**, whichever is first. Unmerged work returns to backlog, no forensics.
+```
+Replace with:
+```
+**Ends when:** v1.5 is released, approved, and sent via TestFlight (`D35`). Unmerged work returns to backlog, no forensics.
+```
+
+**Then add `D35` to `## Amendments applied`** in `SPEC.md`, which is what drops the ratchet back to zero.
+
+*Why: the September 13 date was anchored to an exam that was cancelled. `zenpom-v1.5.md` replaced it
+with a condition on 2026-09-09 but no delta ever struck this line, so the two documents disagreed and
+`CLAUDE.md`'s tiebreaker — v0.1 wins until a `D<n>` says otherwise — made the dead date authoritative
+by default. `D35` is that `D<n>`.*
+
+**Only the owner may make this edit.** `DeltaIntegrityTests.everyRatifiedSpecAmendmentIsApplied` is
+red until it is made, and its own doc comment says why that is correct: *"THE AGENT MAY NOT FIX THIS,
+AND THAT IS WHY THE TEST EXISTS… It can only refuse to let the gap stay invisible."*
