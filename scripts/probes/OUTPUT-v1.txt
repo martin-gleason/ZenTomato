@@ -1,0 +1,26 @@
+cathil	44	scope-fence	out of scope	Psionicist would touch a line of engine code, it is out of scope by definition.
+cope-processor-standalone	56	scope-fence	in scope	5. **Commit.** Conventional-commit, primary ID in scope. Open the PR. Log the review.
+cope-processor-standalone	134	stop-condition	July 19, 2026	July 19, 2026
+design-system	43	scope-fence	in scope	5. **Commit.** Conventional commit, ID in scope.
+feedback-processor	31	scope-fence	Phase 2	- **Phase** is metadata, not a container. A feature in build phase is still `F2`, never "Phase 
+feedback-processor	41	stop-condition	deadline	- **🎓 per-feature override:** a feature Marty tags 🎓 means he authors it (coached), regardless 
+feedback-processor	74	stop-condition	July 9, 2026	July 9, 2026
+healing-ninjas	68	scope-fence	in scope	5. **Commit.** Conventional-commit, primary ID in scope. Open the PR. Log the review.
+healing-ninjas	83	stop-condition	deadline	**🎓 veto** for deadline or language, stated in the planning prompt, reassigns that feature to t
+home-assistant	129	scope-fence	in scope	5. **Commit.** Conventional commit, ID in scope.
+home-assistant	175	stop-condition	August 19, 2026	August 19, 2026
+ileps-gateway	82	scope-fence	in scope	5. **Commit.** Conventional-commit, primary id in scope. Open the PR. Log the review.
+ileps-gateway	171	stop-condition	June 27, 2026	June 27, 2026
+job-search	93	stop-condition	deadline	wait. The deadline veto applies: if he invokes it, that feature reverts to you.
+leo-for-25	27	stop-condition	Deadline	Agent authors everything; Marty reviews every PR. **Exception: 🎓 F3 turf-cutting** — Marty auth
+mac_mesh_client	84	scope-fence	v0.1 is	**v0.1 is 50-50. v0.5 and beyond is agent-authored** (`D1`). The dial is expressed as the
+Mucha-Design-System	50	scope-fence	in scope	5. **Commit.** Conventional commit, primary ID in scope.
+point-in-polygon-service	65	stop-condition	July 6, 2026	July 6, 2026
+reveal-game-show	83	scope-fence	in scope	5. **Commit.** Conventional commit, ID in scope. Open the PR. Log the review.
+values-card-sort	3	platform-minimum	macOS 15	Open-source SwiftUI multiplatform app (iOS/iPadOS 18+, macOS 15+) of the public-domain Personal
+ZenTomato	10	scope-fence	Scope is	- **Scope is the ratified list and nothing else.** v0.1 was `SPEC.md` F1–F6 and it shipped. The
+ZenTomato	15	stop-condition	stop condition	- **The stop condition is not a date.** v1.5 ends when **zenpom has driven four consecutive for
+ZenTomato	19	platform-minimum	Minimum iOS	Swift 6, SwiftUI, SwiftData, MusicKit, URLSession, async/await. Minimum iOS 26.0; watchOS 26.0 
+ZenTomato	27	stop-condition	deadline	1. **Gate → plan.** Before any feature: Ultrathink. Re-read **both specs, `definitions.md`, and
+ZenTomato	28	scope-fence	in scope	2. **Build.** ultracode unless the plan says otherwise. One feature branch `F<N>/<slug>`. Small
+ZenTomato	46	stop-condition	August 21, 2026	August 21, 2026

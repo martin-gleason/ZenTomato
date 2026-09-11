@@ -1,0 +1,11 @@
+# Invented CLAUDE.md — none of these sentences exist in the corpus
+- Everything not in F1–F4 is deferred to the next milestone.
+- **Ships when the beta has run a fortnight without a crash.**
+- Targets Python 3.12 and above.
+- The MVP is the three screens in the spec; anything else waits.
+- v0.2 covers the importer only.
+- We stop at the end of Q4.
+- Minimum supported browser is Chrome 120.
+- Build only what `ROADMAP.md` lists for this release.
+- Work ends once every P0 owner item is closed.
+- Requires Node 20 or newer.
