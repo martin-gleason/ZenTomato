@@ -65,7 +65,7 @@ Counted from the register itself. A register with no rows still gets a line.
 | Owner items (`O`) | 24 | 20 | 0 | 4 |
 | Hooks (`H`) | 0 | 0 | 0 | 0 |
 | Mutations (`M`) | 0 | 0 | 0 | 0 |
-| Other (C) (`C`) | 11 | 0 | 8 | 3 |
+| Other (C) (`C`) | 12 | 1 | 8 | 3 |
 
 `Unknown` is not a third kind of open. It means the source document said nothing about status, so the page will not guess — the row is a question for the owner (`RR37`).
 
@@ -78,6 +78,7 @@ Counted from the register itself. A register with no rows still gets a line.
 | `O` | closed | 4 |
 | `O` | open | 20 |
 | `C` | closed | 3 |
+| `C` | open | 1 |
 | `C` | unknown | 8 |
 
 ## Hooks
@@ -122,7 +123,8 @@ Every open row in the register. Owner is the row's Owner column where the table 
 | unassigned | C18 | P1 | unknown | GPL-3.0 for the repository, and an App Store exception for the app |
 | unassigned | C19 | P1 | unknown | the alarm that could not be silenced |
 | unassigned | C20 | P1 | unknown | the alarm that sounded with sound off |
+| unassigned | C26 | P0 | open | ZenTomato is still the app's name where the store looks |
 
 ---
 
-29 open register rows.
+30 open register rows.
