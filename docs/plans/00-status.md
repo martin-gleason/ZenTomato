@@ -3,94 +3,102 @@
 
 # Status — ZenTomato
 
-Generated from `docs/plans/00-register.md`, the plan files in `docs/plans/` and `docs/specs/SPEC.md`, by `scripts/gen_status.py`. Hand edits are reverted by the next run and fail CI in the meantime (`D13`, `H1`).
+Generated from `docs/plans/00-register.md`, the plan files in `docs/plans/` and `docs/chores/`, and the specs in `docs/specs/`, by `scripts/gen_status.py`. Hand edits are reverted by the next run and fail CI in the meantime.
 
-**Nothing on this page comes from git, and there is no date.** A generated file that embeds anything which moves on its own can never compare equal to a regeneration of itself. This page once reported which task IDs had appeared in a commit scope, so the commit that first shipped `F3-T1` was the thing that made `F3-T1` appear — the page was stale by the act of committing it, and one project collected five regeneration commits in a day, none of which carried information (`RR11`). Everything here is derived from the register, so it changes only when the register changes, and regenerating is part of that same edit.
+**Nothing on this page comes from git, and there is no date.** A generated file that embeds anything which moves on its own can never compare equal to a regeneration of itself — `--check` would then fail for a reason nobody caused. A prior project's page reported which task IDs had appeared in a commit scope, so the commit that first shipped `F3-T1` was the thing that made `F3-T1` appear: the page was stale by the act of committing it. Everything here derives from the register, the plan headers and the specs, so it changes only when they change, and regenerating is part of that same edit.
 
 ## The vision sentence
 
-> **Status:** DRAFT for ratification. Marty ratifies; then it's the contract. The agent never edits this file — it proposes deltas in a plan summary and Marty merges them.
+> A focus timer that works with the fixed toolset so that study and work blocks run without a second app to vacuum — whose actual reason for existing is the distraction log.
 
-## Milestone
-
-Named, never numbered (`D2`). **No source read here marks a milestone as the current one** — neither the register nor any plan header says which release is in flight, so this page does not claim to know.
-
-| Milestone | Decisions landing here | Units |
-|---|---|---|
-| — | 0 | F1, F10, F11, F12, F13, F14, F15, F16, F17, F18, F19, F2, F2b, F2c, F2d, F2e, F3, F4, F4c, F4d, F4e, F4f, F5, F6, F6b, F7, F8, F9 |
+From `docs/specs/zenpom-v1.5.md`.
 
 ## Features and chores
 
-Status is what the unit's own plan header declares. What has landed in git is deliberately not here — see the note above.
+Status is what the unit's own plan file declares. What has landed in git is deliberately not here — see the note above. A unit whose plan header is silent shows `—`, which means the plan did not say, not that the work has not started.
 
-| ID | Kind | Status | Milestone | P | Owner | Plan | Tasks |
-|---|---|---|---|---|---|---|---|
-| F1 | feature | — | — | — | — | `docs/plans/F1.md` | 9 planned |
-| F2 | feature | — | — | — | — | `docs/plans/F2.md` | 6 planned |
-| F2b | feature | — | — | — | — | `docs/plans/F2b.md` | 0 planned |
-| F2c | feature | — | — | — | — | `docs/plans/F2c.md` | 0 planned |
-| F2d | feature | — | — | — | — | `docs/plans/F2d.md` | 0 planned |
-| F2e | feature | — | — | — | — | `docs/plans/F2e.md` | 0 planned |
-| F3 | feature | — | — | — | — | `docs/plans/F3.md` | 5 planned |
-| F4 | feature | — | — | — | — | `docs/plans/F4.md` | 4 planned |
-| F4c | feature | — | — | — | — | `docs/plans/F4c.md` | 0 planned |
-| F4d | feature | — | — | — | — | `docs/plans/F4d.md` | 0 planned |
-| F4e | feature | — | — | — | — | `docs/plans/F4e.md` | 0 planned |
-| F4f | feature | — | — | — | — | `docs/plans/F4f.md` | 0 planned |
-| F5 | feature | — | — | — | — | `docs/plans/F5.md` | 4 planned |
-| F6 | feature | — | — | — | — | `docs/plans/F6.md` | 5 planned |
-| F6b | feature | — | — | — | — | `docs/plans/F6b.md` | 7 planned |
-| F7 | feature | — | — | — | — | `docs/plans/F7.md` | 5 planned |
-| F8 | feature | plan written, **awaiting the gate.** No code has been written | — | — | — | `docs/plans/F8.md` | 0 planned |
-| F9 | feature | plan written, **awaiting the gate.** No code has been written | — | — | — | `docs/plans/F9.md` | 0 planned |
-| F10 | feature | plan written, **awaiting the gate.** No code has been written | — | — | — | `docs/plans/F10.md` | 0 planned |
-| F11 | feature | plan written, **awaiting the gate | — | — | — | `docs/plans/F11.md` | 0 planned |
-| F12 | feature | plan written, awaiting the gate | — | — | — | `docs/plans/F12.md` | 0 planned |
-| F13 | feature | plan written, awaiting the gate | — | — | — | `docs/plans/F13.md` | 0 planned |
-| F14 | feature | plan written, awaiting the gate | — | — | — | `docs/plans/F14.md` | 0 planned |
-| F15 | feature | plan written, **awaiting the gate.** No code has been written | — | — | — | `docs/plans/F15.md` | 0 planned |
-| F16 | feature | plan written, awaiting the gate | — | — | — | `docs/plans/F16.md` | 0 planned |
-| F17 | feature | plan written, awaiting the gate | — | — | — | `docs/plans/F17.md` | 0 planned |
-| F18 | feature | plan written, awaiting the gate | — | — | — | `docs/plans/F18.md` | 0 planned |
-| F19 | feature | plan written, **awaiting the gate.** No code has been written | — | — | — | `docs/plans/F19.md` | 0 planned |
+| ID | Kind | Status | Plan | Tasks |
+|---|---|---|---|---|
+| C6 | chore | — | `docs/chores/C6.md` | 7 planned |
+| C8 | chore | — | `docs/chores/C8.md` | 0 planned |
+| C9 | chore | — | `docs/chores/C9.md` | 0 planned |
+| C10 | chore | — | `docs/chores/C10.md` | 0 planned |
+| C11 | chore | — | `docs/chores/C11.md` | 0 planned |
+| C12 | chore | — | `docs/chores/C12.md` | 0 planned |
+| C14 | chore | — | `docs/chores/C14.md` | 0 planned |
+| C16 | chore | — | `docs/chores/C16.md` | 0 planned |
+| C18 | chore | — | `docs/chores/C18.md` | 5 planned |
+| C19 | chore | — | `docs/chores/C19.md` | 0 planned |
+| C20 | chore | — | `docs/chores/C20.md` | 0 planned |
+| C21 | chore | written, **unverified on a device.** Nothing below is proven until step 6 has been done. | `docs/chores/C21.md` | 0 planned |
+| C26 | chore | open. Raised 2026-09-11 after the owner reported the App Store rejected *ZenTomato*. | `docs/chores/C26.md` | 4 planned |
+| C27 | chore | — | `docs/chores/C27.md` | 0 planned |
+| C28 | chore | — | `docs/chores/C28.md` | 0 planned |
+| F1 | feature | — | `docs/plans/F1.md` | 9 planned |
+| F2 | feature | — | `docs/plans/F2.md` | 6 planned |
+| F2b | feature | — | `docs/plans/F2b.md` | 0 planned |
+| F2c | feature | — | `docs/plans/F2c.md` | 5 planned |
+| F2d | feature | — | `docs/plans/F2d.md` | 3 planned |
+| F2e | feature | — | `docs/plans/F2e.md` | 5 planned |
+| F3 | feature | — | `docs/plans/F3.md` | 5 planned |
+| F4 | feature | — | `docs/plans/F4.md` | 4 planned |
+| F4c | feature | — | `docs/plans/F4c.md` | 0 planned |
+| F4d | feature | — | `docs/plans/F4d.md` | 0 planned |
+| F4e | feature | — | `docs/plans/F4e.md` | 5 planned |
+| F4f | feature | — | `docs/plans/F4f.md` | 5 planned |
+| F5 | feature | — | `docs/plans/F5.md` | 4 planned |
+| F6 | feature | — | `docs/plans/F6.md` | 5 planned |
+| F6b | feature | — | `docs/plans/F6b.md` | 7 planned |
+| F7 | feature | — | `docs/plans/F7.md` | 5 planned |
+| F8 | feature | **gated and building.** The gate was given 2026-09-09, when `zenpom-v1.5.md` was ratified with `F8`… | `docs/plans/F8.md` | 6 planned |
+| F9 | feature | plan written, **awaiting the gate.** No code has been written. | `docs/plans/F9.md` | 6 planned |
+| F10 | feature | plan written, **awaiting the gate.** No code has been written. | `docs/plans/F10.md` | 5 planned |
+| F11 | feature | plan written, **awaiting the gate. No code has been written.** | `docs/plans/F11.md` | 5 planned |
+| F12 | feature | plan written, awaiting the gate. No code has been written. | `docs/plans/F12.md` | 5 planned |
+| F13 | feature | plan written, awaiting the gate. No code has been written. | `docs/plans/F13.md` | 5 planned |
+| F14 | feature | plan written, awaiting the gate. No code has been written. | `docs/plans/F14.md` | 6 planned |
+| F15 | feature | plan written, **awaiting the gate.** No code has been written. | `docs/plans/F15.md` | 6 planned |
+| F16 | feature | plan written, awaiting the gate. No code has been written. | `docs/plans/F16.md` | 6 planned |
+| F17 | feature | plan written, awaiting the gate. No code has been written. **Revised 2026-09-09** after the first… | `docs/plans/F17.md` | 6 planned |
+| F18 | feature | plan written, awaiting the gate. No code has been written. | `docs/plans/F18.md` | 5 planned |
+| F19 | feature | plan written, **awaiting the gate.** No code has been written. | `docs/plans/F19.md` | 6 planned |
 
 ## Registers
 
-Counted from the register itself. A register with no rows still gets a line.
+Counted from `docs/plans/00-register.md`. A register with no rows still gets a line, so that *"this project has no risk register"* is visible rather than absent.
 
 | Register | Rows | Open | Unknown | Closed |
 |---|---|---|---|---|
 | Decisions (`D`) | 1 | 1 | 0 | 0 |
 | Risks (`RR`) | 0 | 0 | 0 | 0 |
-| Owner items (`O`) | 24 | 20 | 0 | 4 |
+| Owner items (`O`) | 28 | 22 | 0 | 6 |
 | Hooks (`H`) | 0 | 0 | 0 | 0 |
 | Mutations (`M`) | 0 | 0 | 0 | 0 |
-| Other (C) (`C`) | 12 | 1 | 8 | 3 |
+| Chores (`C`) | 14 | 2 | 8 | 4 |
 
-`Unknown` is not a third kind of open. It means the source document said nothing about status, so the page will not guess — the row is a question for the owner (`RR37`).
-
+`Unknown` is not a third kind of open. It means the source document said nothing about status, so this page will not guess — the row is a question for the owner.
 
 ### By status
 
 | Register | Status | Count |
 |---|---|---|
 | `D` | proposed | 1 |
-| `O` | closed | 4 |
-| `O` | open | 20 |
-| `C` | closed | 3 |
-| `C` | open | 1 |
+| `O` | closed | 6 |
+| `O` | open | 22 |
+| `C` | closed | 4 |
+| `C` | open | 2 |
 | `C` | unknown | 8 |
 
 ## Hooks
 
-**0 of 0 built.** Prose is advisory; hooks are not. A hook's status is what the register says — this page does not go looking in `scripts/` for a file and infer that the hook works, because a file existing is not evidence that it ever failed.
+**0 of 0 built.** Prose is advisory; hooks are not. A hook's status is what the register says — this page does not go looking in `scripts/` for a file and infer that the hook works, because a file existing is not evidence that it has ever failed.
 
-| ID | Hook | Surface | Protects | Status |
-|---|---|---|---|---|
+| ID | Hook | Status |
+|---|---|---|
 
 ## Open, and owned by whom
 
-Every open row in the register. Owner is the row's Owner column where the table has one; otherwise it is `owner` for the two registers whose own text says only the owner can close them, and `unassigned` everywhere else — an open item nobody owns is a finding, not something to paper over with a default.
+Every open row in the register. Owner is `owner` for the two registers whose own text says only the owner can close a row, and `unassigned` everywhere else — an open item nobody owns is a finding, not something to paper over with a default.
 
 | Owner | ID | P | Status | Item |
 |---|---|---|---|---|
@@ -102,29 +110,24 @@ Every open row in the register. Owner is the row's Owner column where the table 
 | owner | O15 | P0 | open | F7's device check — three wrist taps, phone in another room |
 | owner | O20 | P1 | open | No choice of alarm sound (needs a delta — D24 proposed) |
 | owner | O23 | P1 | open | Progress bars appear full rather than filling |
-| owner | O25 | P2 | open | docs/chores/C18.md needs splitting so it can leave the licence allowlist |
+| owner | O25 | P2 | open | docs/chores/C18.md needs splitting so it can leave the licence… |
 | owner | O29 | P0 | open | The Silence button, on a phone — HALF ANSWERED 2026-08-28 |
 | owner | O30 | P0 | open | The locked settings screen and the sound preview, on a phone |
-| owner | O31 | P3 | open | The watch alarm's button says Stop, and ours says Done — PARKED 2026-08-28 |
+| owner | O31 | P3 | open | The watch alarm's button says Stop, and ours says Done — PARKED… |
 | owner | O32 | P1 | open | A watch-face complication does not exist |
 | owner | O33 | P1 | open | The watch makes a noise when the phone is told not to |
 | owner | O34 | P1 | open | From the lock screen, slide-to-stop worked |
 | owner | O35 | P2 | open | Documentation accuracy left over from F2d/F2e's eight review passes |
 | owner | O36 | P1 | open | The zenpom Focus runbook, followed once on the phone |
 | owner | O37 | P1 | open | The shape screen, on a phone — F8-T3's device check |
-| owner | O38 | P2 | open | The two sentences on the shape screen are the agent's words, not the owner's |
+| owner | O38 | P2 | open | The two sentences on the shape screen are the agent's words, not the… |
 | owner | O39 | P2 | open | Does the absorption preset control earn its place? |
 | owner | O40 | P2 | open | The App Group capability, in the developer portal |
-| unassigned | C9 | P1 | unknown | TestFlight runbook |
-| unassigned | C10 | P1 | unknown | GPL-3.0 and the App Store: a decision, not a task |
-| unassigned | C12 | P1 | unknown | the configuration that ships is now built by the gate |
-| unassigned | C14 | P1 | unknown | three findings from the first real sprint on ZenPom 0.9.0 (2) |
-| unassigned | C16 | P1 | unknown | the app is killed by the watchdog reading whether music is playing |
-| unassigned | C18 | P1 | unknown | GPL-3.0 for the repository, and an App Store exception for the app |
-| unassigned | C19 | P1 | unknown | the alarm that could not be silenced |
-| unassigned | C20 | P1 | unknown | the alarm that sounded with sound off |
+| owner | O43 | P2 | open | F8-M7 and F8-M8 each name two different mutations |
+| owner | O44 | P2 | open | docs/reviews/OPEN.md is five items behind this register |
 | unassigned | C26 | P0 | open | ZenTomato is still the app's name where the store looks |
+| unassigned | C27 | P1 | open | the standing documents, after the rescope |
 
 ---
 
-30 open register rows.
+25 open register rows.

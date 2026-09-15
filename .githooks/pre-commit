@@ -54,6 +54,13 @@ run_check "licence wording" ./scripts/check-licence-wording.sh
 # owner's reader that way — see scripts/check-open-register.sh for the story.
 run_check "OPEN.md renders" ./scripts/check-open-register.sh
 
+# The status page is generated, and for the life of the project it said so
+# while no generator existed (O42). Checking it here rather than only in CI
+# is the point of conventions.md's "a pre-commit that runs after the last
+# edit": a register edited in the same commit that leaves the page stale is
+# caught before it is pushed, not after.
+run_check "00-status.md is current" python3 scripts/gen_status.py --check
+
 if [[ $failed -ne 0 ]]; then
   cat <<'EOF' >&2
 
