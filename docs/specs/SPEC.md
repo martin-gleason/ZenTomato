@@ -2,7 +2,7 @@
 
 **Status:** DRAFT for ratification. Marty ratifies; then it's the contract. The agent never edits this file — it proposes deltas in a plan summary and Marty merges them.
 **License:** GPL-3.0-or-later (copyleft, open source). Public GitHub repo.
-**Hard stop:** the day work resumes or **September 13, 2026**, whichever is first. Unmerged work returns to backlog, no forensics.
+**Ends when:** v1.5 is released, approved, and sent via TestFlight (`D35`). Unmerged work returns to backlog, no forensics.
 **Platform:** iOS, with a watchOS companion (F7). Mac, CloudKit sync, playlist creation, and task *creation* are Phase 2 — see Out of Scope.
 
 ## Why
@@ -75,7 +75,7 @@ August 21, 2026
 
 ## Amendments applied
 
-D1 D2 D3 D4 D17 D18 D20 D24 D25 D26 D27 D28 D29
+D1 D2 D3 D4 D17 D18 D20 D24 D25 D26 D27 D28 D29 D35
 
 Ratified deltas whose text has been written into this file. `DeltaIntegrityTests` reads this list;
 `docs/specs/AMENDMENT-BASELINE.txt` counts what is still outstanding, and the exact replacement text
