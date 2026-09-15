@@ -109,6 +109,12 @@ check-licence: ## Fail if the licences are described as alternatives
 check-register: ## Fail if a table in OPEN.md has stopped rendering as a table
 	@./scripts/check-open-register.sh
 
+status: ## Regenerate docs/plans/00-status.md from the register and the plans
+	@python3 scripts/gen_status.py
+
+check-status: ## Fail if 00-status.md is stale or was edited by hand
+	@python3 scripts/gen_status.py --check
+
 device: generate ## Build and install on a connected iPhone (needs DEVELOPMENT_TEAM)
 	@./scripts/install-device.sh
 

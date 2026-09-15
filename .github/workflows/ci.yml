@@ -136,6 +136,9 @@ jobs:
       - name: The open-items register renders as tables
         run: make check-register
 
+      - name: The status page is generated, not hand-written
+        run: make check-status
+
       - name: Todoist allowlist
         run: make check-todoist
 
