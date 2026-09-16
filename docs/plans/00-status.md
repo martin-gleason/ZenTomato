@@ -75,7 +75,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Owner items (`O`) | 28 | 22 | 0 | 6 |
 | Hooks (`H`) | 0 | 0 | 0 | 0 |
 | Mutations (`M`) | 0 | 0 | 0 | 0 |
-| Chores (`C`) | 15 | 1 | 8 | 6 |
+| Chores (`C`) | 16 | 1 | 8 | 7 |
 
 `Unknown` is not a third kind of open. It means the source document said nothing about status, so this page will not guess — the row is a question for the owner.
 
@@ -86,7 +86,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `D` | proposed | 1 |
 | `O` | closed | 6 |
 | `O` | open | 22 |
-| `C` | closed | 6 |
+| `C` | closed | 7 |
 | `C` | open | 1 |
 | `C` | unknown | 8 |
 
