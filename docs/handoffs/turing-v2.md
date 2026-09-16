@@ -172,9 +172,19 @@ between them is the owner's.
 ## 7 · Two places to look is one place too many
 
 **What happened.** Outstanding items live in both `docs/plans/00-register.md` and
-`docs/reviews/OPEN.md`. The register runs to `O40`; `OPEN.md` stops at `O35`. They drifted five items
-apart, and `OPEN.md` records this happening to it before — `O4` and `O5` sat open there while the
-register already had them closed.
+`docs/reviews/OPEN.md`, and they disagree.
+
+**CORRECTED 2026-09-16.** This entry first said *"the register runs to `O40`; `OPEN.md` stops at
+`O35`; they drifted five items apart."* **That was wrong, and it was wrong in the direction that makes
+the problem look small.** `C29` measured it: 16 of `OPEN.md`'s 35 `O` ids are absent from the register
+entirely, plus 83 lines of prose it has no column for — and two adversarial reviews then found the
+register is also missing 36 of 37 decisions, six chores, and the `M`, `H` and `RR` registers whole.
+The drift is four-dimensional, not five items. See `docs/handoffs/blockersfor1_5.md`.
+
+**Left in place rather than deleted, because the correction is the lesson.** This paragraph was
+written confidently, from one `sort | tail` of each file, and it is the first thing a resuming session
+reads. It then survived two more sessions. A handoff is an artifact that makes claims, and it is worth
+exactly as much as the mechanism that would catch it being wrong — which for this file is nothing.
 
 **The irony, recorded because it is instructive.** `OPEN.md` was *created* to solve exactly this: six
 review logs with a *Still open* section each, and no way to answer "what is outstanding" without
