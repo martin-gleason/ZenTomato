@@ -97,7 +97,7 @@ struct DeltaIntegrityTests {
 
   // MARK: Private
 
-  private static let repositoryRoot = URL(fileURLWithPath: #filePath)
+  static let repositoryRoot = URL(fileURLWithPath: #filePath)
     .deletingLastPathComponent()
     .deletingLastPathComponent()
 
@@ -108,7 +108,7 @@ struct DeltaIntegrityTests {
   /// and a parser that cannot tell a heading from a sample of one reported them as deltas with no
   /// status. A fence check that cannot tell content from illustration is worse than none, because
   /// somebody eventually silences the noise it makes.
-  private static func deltaFileLines() throws -> [String] {
+  static func deltaFileLines() throws -> [String] {
     let raw = try String(contentsOf: repositoryRoot.appending(path: "docs/plans/00-deltas.md"), encoding: .utf8)
       .components(separatedBy: "\n")
     var inFence = false
@@ -122,12 +122,12 @@ struct DeltaIntegrityTests {
   }
 
   /// Every `D<n>` that has a heading of its own.
-  private static func definedDeltas() throws -> Set<String> {
+  static func definedDeltas() throws -> Set<String> {
     Set(try deltaFileLines().compactMap { $0.hasPrefix("## D") ? headingID($0) : nil })
   }
 
   /// `## D21b — …` becomes `D21b`.
-  private static func headingID(_ line: String) -> String? {
+  static func headingID(_ line: String) -> String? {
     let body = line.dropFirst(3)
     let id = body.prefix { $0.isNumber || $0.isLetter }
     return id.isEmpty ? nil : "D" + id.drop { $0 == "D" }
@@ -137,7 +137,7 @@ struct DeltaIntegrityTests {
   ///
   /// Deliberately conservative: it matches a `D` followed by digits at a word boundary, so `D14` is
   /// found and `3D` or `MMDDYY` are not.
-  private static func deltaIDs(in text: String) -> Set<String> {
+  static func deltaIDs(in text: String) -> Set<String> {
     var found: Set<String> = []
     let pattern = try? NSRegularExpression(pattern: "\\bD([0-9]{1,3}[a-z]?)\\b")
     let range = NSRange(text.startIndex..<text.endIndex, in: text)
@@ -190,129 +190,13 @@ struct DeltaIntegrityTests {
       .joined(separator: "\n")
   }
 
-  // MARK: The contract's amendment backlog
-
-  /// `everyRatifiedSpecAmendmentIsApplied` — H2. The gap between what was ratified and what the
-  /// contract actually says, made countable.
-  ///
-  /// **THE AGENT MAY NOT FIX THIS, AND THAT IS WHY THE TEST EXISTS.** `CLAUDE.md` and
-  /// `conventions.md` both say the agent never edits `SPEC.md`; spec authority is the owner's.
-  /// So this test cannot close the gap. It can only refuse to let the gap stay invisible.
-  ///
-  /// **What went wrong without it.** Twenty-two deltas were ratified between 2026-08-21 and
-  /// 2026-08-24 and not one was ever applied to `SPEC.md`. The contract still said minimum iOS 18.0
-  /// after D1 raised it to 26, still said OAuth sign-in after D18 replaced it with a pasted token,
-  /// still listed watchOS as out of scope after D2 moved the remote half in. `CLAUDE.md`'s working
-  /// loop opens with *"Re-read `SPEC.md`"* — so an agent following its instructions exactly gets
-  /// answers that are two months stale, and then re-derives from 1,000 lines of deltas or, worse,
-  /// believes the contract. That is what happened at the F7 gate.
-  ///
-  /// **How a delta is judged to need spec text.** It carries a `**Currently:**` block — the
-  /// convention this file uses for quoting the spec line a delta replaces. A delta that records a
-  /// verification result or a build decision has no such block and is not counted.
-  ///
-  /// **How to make it pass:** apply the amendment to `SPEC.md` and add its id to the
-  /// `## Amendments applied` list there. Not by editing this test.
-  @Test("everyRatifiedSpecAmendmentIsApplied")
-  func everyRatifiedSpecAmendmentIsApplied() throws {
-    let lines = try Self.deltaFileLines()
-    var owed: [(id: String, summary: String)] = []
-
-    for (index, line) in lines.enumerated() where line.hasPrefix("## D") {
-      guard let id = Self.headingID(line) else { continue }
-      let end = lines[(index + 1)...].firstIndex { $0.hasPrefix("## D") } ?? lines.count
-      let body = lines[index..<end].joined(separator: "\n")
-      guard body.contains("Ratified") else { continue }
-      guard body.contains("REJECTED") == false else { continue }
-      // A delta owes an amendment when the text it says the spec CURRENTLY says is still there.
-      guard try Self.quotesLiveSpecText(in: body) else { continue }
-      let summary = line.dropFirst(3).prefix(72)
-      owed.append((id, String(summary)))
-    }
-
-    let applied = try Self.appliedAmendments()
-    let outstanding = owed.filter { applied.contains($0.id) == false }
-    let baseline = try Self.amendmentBaseline()
-
-    // THE RATCHET, AND WHY IT IS NOT SIMPLY `outstanding.isEmpty`.
-    //
-    // Nine amendments are outstanding today. Asserting zero would fail every run until the owner
-    // works through all nine — and under branch protection a permanently red test blocks every
-    // merge, including the features still to come. A gate that cannot be met is a gate somebody
-    // deletes, and then the check is gone rather than satisfied.
-    //
-    // So the assertion is on the DIRECTION instead: the backlog may shrink or hold, never grow.
-    // Ratifying a new amendment without applying it fails immediately, which is the behaviour that
-    // let this reach nine in the first place. The baseline lives in a committed file, so lowering it
-    // is a visible edit in a diff rather than a number somebody nudged.
-    #expect(
-      outstanding.count <= baseline,
-      Comment(rawValue: """
-        The unapplied-amendment backlog grew: \(outstanding.count) outstanding against a baseline of \(baseline).
-        A delta was ratified without its text reaching docs/specs/SPEC.md. Apply it, add its id to the
-        '## Amendments applied' list there, and lower the number in docs/specs/AMENDMENT-BASELINE.txt.
-        """))
-
-    // Named on every run whether or not the ratchet trips, because the point is that the gap is
-    // countable and visible rather than merely bounded.
-    if outstanding.isEmpty == false {
-      print("""
-
-        ── SPEC.md amendment backlog: \(outstanding.count) outstanding (baseline \(baseline)) ──
-        The contract states things that are no longer true, so "re-read SPEC.md" returns stale
-        answers. Only the owner may close these; the agent never edits the contract.
-
-        \(outstanding.map { "  \($0.id) — \($0.summary)" }.joined(separator: "\n"))
-
-        """)
-    }
-  }
-
-  /// The highest number of unapplied amendments this repository currently tolerates.
-  ///
-  /// A missing or unreadable file means zero, so deleting it makes the test stricter rather than
-  /// silently switching it off.
-  private static func amendmentBaseline() throws -> Int {
-    let url = repositoryRoot.appending(path: "docs/specs/AMENDMENT-BASELINE.txt")
-    guard let text = try? String(contentsOf: url, encoding: .utf8) else { return 0 }
-    let digits = text.split(separator: "\n")
-      .first { $0.trimmingCharacters(in: .whitespaces).first?.isNumber == true }
-    return Int(digits?.trimmingCharacters(in: .whitespaces) ?? "0") ?? 0
-  }
-
-  /// Whether a delta's `**Currently:**` block quotes text that is *still present* in `SPEC.md`.
-  ///
-  /// **THIS IS THE WHOLE DETECTOR, AND IT SELF-CLOSES.** A delta amends the contract when it says
-  /// "the spec currently says X" and the spec does, in fact, still say X. The moment the owner
-  /// applies the amendment, X is gone from `SPEC.md`, this returns false, and the delta stops being
-  /// counted — with no list to maintain and no baseline to remember to lower.
-  ///
-  /// The first version of this test asked only whether a `**Currently:**` block existed, and
-  /// over-counted: `D14` quotes a conflict between `D13` and `F5`, and `D21` quotes a SwiftData
-  /// model. Neither quotes the contract, and neither owes it anything. A check that names the wrong
-  /// files is one people stop reading.
-  ///
-  /// Fragments are taken from backticked spans, because that is how this file quotes spec lines.
-  /// Only fragments long enough to be distinctive are used — a short one like `F2` appears
-  /// everywhere and would match by accident.
-  private static func quotesLiveSpecText(in body: String) -> Bool {
-    guard let currently = body.range(of: "**Currently:**") else { return false }
-    let tail = body[currently.upperBound...]
-    let block = tail.range(of: "**Proposed").map { String(tail[..<$0.lowerBound]) } ?? String(tail)
-
-    let spec = squashed((try? String(
-      contentsOf: repositoryRoot.appending(path: "docs/specs/SPEC.md"), encoding: .utf8)) ?? "")
-
-    return fragments(of: block).contains { spec.contains($0) }
-  }
-
   /// Whitespace collapsed to single spaces.
   ///
   /// Load-bearing: `00-deltas.md` wraps its quotations across lines, so a quoted spec line contains a
   /// newline exactly where `SPEC.md` has a space. Comparing raw text finds nothing and the check
   /// silently reports a clean backlog — the worst failure available to a test whose whole job is to
   /// count what is outstanding.
-  private static func squashed(_ text: String) -> String {
+  static func squashed(_ text: String) -> String {
     text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
   }
 
@@ -327,14 +211,10 @@ struct DeltaIntegrityTests {
   /// missed: the whole of the spec text it replaces is *"OAuth sign-in."*, fourteen characters. A
   /// floor exists at all because a fragment like `F2` occurs everywhere and would match by accident;
   /// the number is the shortest one that still separates a quotation from a passing mention.
-  private static func fragments(of block: String) -> [String] {
+  static func fragments(of block: String) -> [String] {
     var found: [String] = []
 
-    found += block
-      .split(separator: "`", omittingEmptySubsequences: false)
-      .enumerated()
-      .filter { $0.offset % 2 == 1 }
-      .map { squashed(String($0.element)) }
+    found += backtickedSpans(in: block)
 
     if let quoted = try? NSRegularExpression(pattern: "[\u{201C}\"]([^\u{201D}\"]{12,})[\u{201D}\"]") {
       let range = NSRange(block.startIndex..<block.endIndex, in: block)
@@ -349,17 +229,6 @@ struct DeltaIntegrityTests {
       .map { $0.replacingOccurrences(of: " …", with: "").replacingOccurrences(of: "…", with: "") }
       .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: " ·")) }
       .filter { $0.count >= 12 }
-  }
-
-  /// The ids listed under `## Amendments applied` in `SPEC.md`, or an empty set when the section
-  /// does not exist yet.
-  private static func appliedAmendments() throws -> Set<String> {
-    let spec = try String(
-      contentsOf: repositoryRoot.appending(path: "docs/specs/SPEC.md"), encoding: .utf8)
-    guard let start = spec.range(of: "## Amendments applied") else { return [] }
-    let rest = spec[start.upperBound...]
-    let section = rest.range(of: "\n## ").map { String(rest[..<$0.lowerBound]) } ?? String(rest)
-    return deltaIDs(in: section)
   }
 
   /// `theIndexListsEveryDelta` — the table at the top of the file cannot rot.
@@ -389,5 +258,64 @@ struct DeltaIntegrityTests {
     #expect(
       phantom.isEmpty,
       Comment(rawValue: "The index lists deltas that do not exist: \(phantom.joined(separator: ", "))"))
+  }
+
+  // MARK: The index states a number
+
+  /// `theIndexStatesTheNumberOfDeltas` — the sentence under the index cannot state a count the file
+  /// does not hold.
+  ///
+  /// It said *"36 deltas"* above 37 headings, and `O35` recorded the identical hole earlier at
+  /// *"24 deltas"* above 32 rows. `theIndexListsEveryDelta` asserts membership both ways and never
+  /// the number, so a stale count was invisible to it. `C31` corrected the number by hand; nothing
+  /// stopped it drifting again until `D41`.
+  ///
+  /// The check is indifferent to everything except *a number, whitespace, the word "deltas"* — move
+  /// the sentence, rewrap it, reword the rest, and it does not notice. **The two words must stay
+  /// adjacent:** `43 ratified deltas` matches nothing and takes the absent-sentence branch, which
+  /// fails loudly rather than passing, so the failure is safe — but the message has to say so, or a
+  /// reader who inserted an adjective is sent hunting for a spelled-out number instead.
+  ///
+  /// **Absence fails, deliberately.** A check that silently passes when its subject disappears is
+  /// the green-tick-on-a-tautology failure this repository has five recorded instances of.
+  @Test("theIndexStatesTheNumberOfDeltas")
+  func theIndexStatesTheNumberOfDeltas() throws {
+    let lines = try Self.deltaFileLines()
+    let defined = try Self.definedDeltas().count
+
+    guard let start = lines.firstIndex(where: { $0.hasPrefix("## Index") }) else {
+      Issue.record("00-deltas.md has no '## Index' section.")
+      return
+    }
+    let end = lines[(start + 1)...].firstIndex { $0.hasPrefix("## D") } ?? lines.count
+    let section = lines[start..<end].joined(separator: "\n")
+
+    var stated: [Int] = []
+    if let pattern = try? NSRegularExpression(pattern: "([0-9]+)\\s+deltas", options: .caseInsensitive) {
+      let range = NSRange(section.startIndex..<section.endIndex, in: section)
+      pattern.enumerateMatches(in: section, range: range) { match, _, _ in
+        guard let match, let span = Range(match.range(at: 1), in: section) else { return }
+        stated.append(Int(section[span]) ?? -1)
+      }
+    }
+
+    guard stated.isEmpty == false else {
+      Issue.record("""
+        The index section of 00-deltas.md no longer states how many deltas there are, in a form \
+        this check can read: the digits and the word 'deltas' must be adjacent, so '43 deltas' is \
+        seen and '43 ratified deltas' or 'forty-three deltas' are not. Restore the adjacent form. \
+        Failing on absence is deliberate: a check that passes when its subject disappears is worse \
+        than no check — D41 clause 3 ratified this assertion for exactly that reason.
+        """)
+      return
+    }
+
+    let wrong = stated.filter { $0 != defined }
+    #expect(
+      wrong.isEmpty,
+      Comment(rawValue: """
+        The index sentence states \(wrong.map(String.init).joined(separator: ", ")) deltas, \
+        but 00-deltas.md defines \(defined). Correct the sentence, not this test.
+        """))
   }
 }
