@@ -59,15 +59,16 @@ important fact about this project's state and the stop condition now depends on 
 
 ## The work
 
-**Ten features and one chore** (`D31` struck the second). Larger than all of v0.1, which was six features — and those six
-needed nine retrofits and a branch that took eleven adversarial review passes.
+**Thirteen units — twelve features and one chore** (`D31` struck the second). Larger than all of
+v0.1, which was six features — and those six needed nine retrofits and a branch that took eleven adversarial review
+passes.
 
 **The list is not expected to finish, and that is by design.** v1.5 ends on four Rhodia reviews,
 whatever has shipped by then. So **order is the real decision**, not membership.
 
 ### Order — cheapest first, with `F8` first among equals
 
-**Ratified 2026-09-09**, amended by `D31`. One item costs no build time at all and goes first. `F8` follows, because
+**Ratified 2026-09-09**, amended by `D31` and `D33`. One item costs no build time at all and goes first. `F8` follows, because
 deferring the feature the owner called *"the one that makes the app worth using"* behind six small
 ones would be following a rule off a cliff. Everything after that is cheapest-first.
 
@@ -77,13 +78,18 @@ ones would be following a rule off a cliff. Everything after that is cheapest-fi
 | 2 | `F8` | **Fit a sprint to the time you have** | L | no |
 | 3 | `F12` | Themes | S | **yes** |
 | 4 | `F13` | Todoist, with Todoist's flair | S | no |
-| 5 | `F11` | About screen | S | no |
-| 6 | `F14` | The watch can launch a pom | S/M | probably not |
-| 7 | `F10` | A "start a sprint" App Intent | S/M | no |
-| 8 | `F9` | Instructions and the explainer | M | no |
-| 9 | `F15` | The graphics pass | M | no |
-| 10 | `F16` | The tomato garden | M | **yes** |
-| 11 | `F17` | A watch-face complication | M/L | **yes — `D30`** |
+| 5 | **`F19` search** | Todoist searched cleanly | — | no |
+| 6 | `F11` | About screen | S | no |
+| 7 | `F14` | The watch can launch a pom | S/M | probably not |
+| 8 | `F10` | A "start a sprint" App Intent | S/M | no |
+| 9 | `F18` | A watch-side App Intent | — | no |
+| 10 | `F9` | Instructions and the explainer | M | no |
+| 11 | **`F19` undo** | Undo a completion | — | **yes — unnumbered** |
+| 12 | `F15` | The graphics pass | M | no |
+| 13 | `F16` | The tomato garden | M | **yes** |
+| 14 | `F17` | A watch-face complication | M/L | **yes — `D30`** |
+
+**Fourteen positions over thirteen units**, because `F19` occupies two, its halves shipping apart.
 
 **The constraint that sets the pace is not build time.** At the 5% dial the owner reviews every PR in
 one fixed afternoon slot. **Review capacity is the bottleneck**, and an order that front-loads small

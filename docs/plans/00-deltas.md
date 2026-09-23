@@ -56,8 +56,14 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D33** | ratified | no | — | v1.5 admits two more units, and the order is restated |
 | **D34** | ratified | no | — | The shape store speaks to a medium, to buy sync-readiness now |
 | **D35** | ratified | **yes** | 5 | v1.5 ends at TestFlight; the September 13 date is struck |
+| **D36** | ratified | no | — | Agent findings get a register of their own (`A`) |
+| **D37** | ratified | no | — | The register's decisions are generated from 00-deltas.md |
+| **D38** | ratified | no | — | The missing registers open now — `M`, `H`, `RR` |
+| **D39** | ratified | no | — | F8 is halted at T3 and re-gated; `O37` is held |
+| **D40** | ratified | no — v1.5 | — | D33 is applied; CLAUDE.md stops enumerating the order |
+| **D41** | ratified | no | — | The amendment ratchet learns both spellings, and gains a second baseline |
 
-*36 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*43 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
@@ -1901,3 +1907,193 @@ decision rather than by drift.
 - `SPEC.md:5`'s hard stop is struck. Amendment owed.
 - `zenpom-v1.5.md`'s *"The hard stop"* section is superseded by this row and is not edited.
 - `O1` is no longer absorbed by the stop condition and stands on its own as an open P0.
+
+## D36 — Agent findings get a register of their own
+
+**Proposed 2026-09-22. Ratified by the owner 2026-09-22.** Owed because `docs/conventions.md` Axis 2
+defines no register for a finding only the agent can close, and eighteen such findings already exist.
+
+**The problem this answers.** `docs/reviews/OPEN.md`'s *Needs the agent* table holds eighteen `A` rows,
+`A1`–`A18` at lines 172–189, six of them open — `A1`, `A8`, `A14`, `A16`, `A17`, `A18`.
+`docs/plans/00-register.md` holds none of them, and `docs/conventions.md` Axis 2 names only `D`, `RR`,
+`O`, `H`, `M`, `FR`/`NFR`. So `docs/plans/00-status.md` — the one generated page that answers *what is
+outstanding* — reports the open register rows while six agent-owned code findings are invisible to it.
+A finding nothing counts is a finding that closes by being forgotten.
+
+**Therefore:**
+
+1. **A `## Agent items (A)` section is opened in `docs/plans/00-register.md`**, and **all eighteen rows
+   are carried across, the twelve closed ones included.** The closed rows carry the reasoning for how
+   each closed, which is the part worth keeping; a register of open rows only is a to-do list.
+2. **The two alternatives are named so they are not re-proposed.** *Reclassifying the six open rows as
+   defects or chores* destroys the twelve closed ones, which have no defect or chore to belong to.
+   *Folding `A` into `O`* conflates the one thing `O` means — only the owner can close it — with its
+   exact opposite.
+3. **This is flagged upstream as a candidate promotion to `docs/conventions.md`.** In the owner's
+   words, *"the conventions have no home for agent-owned findings"* is a drift mechanism other projects
+   will hit, and `conventions.md` says a local rule true of every project is promoted visibly rather
+   than paraphrased twelve times. **Flagged, not made:** the vendored copy is never edited here (`D24`).
+
+**The backfill itself is `C33` and is not done by `C31`.** This row is the ruling; the rows are the work.
+
+## D37 — The register's decisions are generated, not maintained
+
+**Proposed 2026-09-22. Ratified by the owner 2026-09-22.** Owed because two documents each hold part of
+the authoritative answer to *how many decisions are there*, and they disagree on a CI-enforced page.
+
+**The problem this answers.** This file defined 37 deltas when the ruling was taken, and 43 with this
+batch in it. `docs/plans/00-register.md`'s
+`## Decisions (D)` table contains exactly one row, `D30`, so `docs/plans/00-status.md` prints
+`Decisions (D) | 1`. Neither source is wrong about itself and neither is complete, which is the second
+intake path `conventions.md` forbids — *"a second document is a second intake path"* — already
+producing a wrong number on a page a CI check keeps current.
+
+**Therefore:** the `## Decisions (D)` section is **generated from `docs/plans/00-deltas.md` by
+`scripts/gen_status.py`.** It is neither hand-maintained nor retired. The owner's principle, in effect:
+**nothing is maintained twice.**
+
+**The alternative that was refused**, so it is not re-proposed: retiring the section and pointing the
+reader at `00-deltas.md`. It removes the disagreement by removing one of the two numbers, and it also
+removes decisions from the single page `conventions.md` says should give the state of the project in
+one read. The owner did not take it: a register that omits the largest register in the project is not
+a register.
+
+**Implementation is `C34`.** This row is the ruling.
+
+## D38 — The missing registers open now
+
+**Proposed 2026-09-22. Ratified by the owner 2026-09-22.** Owed because `conventions.md` Axis 2 names
+five registers and this project keeps two.
+
+**The problem this answers.** None of `## Mutations (M)`, `## Hooks (H)` or `## Risks (RR)` exists,
+while **mutation IDs are in use across the plans in two incompatible spellings** — 23 distinct bare
+`M<n>` tokens (`M1`–`M20`, `M22`, `M23`, `M34`) and 52 distinct feature-scoped ones (`F8-M1` …
+`F19-M4`). **Both numbers were re-derived over this tree before this row was written, and the commands
+are recorded here because a figure nobody ran is the thing this ruling exists to stop:**
+`grep -rhoE 'F[0-9]+[a-z]*-M[0-9]+' . | sort -u | wc -l` returns 52 — F8 10, F10 5, F14 10, F15 6,
+F16 4, F17 9, F18 4, F19 4 — and `grep -rhoE '(^|[^A-Za-z0-9_-])M[0-9]+' docs | grep -oE 'M[0-9]+' | sort -u | wc -l` returns 23.
+`docs/handoffs/blockersfor1_5.md` states 52 in the sentence this ruling was drafted from, and it agrees
+with the tree; **52 is inherited only because it was reproduced, not because the handoff said it.**
+**The same handoff sentence also claims fifteen enforcement mechanisms, and that figure is NOT
+inherited:** no command in this repository has been shown to reproduce fifteen, so this row does not
+restate it. **Establishing the mechanism count is the first work of the backfill**, alongside
+reconciling the two mutation spellings. The sharpest evidence is inside the test file written to stop
+exactly this: `ZenTomatoTests/DeltaIntegrityTests.swift` carries the doc comment
+``/// `everyRatifiedSpecAmendmentIsApplied` — H2.`` — **cited by that string rather than by a line
+number, because that file is mutable and this row is not.**
+**A shipped production test cites a register row that exists in no register.** That is the `D14`
+failure — a citation with nothing behind it — reproduced one register over, by the file that exists to
+catch it.
+
+**Therefore:** `## Mutations (M)` and `## Hooks (H)` **open now, with full backfill** — every mutation
+ID in use and every mechanism that actually enforces something, each traced *spec invariant →
+mechanism → owning task*. `## Risks (RR)` opens with seed rows; it has no backlog to recover, so seeds
+are honest where a backfill would be invention.
+
+**The backfill is `C33`.** This row is the ruling. An empty or half-filled section opened before the
+backfill would put the generated page's word behind work nobody has done, which is the failure
+`00-status.md` was built to stop.
+
+## D39 — F8 is halted at T3 and re-gated
+
+**Proposed 2026-09-22. Ratified by the owner 2026-09-22.** Owed because it changes the scope and the
+gate state of a feature already building, and `conventions.md` says a change of scope is a `D<n>`.
+
+**The problem this answers.** `F8`'s ruled algorithm does not produce the thing `F8` was gated to
+build. The trigger is the **last of the five `BLOCKING` notes** in `docs/plans/F8.md` — the one
+beginning *"the second case in that list is the owner's stated example"* — against the owner's own
+worked example, quoted verbatim from that file's *Paraphrasing it back* section. **Cited by anchor,
+not by line:** this row is immutable and `F8.md` is not, so a line number written here would be wrong
+the next time that file is edited, which is exactly what happened while this row was being drafted.
+
+> *"say I have 2 hours to work on something. I want to break it up into 3 sprints over 120 minutes,
+> with a good focus block and a minimum 5 minute break and a 10 minute long break."*
+
+**What was built instead, for that same input: one sprint of four poms with a seventeen-minute long
+break.** Not three sprints, and not a ten-minute long break. Those seventeen minutes are what `O37`
+currently asks the owner to go and confirm on a phone.
+
+**Therefore:**
+
+1. **`T1`, `T2` and `T3` stay merged and stay usable.** They are not reverted; the shape store, the
+   medium and the screen are real work that a corrected algorithm still needs.
+2. **`T4`, `T5` and `T6` stop.**
+3. **`F8`'s algorithm returns to a fresh gate**, and **all five unresolved `BLOCKING` notes in
+   `docs/plans/F8.md` are answered first.** They are greppable — each begins `**BLOCKING —` — and
+   `F8.md`'s own header names their line numbers.
+4. **`O37` is held.** It asks the owner to confirm figures no document justifies. A device check whose
+   expected values are in dispute cannot pass or fail; it can only ratify an accident.
+
+**This is not the recommendation it was given.** `docs/handoffs/blockersfor1_5.md` listed this as
+option *"C · Halt `F8`"* and recommended **against** it, preferring A. The owner ruled otherwise. Said
+plainly here rather than quietly presented as the recommendation, because a register that launders a
+ruling into advice loses the only thing it records.
+
+## D40 — D33 is applied, and CLAUDE.md stops enumerating the order
+
+**Proposed 2026-09-22. Ratified by the owner 2026-09-22.** Owed because applying it edits a ratified
+baseline, which is the owner's to authorise and no one else's.
+
+**The problem this answers.** `D33` was ratified 2026-09-09 and **never applied**. For thirteen days
+`docs/specs/zenpom-v1.5.md` — a ratified baseline — stated a superseded scope of eleven units, and
+`CLAUDE.md`, the project's own non-negotiables file, enumerated the same eleven on line 10. **Nothing
+could have caught it:** the amendment ratchet reads `docs/specs/SPEC.md` and only `SPEC.md`, so a
+delta amending the v1.5 spec has no instrument at all. That hole is `D41`.
+
+**Therefore:**
+
+1. **`D33`'s replacement text is written into `docs/specs/zenpom-v1.5.md`** — the unit count, the
+   amendment trail, and the order table, which becomes **fourteen positions over thirteen units**
+   because `F19` occupies two, its halves shipping apart.
+2. **`CLAUDE.md` stops enumerating the v1.5 order** and points at the spec instead, per `C27`'s own
+   principle that a standing document holds no milestone-scoped fact. A list copied into a second
+   document is a second thing to keep true, and this is what it cost.
+
+**Currently:** `CLAUDE.md:10` — *"The live milestone is **v1.5**, whose list and order are in
+`docs/specs/zenpom-v1.5.md`: `C21`, `F8`, `F12`, `F13`, `F11`, `F14`, `F10`, `F9`, `F15`, `F16`,
+`F17`."*
+**Proposed:** *"The live milestone is **v1.5**. Its list and order live in
+`docs/specs/zenpom-v1.5.md` and are not repeated here — a standing document holds no milestone-scoped
+fact (`C27`)."*
+
+**One gap, seen and left rather than missed.** `D33` says `F19`'s undo half *"owes its own delta"*,
+which arguably makes a fourth row in `zenpom-v1.5.md`'s *Deltas this milestone owes* table. `D33`
+proposes no replacement text for that table and the delta has no number, so the table is not touched;
+the order table's `**yes — unnumbered**` cell carries the fact until there is a number to carry it.
+
+**The replacement text for `docs/specs/zenpom-v1.5.md` is `D33`'s and is not restated here** — `D33`
+is ratified and immutable and already holds it, and a second copy would be a second source.
+
+## D41 — The amendment ratchet learns both spellings, and gains a second baseline
+
+**Proposed 2026-09-22. Ratified by the owner 2026-09-22.** Owed because the instrument that is supposed
+to make an unapplied amendment impossible missed one for thirteen days.
+
+**The problem this answers**, in three holes, each with its evidence:
+
+1. **Punctuation.** `ZenTomatoTests/DeltaIntegrityTests.swift:299` matches the literal string
+   `**Currently:**`, colon inside the bold. Four deltas — `D31`, `D32`, `D33`, `D34` — write
+   `**Currently**,` with the comma outside, and are invisible to it. **The precision matters:** a
+   reviewer reported this as *"every delta since 2026-09-09"*. It is not. `D35` uses the colon form and
+   **is** seen. It is four. An overstated finding gets refuted and takes the real one down with it.
+2. **One baseline is unguarded.** `everyRatifiedSpecAmendmentIsApplied` reads **only**
+   `docs/specs/SPEC.md`. `docs/specs/zenpom-v1.5.md` is an equally ratified baseline with no amendment
+   ledger, no baseline file and no ratchet — and `D33` amends it. Nothing would ever have gone red.
+3. **The count is unasserted.** This file's index sentence said *"36 deltas"* above 37 headings;
+   `theIndexListsEveryDelta` asserts membership and never the count. This is the identical hole `O35`
+   recorded against the old *"24 deltas"* claim, reopened at a new number.
+
+**Therefore:**
+
+1. **The detector is taught both spellings** rather than four ratified deltas being edited.
+   `conventions.md` says a ratified decision is never edited, only superseded, so **normalising
+   `D31`–`D34`'s text was refused.** The instrument bends to the record, not the record to the
+   instrument.
+2. **The ratchet is extended to cover `docs/specs/zenpom-v1.5.md`**, with its own baseline count.
+3. **A count assertion is added for `docs/plans/00-deltas.md`**, so the index sentence cannot again
+   state a number the table does not hold.
+
+**Each new assertion is proven by being broken, and the failure is recorded** — *a ratchet nobody has
+seen fail is not a ratchet.*
+
+**Implementation is `C32`.** This row is the ruling.
