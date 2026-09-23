@@ -51,7 +51,7 @@ Status is what the unit's own plan file declares. What has landed in git is deli
 | F6 | feature | — | `docs/plans/F6.md` | 5 planned |
 | F6b | feature | — | `docs/plans/F6b.md` | 7 planned |
 | F7 | feature | — | `docs/plans/F7.md` | 5 planned |
-| F8 | feature | **gated and building.** The gate was given 2026-09-09, when `zenpom-v1.5.md` was ratified with `F8`… | `docs/plans/F8.md` | 6 planned |
+| F8 | feature | **HALTED AT `T3` AND RE-GATED** by `D39`, 2026-09-22. `T1`, `T2` and `T3` stay merged to `main`… | `docs/plans/F8.md` | 6 planned |
 | F9 | feature | plan written, **awaiting the gate.** No code has been written. | `docs/plans/F9.md` | 6 planned |
 | F10 | feature | plan written, **awaiting the gate.** No code has been written. | `docs/plans/F10.md` | 5 planned |
 | F11 | feature | plan written, **awaiting the gate. No code has been written.** | `docs/plans/F11.md` | 5 planned |
@@ -75,7 +75,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Owner items (`O`) | 28 | 22 | 0 | 6 |
 | Hooks (`H`) | 0 | 0 | 0 | 0 |
 | Mutations (`M`) | 0 | 0 | 0 | 0 |
-| Chores (`C`) | 16 | 1 | 8 | 7 |
+| Chores (`C`) | 20 | 4 | 8 | 8 |
 
 `Unknown` is not a third kind of open. It means the source document said nothing about status, so this page will not guess — the row is a question for the owner.
 
@@ -85,9 +85,10 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 |---|---|---|
 | `D` | proposed | 1 |
 | `O` | closed | 6 |
-| `O` | open | 22 |
-| `C` | closed | 7 |
-| `C` | open | 1 |
+| `O` | held | 1 |
+| `O` | open | 21 |
+| `C` | closed | 8 |
+| `C` | open | 4 |
 | `C` | unknown | 8 |
 
 ## Hooks
@@ -120,14 +121,17 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | owner | O34 | P1 | open | From the lock screen, slide-to-stop worked |
 | owner | O35 | P2 | open | Documentation accuracy left over from F2d/F2e's eight review passes |
 | owner | O36 | P1 | open | The zenpom Focus runbook, followed once on the phone |
-| owner | O37 | P1 | open | The shape screen, on a phone — F8-T3's device check |
+| owner | O37 | P1 | held | The shape screen, on a phone — F8-T3's device check |
 | owner | O38 | P2 | open | The two sentences on the shape screen are the agent's words, not the… |
 | owner | O39 | P2 | open | Does the absorption preset control earn its place? |
 | owner | O40 | P2 | open | The App Group capability, in the developer portal |
 | owner | O43 | P2 | open | F8-M7 and F8-M8 each name two different mutations |
 | owner | O44 | P1 | open | OPEN.md and the register are lossy in OPPOSITE directions, and… |
 | unassigned | C26 | P0 | open | ZenTomato is still the app's name where the store looks |
+| unassigned | C32 | P0 | open | the amendment ratchet learns both spellings, and gains a second… |
+| unassigned | C33 | P0 | open | the missing registers, backfilled — A, M, H and RR |
+| unassigned | C34 | P0 | open | the register's Decisions section, generated rather than maintained |
 
 ---
 
-24 open register rows.
+27 open register rows.
