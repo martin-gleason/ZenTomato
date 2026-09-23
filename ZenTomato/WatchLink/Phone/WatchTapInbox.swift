@@ -29,9 +29,26 @@ struct WatchTapInbox {
     /// This exact tap is already in the database and was ignored.
     case duplicate
     /// The row could not be saved. The system will not redeliver, so this is the
-    /// one case where a tap is genuinely lost, and it is reported rather than
-    /// swallowed.
+    /// one case where a tap is genuinely lost.
+    ///
+    /// **It is returned, not surfaced.** `PhoneWatchLink` drops every outcome
+    /// that is not `.recorded`, so nothing in the app tells anybody this
+    /// happened. The same is true of `.unreadable`. That asymmetry against the
+    /// phone's own amber line — *"That tap wasn't saved. Tap again."* — is real,
+    /// is `O47`, and is not this unit's to settle. Saying so here is cheaper
+    /// than a doc comment that claims a surface the caller does not have.
     case failed
+    /// The database refused the duplicate check, so the tap was dropped.
+    ///
+    /// **This is not `failed`.** Nothing was written and nothing was refused a
+    /// write: the phone could not find out whether this tap is already here.
+    /// Writing it anyway risks a second row for one press — permanently, because
+    /// this app has no surface that can delete one — and an inflated distraction
+    /// count is invisible, plausible and always flatters. Dropping loses one tap,
+    /// which is absent rather than wrong. `StatsQuery` makes the same call in the
+    /// same word: a read it cannot complete is `unreadable`, never an empty
+    /// fortnight.
+    case unreadable
   }
 
   let context: ModelContext
@@ -57,7 +74,29 @@ struct WatchTapInbox {
     var existing = FetchDescriptor<Distraction>(
       predicate: #Predicate<Distraction> { $0.id == identity })
     existing.fetchLimit = 1
-    if let found = try? context.fetch(existing), found.isEmpty == false {
+    // A REFUSED READ IS NOT AN EMPTY ONE, AND `try?` MADE THEM THE SAME BRANCH.
+    // `try?` turns a thrown error into `nil`, the `if let` then fails, and
+    // control falls through to the insert below — writing the second row this
+    // check exists to prevent. Nothing about the result looks wrong afterwards:
+    // the row is ordinary, the count is plausible, and it is wrong upward.
+    //
+    // THIS LINE IS THE ONE THE APP RUNS, AND IT IS THE ONE THE TESTS DRIVE.
+    // There is no injected closure here and no branch for a test to take: the
+    // two refused-read tests point a real `ModelContext` at a real store file
+    // whose bytes have been overwritten, and this `fetch` really throws
+    // (`NSCocoaErrorDomain` 259, *"isn't in the correct format"*). A seam would
+    // have left this exact line — the only one that ships — uncovered, which is
+    // how the swallowed error got here in the first place.
+    let found: [Distraction]
+    do {
+      found = try context.fetch(existing)
+    } catch {
+      // Nothing is inserted. `Outcome.unreadable` carries the reasoning: a tap
+      // that may already be here is dropped rather than written twice, because
+      // this app can never delete the second one.
+      return .unreadable
+    }
+    if found.isEmpty == false {
       return .duplicate
     }
 

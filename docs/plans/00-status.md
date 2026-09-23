@@ -52,6 +52,7 @@ Status is what the unit's own plan file declares. What has landed in git is deli
 | F6 | feature | — | `docs/plans/F6.md` | 5 planned |
 | F6b | feature | — | `docs/plans/F6b.md` | 7 planned |
 | F7 | feature | — | `docs/plans/F7.md` | 5 planned |
+| F7b | feature | built, gates green, awaiting review. Defect fix on a shipped feature; no gate was required and none… | `docs/plans/F7b.md` | 6 planned |
 | F8 | feature | **HALTED AT `T3` AND RE-GATED** by `D39`, 2026-09-22. `T1`, `T2` and `T3` stay merged to `main`… | `docs/plans/F8.md` | 6 planned |
 | F9 | feature | plan written, **awaiting the gate.** No code has been written. | `docs/plans/F9.md` | 6 planned |
 | F10 | feature | plan written, **awaiting the gate.** No code has been written. | `docs/plans/F10.md` | 5 planned |
@@ -73,7 +74,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 |---|---|---|---|---|
 | Decisions (`D`) | 1 | 1 | 0 | 0 |
 | Risks (`RR`) | 0 | 0 | 0 | 0 |
-| Owner items (`O`) | 30 | 24 | 0 | 6 |
+| Owner items (`O`) | 31 | 25 | 0 | 6 |
 | Hooks (`H`) | 0 | 0 | 0 | 0 |
 | Mutations (`M`) | 0 | 0 | 0 | 0 |
 | Chores (`C`) | 20 | 3 | 8 | 9 |
@@ -87,7 +88,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `D` | proposed | 1 |
 | `O` | closed | 6 |
 | `O` | held | 1 |
-| `O` | open | 23 |
+| `O` | open | 24 |
 | `C` | closed | 9 |
 | `C` | open | 3 |
 | `C` | unknown | 8 |
@@ -130,10 +131,11 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | owner | O44 | P1 | open | OPEN.md and the register are lossy in OPPOSITE directions, and… |
 | owner | O45 | P2 | open | Whether v1.5's amendment ledger belongs inside the baseline |
 | owner | O46 | P1 | open | The v1.5 ratchet still cannot see D33, the delta it was built for |
+| owner | O47 | P1 | open | A refused dedup read drops the wrist tap, and `Distraction.id` still… |
 | unassigned | C26 | P0 | open | ZenTomato is still the app's name where the store looks |
 | unassigned | C33 | P0 | open | the missing registers, backfilled — A, M, H and RR |
 | unassigned | C34 | P0 | open | the register's Decisions section, generated rather than maintained |
 
 ---
 
-28 open register rows.
+29 open register rows.
