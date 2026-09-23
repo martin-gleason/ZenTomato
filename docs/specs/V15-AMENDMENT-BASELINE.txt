@@ -1,0 +1,64 @@
+0
+
+The number of ratified deltas whose replacement text has never been applied to
+docs/specs/zenpom-v1.5.md, as counted by
+DeltaIntegrityTests.everyRatifiedV15AmendmentIsApplied.
+
+THIS FILE IS NOT PART OF THE BASELINE, AND THAT IS DELIBERATE.
+docs/specs/zenpom-v1.5.md is a ratified baseline. The agent never edits a baseline — C31 needed D40,
+ratified by the owner, before a single character of it could change. So the instrument that watches
+it lives OUTSIDE it, exactly as docs/specs/AMENDMENT-BASELINE.txt lives outside SPEC.md. Nothing in
+this file is an amendment to the spec; it is a count of the gap between what was ratified and what
+the spec says.
+
+THE NUMBER WAS DERIVED BY RUNNING, NOT ASSUMED.
+C32 wrote this file with a deliberately unproven 0, ran the suite, and read the printed backlog. The
+run says: D31 is the only delta whose Currently block resolves to zenpom-v1.5.md and still matches
+live text there, and D31 is listed in docs/specs/V15-AMENDMENTS-APPLIED.md because it genuinely has
+been applied — C22 is struck in the spec and F11 is unblocked. Outstanding: 0.
+
+TWO THINGS THE DETECTOR CANNOT SEE, kept as warnings rather than live items.
+The second is the more consequential and was missed when this file was first written; it is O46.
+
+1. D33 — THE DELTA THIS RATCHET EXISTS FOR — WOULD NOT HAVE MADE IT GO RED, AND STILL WOULD NOT.
+  D41's second hole says it plainly: zenpom-v1.5.md "is an equally ratified baseline with no
+  amendment ledger, no baseline file and no ratchet - and D33 amends it. Nothing would ever have
+  gone red." There is now a ledger, a baseline file and a ratchet, and D33 STILL does not go red.
+  Half of the reason was a defect and is fixed: D33 declares no document inside its Currently block,
+  so it was judged against SPEC.md, the wrong baseline entirely. C32 now also reads the declaration
+  out of a delta's PREAMBLE, where D33 writes "Owed because `docs/specs/zenpom-v1.5.md` is a ratified
+  baseline", and D33 resolves to v1.5. theBaselineADeltaDeclaresInItsPreambleIsRead pins that.
+  The other half is not fixed and is not fixable by verbatim matching. D33 amends an order TABLE, and
+  quotes it as a comma list - `C21`, `F8`, `F12` ... - every entry under the twelve-character floor,
+  and the live spec renders them one per table row. Its only fragment at or above the floor is the
+  incidental quotation "delta owed: none". There is no twelve-character verbatim overlap between what
+  D33 says the spec says and what the spec said, so no amount of pointing the detector at the right
+  document makes it see this one. Lowering the floor is not the fix: `F8` occurs everywhere.
+  MEASURED, NOT ARGUED. The pre-C31 tree was reconstructed - git show ac80738:docs/specs/zenpom-v1.5.md
+  and ac80738:docs/plans/00-deltas.md, the exact state where D33 sat ratified-and-unapplied - and the
+  finished C32 detector run over it. D33 resolves to docs/specs/zenpom-v1.5.md, yields the single
+  fragment "delta owed: none", and matches nothing. The v1.5 owed set at that state is ['D31'].
+  "Would the new ratchet have gone red for D33?" => False.
+  SO THE LEDGER IS WHAT CAUGHT D33, AND A PERSON IS WHAT FILLED THE LEDGER. That is the residual gap,
+  it is O46, and it is written here rather than left for a reader to infer from a green run.
+  This is the D18 class, which docs/specs/AMENDMENT-BASELINE.txt already records: a delta that
+  paraphrases its baseline instead of quoting it is invisible. QUOTE EXACTLY.
+
+2. D31's match is a FALSE POSITIVE of the fragment extractor. Its real quoted text — "which licence
+  the binaries carry" — is gone from v1.5, which is what applied means. What still matches is the
+  backticked path `docs/plans/parked.md`, which D31's body mentions three paragraphs below the
+  marker and which zenpom-v1.5.md carries on line 7 as a Sources: citation. Matching is verbatim on
+  purpose: fuzzy comparison buys one true positive at the cost of false ones, and a check that cries
+  wolf stops being read. The applied ledger is how a false positive is retired, and it is the only
+  sanctioned way.
+
+WHY zenpom-v1.5.md IS NOT EDITED TO SATISFY THIS NUMBER.
+Only the owner may amend a baseline, under a D<n>, as D40 authorised for D33. An agent that closed
+this gap by editing the spec would be deleting the evidence instead of reporting it.
+
+The test fails if the real number EXCEEDS this one. At zero that means any delta ratified from now on
+that amends zenpom-v1.5.md must reach the spec in the same change, or the build goes red
+immediately. That is the behaviour D41 exists for: D33 was ratified on 2026-09-09 and sat unapplied
+for thirteen days with nothing able to go red.
+
+Never raise this number. Raising it is the act this file exists to make visible.

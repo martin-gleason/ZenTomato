@@ -35,6 +35,7 @@ Status is what the unit's own plan file declares. What has landed in git is deli
 | C27 | chore | — | `docs/chores/C27.md` | 0 planned |
 | C28 | chore | — | `docs/chores/C28.md` | 0 planned |
 | C29 | chore | — | `docs/chores/C29.md` | 0 planned |
+| C32 | chore | — | `docs/chores/C32.md` | 0 planned |
 | F1 | feature | — | `docs/plans/F1.md` | 9 planned |
 | F2 | feature | — | `docs/plans/F2.md` | 6 planned |
 | F2b | feature | — | `docs/plans/F2b.md` | 0 planned |
@@ -72,10 +73,10 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 |---|---|---|---|---|
 | Decisions (`D`) | 1 | 1 | 0 | 0 |
 | Risks (`RR`) | 0 | 0 | 0 | 0 |
-| Owner items (`O`) | 28 | 22 | 0 | 6 |
+| Owner items (`O`) | 30 | 24 | 0 | 6 |
 | Hooks (`H`) | 0 | 0 | 0 | 0 |
 | Mutations (`M`) | 0 | 0 | 0 | 0 |
-| Chores (`C`) | 20 | 4 | 8 | 8 |
+| Chores (`C`) | 20 | 3 | 8 | 9 |
 
 `Unknown` is not a third kind of open. It means the source document said nothing about status, so this page will not guess — the row is a question for the owner.
 
@@ -86,9 +87,9 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `D` | proposed | 1 |
 | `O` | closed | 6 |
 | `O` | held | 1 |
-| `O` | open | 21 |
-| `C` | closed | 8 |
-| `C` | open | 4 |
+| `O` | open | 23 |
+| `C` | closed | 9 |
+| `C` | open | 3 |
 | `C` | unknown | 8 |
 
 ## Hooks
@@ -127,11 +128,12 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | owner | O40 | P2 | open | The App Group capability, in the developer portal |
 | owner | O43 | P2 | open | F8-M7 and F8-M8 each name two different mutations |
 | owner | O44 | P1 | open | OPEN.md and the register are lossy in OPPOSITE directions, and… |
+| owner | O45 | P2 | open | Whether v1.5's amendment ledger belongs inside the baseline |
+| owner | O46 | P1 | open | The v1.5 ratchet still cannot see D33, the delta it was built for |
 | unassigned | C26 | P0 | open | ZenTomato is still the app's name where the store looks |
-| unassigned | C32 | P0 | open | the amendment ratchet learns both spellings, and gains a second… |
 | unassigned | C33 | P0 | open | the missing registers, backfilled — A, M, H and RR |
 | unassigned | C34 | P0 | open | the register's Decisions section, generated rather than maintained |
 
 ---
 
-27 open register rows.
+28 open register rows.
