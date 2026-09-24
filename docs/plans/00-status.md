@@ -62,7 +62,7 @@ Status is what the unit's own plan file declares. What has landed in git is deli
 | F10 | feature | plan written, **awaiting the gate.** No code has been written. | `docs/plans/F10.md` | 5 planned |
 | F11 | feature | plan written, **awaiting the gate. No code has been written.** | `docs/plans/F11.md` | 5 planned |
 | F12 | feature | plan written, awaiting the gate. No code has been written. | `docs/plans/F12.md` | 5 planned |
-| F13 | feature | plan written, awaiting the gate. No code has been written. | `docs/plans/F13.md` | 5 planned |
+| F13 | feature | `F13-T1` built and merged-pending; `T2`–`T4` next; `T5` is the owner's. | `docs/plans/F13.md` | 5 planned |
 | F14 | feature | plan written, awaiting the gate. No code has been written. | `docs/plans/F14.md` | 6 planned |
 | F15 | feature | plan written, **awaiting the gate.** No code has been written. | `docs/plans/F15.md` | 6 planned |
 | F16 | feature | plan written, awaiting the gate. No code has been written. | `docs/plans/F16.md` | 6 planned |
@@ -80,7 +80,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
 | Owner items (`O`) | 48 | 24 | 0 | 24 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
-| Mutations (`M`) | 130 | 42 | 0 | 88 |
+| Mutations (`M`) | 138 | 47 | 0 | 91 |
 | Chores (`C`) | 29 | 5 | 9 | 15 |
 | Agent items (`A`) | 19 | 7 | 0 | 12 |
 
@@ -100,8 +100,8 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `O` | open | 23 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
-| `M` | closed | 88 |
-| `M` | open | 42 |
+| `M` | closed | 91 |
+| `M` | open | 47 |
 | `C` | closed | 15 |
 | `C` | open | 5 |
 | `C` | unknown | 9 |
@@ -206,6 +206,11 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | unassigned | F10-M3 | — | open | Point Fence A's scan at a path that does not exist |
 | unassigned | F10-M4 | — | open | Make `BlockLauncher` answer `started` instead of `alreadyRunning` and… |
 | unassigned | F10-M5 | — | open | Make `BlockLauncher` treat an intent-sourced request as a local one… |
+| unassigned | F13-M1 | — | open | Make `TodoistProjectDTO.color` required rather than `decodeIfPresent` |
+| unassigned | F13-M2 | — | open | Make `TodoistTaskDTO.priority` required |
+| unassigned | F13-M3 | — | open | Invert the priority mapping — return the top level for the wire's… |
+| unassigned | F13-M6 | — | open | Drop the priority clause from `PickerRowView.spokenToggleLabel` |
+| unassigned | F13-M7 | — | open | Stop `TodoistCacheStore` copying the colour onto the mirrored row… |
 | unassigned | F14-M1 | — | open | Delete the freshness check — honour a request of any age |
 | unassigned | F14-M2 | — | open | Honour a request id that has already been honoured |
 | unassigned | F14-M3 | — | open | Let a remote launch through while authorization is `.notDetermined` |
@@ -258,4 +263,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-102 open register rows.
+107 open register rows.

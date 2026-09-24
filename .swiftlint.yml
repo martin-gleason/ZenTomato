@@ -148,8 +148,14 @@ custom_rules:
     # and a guard with a hole is one that gets believed when it should not be.
     # Todoist, Plan and Music are here for the same reason: they draw too.
     included: "(ZenTomato/(App|Views|Models|Timer|Alarm|Shared|Stats|Export|Sprint|Todoist|Plan|Music)|ZenTomatoActivity|ZenTomatoWatch)/.*\\.swift"
-    regex: "\\bPalette\\."
-    message: "Screens may only name a ColorRole, never a raw Palette step."
+    # BOTH primitive tables, since F13-T1. `TodoistPalette` is Todoist's own
+    # twenty colours, and a rule matching only `Palette.` would have let
+    # `TodoistPalette.` through a view untouched — a guard with a hole, which is
+    # the thing the comment above already says is worth avoiding. Widened in the
+    # commit that created the second table rather than in a retrofit after
+    # somebody named it from a screen.
+    regex: "\\b(Palette|TodoistPalette)\\."
+    message: "Screens may only name a ColorRole or a TodoistTint, never a raw palette step."
     severity: error
 
 reporter: xcode
