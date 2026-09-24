@@ -50,7 +50,7 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D27** | ratified | yes, applied | — | Settings are read-only while a block is running |
 | **D28** | ratified | yes, applied | — | The alert sound can be previewed from Settings |
 | **D29** | ratified | yes, applied | — | A locked phone is somebody being there |
-| **D30** | proposed | yes, pending | — | A watch-face complication |
+| **D30** | ratified | yes, pending | — | A watch-face complication |
 | **D31** | ratified | no | — | C22 is struck; the licence question was already answered |
 | **D32** | ratified | no | — | A shape is stored, in one file, outside SwiftData |
 | **D33** | ratified | no | — | v1.5 admits two more units, and the order is restated |
@@ -66,8 +66,9 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D43** | ratified | no | — | The shape screen lets you set the number of pomodoros (F8 re-gate) |
 | **D44** | ratified | **yes — v1.5** | 1 | v1.5's amendment ledger moves inside the baseline |
 | **D45** | **proposed** | no | — | A silent alarm and a haptic on the watch when the phone's sound is off |
+| **D46** | **proposed** | no | — | The watch fires the same controls as the phone — contradicts D2 |
 
-*47 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*48 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
@@ -1617,9 +1618,17 @@ published.
 
 ## D30 — A watch-face complication
 
-**Proposed 2026-08-28. Not ratified.** Requested by the owner:
+**Proposed 2026-08-28. Ratified by the owner 2026-09-24.** Requested by the owner:
 
 > also, make sure zenpom can be installed as a complication on a ultra watch face
+
+**RATIFIED AS WRITTEN, which means the complication below and not more than it.** The proposed spec
+text at the end of this row says *"It starts nothing and captures nothing"*, and that sentence is the
+ratified one. The owner asked in the same breath for a complication *"that lets the watch app fire
+off all the same controls as the iOS app"*; that is a different and much larger change, it
+contradicts ratified `D2` in three places, and it is carried separately as `D46` rather than folded
+in here. Ratifying a row silently wider than its own text is how a scope fence stops meaning
+anything.
 
 **It cannot be made sure of, because it does not exist and the contract forbids
 it.** Stating that plainly rather than quietly building it:
@@ -2286,6 +2295,76 @@ is that the app had been noisier than it was told to be.
    know *"the cycle is either on a break or a long break"*, which is two signals, not one.
 
 **Nothing is built.** `F7` shipped and this changes its behaviour on the wrist.
+
+-----
+September 24, 2026
+
+#AI/Claude
+
+## D46 — The watch fires the same controls as the phone
+
+**Proposed 2026-09-24. NOT RATIFIED — it contradicts ratified `D2` and needs to be decided against
+it rather than beside it.** Requested by the owner while ratifying `D30`:
+
+> *"it needs to have a watch face complication that lets the watch app fire off all the same controls
+> as the iOS app."*
+
+**This is separated from `D30` deliberately.** `D30`'s own ratified spec text says the complication
+*"starts nothing and captures nothing."* Reading this sentence into `D30` would have ratified a row
+much wider than the text it carries, which is how a scope fence stops meaning anything.
+
+### What it contradicts, by name
+
+**`D2`, ratified 2026-08-21**, defines the watch in one sentence and rules three things out
+explicitly:
+
+> The phone is the source of truth and runs the only timer engine. The watch displays the running
+> block, the block kind, and the attached task, and puts the I and E distraction buttons on the wrist.
+> **The watch never runs a timer of its own, never controls music, never picks a task**, and never
+> edits a distraction note. … Everything else stays on the phone.
+
+**And `docs/specs/zenpom-v1.5.md` puts this on the v2.0 list by name:** *"A more independent watch
+app — Contradicts ratified `D2`. `F14` delivers the useful half without reopening it."*
+
+So the request is already answered by the contract, in the negative, twice — which is exactly why it
+needs a decision rather than an implementation.
+
+### What is already coming, and may be what was actually wanted
+
+Three ratified items already move controls to the wrist without reopening `D2`:
+
+| | | |
+|---|---|---|
+| `F14` | *The watch can launch a pom* | v1.5 item 7 |
+| `F18` | *A watch-side App Intent* | v1.5 item 9 |
+| `F17` | the complication, which **opens the app** when tapped | v1.5 item 14 |
+
+**`F17`'s plan already says the complication taps through to `F14`'s button**: *"a tap would invoke
+an App Intent `F14` already defines."* So *start a pom from the wrist* is coming, and the gap between
+that and this request is **music control and task picking** — the two things `D2` names.
+
+### The question the owner has to answer
+
+**Is this "let me start and stop a sprint from my wrist" — already planned — or "let me run the whole
+app from my wrist", which is the v2.0 item?** They are very different in size and only the second
+needs this delta.
+
+If it is the second, three things follow and none is small: `D2` is superseded rather than edited (a
+ratified decision is never edited); the watch gains a task picker and music control, which is the
+*"scope gravity"* `F7.md` warns about in as many words — *"a watch app invites a complication, a start
+button, a task picker"*; and **a complication is the wrong surface for it regardless.** A watch-face
+complication is a glance with at most a small interactive area; it cannot host the phone's controls,
+so this would be a watch *app* change with the complication merely launching it.
+
+### The recommendation
+
+**Take the first reading, and build nothing new.** `F14` and `F18` already deliver starting a pom
+from the wrist, `F17` taps through to them, and that is the useful half the v1.5 spec says it is. If
+after using `F14` the wrist still feels short of controls, that is feedback with a real build behind
+it — which is a much better position to widen `D2` from than this one.
+
+**Nothing is built, and `F17` is unblocked either way**: `D30` is ratified and `F17` can be gated on
+its own terms.
 
 -----
 September 24, 2026
