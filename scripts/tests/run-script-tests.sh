@@ -461,11 +461,58 @@ test_rewrite_hook_ignores_a_new_file() {
 # Everything runs against a fixture repository in a temporary directory, never
 # against this one.
 
+# A GENERATOR THAT EXITS NON-ZERO MUST FAIL ONE TEST, NOT KILL THE SUITE.
+# This runner sets `set -e`, so a bare `python3 gen_status.py` aborted the whole
+# script the moment the generator returned 1 - the run printed its banner, exited
+# 1, and reported NOTHING. That is a suite that stopped running, which the harness
+# contract in docs/conventions.md names as the thing an exit code cannot show.
+# Found by C37-M5, which broke splice_open and got no failure report back.
+gen_or_fail() {
+  local name="$1" dir="$2" out
+  if ! out="$(python3 "${dir}/scripts/gen_status.py" 2>&1)"; then
+    fail "$name" "the generator exited non-zero, and this test expected it to write" "$out"
+    return 1
+  fi
+  return 0
+}
+# `|| return 0`, NOT `|| return`, at every call site. The first version returned
+# the helper's 1, the test function returned 1, and `set -e` killed the runner at
+# the top-level call - so the suite reported ONE failure and abandoned the other
+# 43. `fail` has already recorded the failure by then; the test's own exit status
+# carries no further information and must not be allowed to stop the run.
+
 make_status_repo() {
   local dir="$1"
-  mkdir -p "${dir}/scripts" "${dir}/docs/plans" "${dir}/docs/chores" "${dir}/docs/specs"
+  mkdir -p "${dir}/scripts" "${dir}/docs/plans" "${dir}/docs/chores" "${dir}/docs/specs" \
+           "${dir}/docs/reviews"
   cp "${SCRIPTS_DIR}/gen_status.py" "${dir}/scripts/gen_status.py"
   cp "${SCRIPTS_DIR}/check_register_rows.py" "${dir}/scripts/check_register_rows.py"
+
+  # OPEN.MD IS PART OF THE FIXTURE SINCE C37, WITH BOTH MARKER PAIRS AND PROSE
+  # OUTSIDE THEM. It is here because leaving it out broke every status test the
+  # moment the generator learned to write this file - the fixture repo had no
+  # OPEN.md, the marker refusal fired, and `make checks` failed on a file no test
+  # was about. A fixture that omits an artefact the generator writes tests the
+  # generator with that artefact switched off.
+  cat > "${dir}/docs/reviews/OPEN.md" <<'OPENMD'
+# Open items — fixture
+
+Prose above the markers. This line is hand-maintained and must survive.
+
+## Needs the owner
+
+<!-- BEGIN GENERATED: owner -->
+<!-- END GENERATED: owner -->
+
+Prose between the regions, which must also survive.
+
+## Needs the agent
+
+<!-- BEGIN GENERATED: agent -->
+<!-- END GENERATED: agent -->
+
+Prose below the markers.
+OPENMD
 
   cat > "${dir}/docs/specs/thing.md" <<'SPEC'
 # Thing — spec
@@ -560,7 +607,7 @@ test_status_check_passes_when_generated() {
   local dir="${work_dir}/status-fresh"
   make_status_repo "$dir"
 
-  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  gen_or_fail "$name" "$dir" || return 0
   if ! python3 "${dir}/scripts/gen_status.py" --check >/dev/null 2>&1; then
     fail "$name" "--check failed on a page it had just written" \
       "a check that cannot pass is one nobody will keep in CI"
@@ -573,7 +620,7 @@ test_status_check_catches_a_hand_edit() {
   local name="statusCheckCatchesAHandEdit"
   local dir="${work_dir}/status-edit"
   make_status_repo "$dir"
-  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  gen_or_fail "$name" "$dir" || return 0
 
   # THE MUTATION. The page says "do not edit by hand"; this edits it by hand,
   # changing a count to a number nobody derived. Before --check existed, this
@@ -602,7 +649,7 @@ test_status_check_catches_a_stale_page() {
   local name="statusCheckCatchesAStalePage"
   local dir="${work_dir}/status-stale"
   make_status_repo "$dir"
-  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  gen_or_fail "$name" "$dir" || return 0
 
   # The register changes and nobody regenerates — the real-world case. An item
   # is closed, so the open count and the open table must both move.
@@ -621,7 +668,7 @@ test_status_page_does_not_guess_an_absent_status() {
   local name="statusPageDoesNotGuessAnAbsentStatus"
   local dir="${work_dir}/status-unknown"
   make_status_repo "$dir"
-  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  gen_or_fail "$name" "$dir" || return 0
   local page="${dir}/docs/plans/00-status.md"
 
   # O3 has an EMPTY status cell. It must be counted unknown, never open, and it
@@ -677,12 +724,108 @@ test_status_page_counts_a_scoped_mutation_id() {
 | MUTATION-X | Not an id at all |  | closed |
 REG
 
-  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  gen_or_fail "$name" "$dir" || return 0
   local page="${dir}/docs/plans/00-status.md"
 
   if ! grep -q '^| Mutations (`M`) | 2 | 0 | 0 | 2 |$' "$page"; then
     fail "$name" "the M register did not count exactly 2 rows" \
       "a scoped id must be counted (or the junk id must not be): $(grep -F 'Mutations (`M`)' "$page")"
+    return
+  fi
+  pass "$name"
+}
+
+# C37 made docs/reviews/OPEN.md generated. These two are the artefact's own tests:
+# the fixture gained an OPEN.md and, until these were written, NOTHING asserted
+# that the splice wrote rows or that the prose outside the markers survived - the
+# `D46` pattern, a second artefact emitted by a feature whose primary output is
+# checked rigorously.
+test_open_regions_are_written_and_prose_survives() {
+  local name="openRegionsAreWrittenAndProseSurvives"
+  local dir="${work_dir}/open-splice"
+  make_status_repo "$dir"
+
+  cat >> "${dir}/docs/plans/00-register.md" <<'REG'
+
+## Owner items (O)
+
+| ID | Title | P | Status | Mode | From | Why | TD |
+|---|---|---|---|---|---|---|---|
+| O1 | An owner item still open | P1 | open | @Review | F1 | Because the owner has not ruled. | — |
+| O2 | An owner item closed | — | closed | — | F1 | Closed on the device. | — |
+
+## Agent items (A)
+
+| ID | Title | P | Status | Mode | From | Why | TD |
+|---|---|---|---|---|---|---|---|
+| A1 | An agent item | P2 | open | @agent | F1 | Because nothing has run it. | — |
+REG
+
+  gen_or_fail "$name" "$dir" || return 0
+  local open_md="${dir}/docs/reviews/OPEN.md"
+
+  # The assertions read the FILE, not the function's return value. A closed row
+  # is struck and an open one is not, which is the one thing a reader of this
+  # file uses it for.
+  if ! grep -q '^| O1 | \*\*An owner item still open\*\* | F1 | Because the owner has not ruled. |$' "$open_md"; then
+    fail "$name" "the open owner row was not written as OPEN.md's own shape" \
+      "got: $(grep -E '^\| O1 ' "$open_md")"
+    return
+  fi
+  if ! grep -q '^| ~~O2~~ | ~~\*\*An owner item closed\*\*~~ | F1 | Closed on the device. |$' "$open_md"; then
+    fail "$name" "the closed owner row was not struck" \
+      "got: $(grep -E 'O2' "$open_md")"
+    return
+  fi
+  if ! grep -q '^| A1 | \*\*An agent item\*\* | F1 | Because nothing has run it. |$' "$open_md"; then
+    fail "$name" "the agent region was not written" \
+      "got: $(grep -E '^\| A1 ' "$open_md")"
+    return
+  fi
+  # An O row must not land in the agent region, nor an A row in the owner region.
+  if [[ "$(awk '/BEGIN GENERATED: agent/,/END GENERATED: agent/' "$open_md" | grep -c '^| ~\?~\?O')" != "0" ]]; then
+    fail "$name" "an owner row was written into the agent region"
+    return
+  fi
+  # THE PROSE IS THE POINT. 83 lines of it exist only in the real file.
+  local line
+  for line in "Prose above the markers" "Prose between the regions" "Prose below the markers"; do
+    if ! grep -q "$line" "$open_md"; then
+      fail "$name" "prose outside the markers was destroyed: '${line}'"
+      return
+    fi
+  done
+  pass "$name"
+}
+
+test_open_generator_refuses_a_missing_marker() {
+  local name="openGeneratorRefusesAMissingMarker"
+  local dir="${work_dir}/open-marker"
+  make_status_repo "$dir"
+
+  local open_md="${dir}/docs/reviews/OPEN.md"
+  gen_or_fail "$name" "$dir" || return 0
+  local before
+  before="$(cat "$open_md")"
+  grep -v 'BEGIN GENERATED: owner' "$open_md" > "${open_md}.cut" && mv "${open_md}.cut" "$open_md"
+  local cut
+  cut="$(cat "$open_md")"
+
+  local out status
+  out="$(python3 "${dir}/scripts/gen_status.py" 2>&1)" && status=0 || status=$?
+
+  if [[ "$status" == "0" ]]; then
+    fail "$name" "the generator wrote into a file whose marker pair was broken" "$out"
+    return
+  fi
+  if ! grep -q "Nothing was written" <<<"$out"; then
+    fail "$name" "it failed, but did not say that nothing was written" "$out"
+    return
+  fi
+  # NOTHING WAS WRITTEN is read off the file, not off the message. A generator
+  # that prints the words and writes anyway is the failure this test is for.
+  if [[ "$(cat "$open_md")" != "$cut" ]]; then
+    fail "$name" "it said nothing was written and then wrote"
     return
   fi
   pass "$name"
@@ -709,7 +852,7 @@ test_status_page_names_the_agent_register() {
 | A2 | One that is closed |  | closed |
 REG
 
-  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  gen_or_fail "$name" "$dir" || return 0
   local page="${dir}/docs/plans/00-status.md"
 
   if ! grep -q '^| Agent items (`A`) | 2 | 1 | 0 | 1 |$' "$page"; then
@@ -727,7 +870,7 @@ test_decisions_region_is_generated_from_the_deltas_file() {
   local name="decisionsRegionIsGeneratedFromTheDeltasFile"
   local dir="${work_dir}/decisions-region"
   make_status_repo "$dir"
-  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  gen_or_fail "$name" "$dir" || return 0
   local reg="${dir}/docs/plans/00-register.md"
 
   # One row per delta, in ID order, carrying the status the DEFINITION declares -
@@ -759,7 +902,7 @@ test_decisions_region_carries_the_owner_overlay() {
   local name="decisionsRegionCarriesTheOwnerOverlay"
   local dir="${work_dir}/decisions-overlay"
   make_status_repo "$dir"
-  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  gen_or_fail "$name" "$dir" || return 0
 
   # D30's real P0 and Todoist id exist in no column of 00-deltas.md, so a
   # regeneration that did not merge them would DELETE a link the owner's own sync
@@ -785,7 +928,7 @@ test_overlay_naming_an_undefined_delta_is_refused() {
   local name="overlayNamingAnUndefinedDeltaIsRefused"
   local dir="${work_dir}/decisions-overlay-bad"
   make_status_repo "$dir"
-  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  gen_or_fail "$name" "$dir" || return 0
   local reg="${dir}/docs/plans/00-register.md"
   local before
   before=$(cat "$reg")
@@ -822,7 +965,7 @@ test_markerless_register_is_refused() {
   local name="markerlessRegisterIsRefused"
   local dir="${work_dir}/decisions-markerless"
   make_status_repo "$dir"
-  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  gen_or_fail "$name" "$dir" || return 0
   local reg="${dir}/docs/plans/00-register.md"
 
   # THE MUTATION. Delete the BEGIN marker, leaving the table and the END marker.
@@ -862,7 +1005,7 @@ test_hand_edit_inside_the_region_fails_check() {
   local name="handEditInsideTheRegionFailsCheck"
   local dir="${work_dir}/decisions-hand-edit"
   make_status_repo "$dir"
-  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  gen_or_fail "$name" "$dir" || return 0
   local reg="${dir}/docs/plans/00-register.md"
 
   # THE MUTATION. Change a status by hand INSIDE the generated region - the same
@@ -902,7 +1045,7 @@ test_an_escaped_pipe_does_not_shift_a_row() {
     return
   fi
 
-  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  gen_or_fail "$name" "$dir" || return 0
   local page="${dir}/docs/plans/00-status.md"
 
   # THE DEFECT THIS PINS, found by C34's own gates. gen_status split a row on a
@@ -935,7 +1078,7 @@ test_ratified_decisions_are_not_counted_open() {
   local name="ratifiedDecisionsAreNotCountedOpen"
   local dir="${work_dir}/decisions-closed"
   make_status_repo "$dir"
-  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  gen_or_fail "$name" "$dir" || return 0
   local page="${dir}/docs/plans/00-status.md"
 
   # `ratified` was not in gen_status.CLOSED, so all 40 ratified deltas would have
@@ -964,7 +1107,7 @@ test_the_command_the_failure_message_prints_actually_fixes_it() {
   local name="theCommandTheFailureMessagePrintsActuallyFixesIt"
   local dir="${work_dir}/decisions-remedy"
   make_status_repo "$dir"
-  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  gen_or_fail "$name" "$dir" || return 0
 
   # D46: a feature that tells a human to run something has emitted a SECOND
   # artefact, and it needs the same treatment as the first. So the command is
@@ -1381,6 +1524,8 @@ test_validator_refuses_an_empty_read() {
 }
 
 test_status_page_names_the_agent_register
+test_open_regions_are_written_and_prose_survives
+test_open_generator_refuses_a_missing_marker
 test_status_page_counts_a_scoped_mutation_id
 test_no_writes_hook_catches_new_endpoint
 test_no_writes_hook_catches_bare_path

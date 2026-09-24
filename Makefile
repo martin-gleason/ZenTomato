@@ -47,6 +47,7 @@ XCODEBUILD_FLAGS := \
 
 .PHONY: help generate simulator build test device script-tests lint \
         check-todoist check-secrets check-licence check-register check-register-rows \
+        check-open-backfill \
         status check-status check-release checks ci hooks clean
 
 # --- Entry points ----------------------------------------------------------
@@ -116,6 +117,14 @@ check-register: ## Fail if a table in OPEN.md has stopped rendering as a table
 check-register-rows: ## Fail if a row in 00-register.md is malformed
 	@python3 scripts/check_register_rows.py
 
+# C37 made OPEN.md generated. C29 is what that costs when it goes wrong: 15 rows
+# whose text a truncating extractor cut, with every gate green. This one names the
+# failure it looks for - a row present in the hand-maintained file and absent from
+# the generated one - and it stays in `checks` rather than being run once, because
+# a hand-edit inside the markers loses text the same way a bad generator does.
+check-open-backfill: ## Fail if generating OPEN.md lost a row or any row's text
+	@python3 scripts/open_backfill_diff.py
+
 status: ## Regenerate 00-register.md's decisions region and 00-status.md
 	@python3 scripts/gen_status.py
 
@@ -128,7 +137,7 @@ device: generate ## Build and install on a connected iPhone (needs DEVELOPMENT_T
 script-tests: ## Run the shell-level tests for the secrets and hook scripts
 	@./scripts/tests/run-script-tests.sh
 
-checks: lint check-todoist check-secrets check-licence check-register check-register-rows check-status script-tests ## Run every non-Xcode gate
+checks: lint check-todoist check-secrets check-licence check-register check-register-rows check-status check-open-backfill script-tests ## Run every non-Xcode gate
 
 ci: checks test check-release ## Everything continuous integration runs, in the same order
 
