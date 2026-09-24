@@ -567,7 +567,19 @@ def open_row(row: dict[str, str]) -> str:
     title = one_line(row.get("title", ""), None)
     closed = status_of(row) in CLOSED
     ident = f"~~{rid}~~" if closed else rid
-    shown = f"~~**{title}**~~" if closed else f"**{title}**"
+    # A TITLE THAT ALREADY CARRIES MARKUP IS NOT WRAPPED AGAIN. The 16 titles C37
+    # transcribed from OPEN.md brought their own `**...**` and their own
+    # `**CLOSED ...**` clause, so wrapping produced `****Migration over an
+    # existing install** **CLOSED 2026-08-28****~~` on every one of them - 16 rows
+    # of broken emphasis, invisible to the backfill diff by construction because
+    # it compares words and markup is not a word. Where the title is already
+    # emphasised, only its FIRST bold span is struck, which is the shape the
+    # hand-maintained file had.
+    if closed:
+        shown = (re.sub(r"^\*\*(.+?)\*\*", r"~~**\1**~~", title, count=1)
+                 if "**" in title else f"~~**{title}**~~")
+    else:
+        shown = title if "**" in title else f"**{title}**"
     return f"| {ident} | {shown} | {row.get('from', '')} | {one_line(row.get('why', ''), None)} |"
 
 

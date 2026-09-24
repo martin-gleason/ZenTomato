@@ -62,8 +62,9 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D39** | ratified | no | — | F8 is halted at T3 and re-gated; `O37` is held |
 | **D40** | ratified | no — v1.5 | — | D33 is applied; CLAUDE.md stops enumerating the order |
 | **D41** | ratified | no | — | The amendment ratchet learns both spellings, and gains a second baseline |
+| **D42** | ratified | no | — | The register is authoritative; OPEN.md is a view generated from it |
 
-*43 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*44 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
@@ -2097,3 +2098,46 @@ to make an unapplied amendment impossible missed one for thirteen days.
 seen fail is not a ratchet.*
 
 **Implementation is `C32`.** This row is the ruling.
+
+## D42 — The register is authoritative and `OPEN.md` is a view
+
+**Proposed 2026-09-24. Ratified by the owner 2026-09-24**, in the owner's own words, before the
+work began:
+
+> *"two files to maintain is exactly what I think we need to avoid. PR45 has been merged: STick
+> with register and regenerate open.md."*
+
+**WRITTEN AFTER THE WORK, AND THAT IS THE DEFECT THIS ROW FIXES.** `C37` was built on the
+instruction above and never given a number. `docs/conventions.md` is explicit: *"An item with no
+number has not been decided, however clearly it was said aloud"*, and *"Anything that changes
+scope enters as a `D<N>`."* `D36` and `D37` cover the `A` register and the `D` table inside the
+register; neither reaches this file. `C37`'s adversarial review found the gap, and it found it in
+the artefact: `docs/reviews/OPEN.md` was printing *"SO: DO NOT GENERATE OPEN.md FROM THE
+REGISTER"* inside a region generated from the register.
+
+**The problem this answers.** `docs/conventions-local.md` defines `OPEN.md` as *"every
+outstanding item from every review, in one table"*, and `docs/plans/00-register.md` holds the same
+items. Two documents with one intake path each is the failure `docs/conventions.md` names:
+*"a second document is a second intake path."* It was not theoretical — `O44` measured the cost.
+16 of `OPEN.md`'s 35 `O` ids and 83 lines of prose existed nowhere else, including a paragraph
+recording that the distraction tally over-reports for one block, which is a caveat on `O1`.
+
+**Therefore:**
+
+1. **`docs/plans/00-register.md` is authoritative for every register item.** An item is opened,
+   updated and closed there.
+2. **`docs/reviews/OPEN.md` is a view of it**, generated between marker pairs. Its prose outside
+   the markers stays hand-maintained, because prose is not a row and a generator has no business
+   writing it.
+3. **The generation publishes a row-by-row diff, as a command with an exit code**, and any row
+   present before and absent after is a defect. `scripts/open_backfill_diff.py`, in `make checks`,
+   in CI, and in the pre-commit hook.
+4. **`O44` is closed by this row**, not overruled by it. `O44` said *"do not generate OPEN.md from
+   the register — the decision is the owner's."* It was right on both counts: the prerequisite it
+   named (the register must first be complete) was met by `C33` and `C34`, and the decision was
+   the owner's and has now been made.
+
+**This supersedes nothing.** `O44`'s prohibition was an owner item, not a ratified decision, which
+is exactly why it needed one.
+
+**Implementation is `C37`.** This row is the ruling.
