@@ -68,23 +68,52 @@ extension ShapeScreenModel {
   static let nothingFitsHeading = "No shape this short"
 
   /// The nothing-fits body. The number moves with the toggle, so it is never fifteen by assumption.
+  ///
+  /// **It says what a cycle is, and then where to go instead** — the owner's wording, `O38`. Two
+  /// things made that worth adding. A reader told only that nothing fits does not know WHY fifteen
+  /// minutes is the floor, and the reason is that a cycle is a pomodoro *and* the break after it, so
+  /// the budget has to cover both. And this screen's floors are not the app's: `SettingsBounds`
+  /// allows any block from **1 to 120 minutes**, so a shorter sprint is entirely possible — just not
+  /// through this screen. Sending somebody to Settings is a fact, not a consolation.
+  ///
+  /// **`cycle` is the ratified word for a pom plus its break** (`docs/specs/definitions.md`, 2026-09-09),
+  /// and the reason it exists is so this screen can explain itself "without taking *pomodoro*'s name
+  /// for it, and without the app teaching a definition the method does not hold."
   static func nothingFitsBody(shortestMinutes: Int?) -> String {
     guard let shortestMinutes else {
-      return "These settings can't make a shape of any length."
+      return """
+        These settings can't make a shape of any length. You can set the block lengths \
+        yourself in Settings.
+        """
     }
-    return "The shortest shape these controls can make is \(StatsWords.count(shortestMinutes, "minute", "minutes"))."
+    return """
+      The shortest shape these controls can make is \
+      \(StatsWords.count(shortestMinutes, "minute", "minutes")). A cycle is one pomodoro plus \
+      the break that follows it, and the time has to cover both. For anything shorter, set the \
+      block lengths yourself in Settings.
+      """
   }
 
-  /// Under the suggested minimum: one line of arithmetic, and nothing else.
+  /// Under the suggested minimum: arithmetic, and then the one thing a reader can act on.
   ///
-  /// *"45 minutes fits 3 pomodoros. A full sprint of 4 needs 60."* Both numbers are computed. The
+  /// *"45 minutes fits 3 pomodoros. A full sprint needs 60 minutes."* Both numbers are computed. The
   /// shape still runs — this is a warning, not an error — so nothing on the screen is switched off
   /// and no colour role but `textMuted` is used to draw it.
+  ///
+  /// **The third sentence exists because the first two read as a refusal and this state is not one**
+  /// (`O38`). It says the shape runs, and it points at `saveLabel` — which is on this screen already,
+  /// in this state, because `saveDetail` is non-nil whenever a shape exists. An earlier draft sent
+  /// the reader to the Settings menu instead; that would have walked them past a button doing exactly
+  /// what they were being sent to do.
+  ///
+  /// It does not breach the no-suggestions rule at the top of this file. That rule forbids suggesting
+  /// **what to do with the time**; this is about where the block lengths are kept.
   static func underMinimum(budgetMinutes: Int, fits pomCount: Int, fullSprintNeeds minutes: Int) -> String {
     """
     \(StatsWords.count(budgetMinutes, "minute", "minutes")) fits \
     \(StatsWords.count(pomCount, "pomodoro", "pomodoros")). A full sprint needs \
-    \(StatsWords.count(minutes, "minute", "minutes")).
+    \(StatsWords.count(minutes, "minute", "minutes")). This shape still runs — \(saveLabel) makes it \
+    your default.
     """
   }
 
