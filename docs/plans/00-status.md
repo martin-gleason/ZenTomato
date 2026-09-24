@@ -79,9 +79,9 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 |---|---|---|---|---|
 | Decisions (`D`) | 45 | 2 | 0 | 43 |
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
-| Owner items (`O`) | 50 | 25 | 0 | 25 |
+| Owner items (`O`) | 50 | 24 | 0 | 26 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
-| Mutations (`M`) | 149 | 42 | 0 | 107 |
+| Mutations (`M`) | 150 | 42 | 0 | 108 |
 | Chores (`C`) | 30 | 5 | 9 | 16 |
 | Agent items (`A`) | 20 | 8 | 0 | 12 |
 
@@ -96,12 +96,12 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `D` | rejected | 1 |
 | `D` | resolved | 1 |
 | `RR` | open | 4 |
-| `O` | closed | 25 |
+| `O` | closed | 26 |
 | `O` | held | 1 |
-| `O` | open | 24 |
+| `O` | open | 23 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
-| `M` | closed | 107 |
+| `M` | closed | 108 |
 | `M` | open | 42 |
 | `C` | closed | 16 |
 | `C` | open | 5 |
@@ -176,7 +176,6 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | owner | O34 | P1 | open | From the lock screen, slide-to-stop worked |
 | owner | O36 | P1 | open | The zenpom Focus runbook, followed once on the phone |
 | owner | O37 | P1 | held | The shape screen, on a phone — F8-T3's device check |
-| owner | O38 | P2 | open | The two sentences on the shape screen are the agent's words, not the… |
 | owner | O39 | P2 | open | Does the absorption preset control earn its place? |
 | owner | O40 | P2 | open | The App Group capability, in the developer portal |
 | owner | O43 | P2 | open | F8-M7 and F8-M8 each name two different mutations |
@@ -262,4 +261,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-105 open register rows.
+104 open register rows.

@@ -89,7 +89,9 @@ struct ShapeScreenTests {
     #expect(model.settingsWrite == nil)
     #expect(
       ShapeScreenModel.nothingFitsBody(shortestMinutes: model.shortestShapeMinutes)
-        == "The shortest shape these controls can make is 15 minutes.")
+        == "The shortest shape these controls can make is 15 minutes. A cycle is one pomodoro "
+        + "plus the break that follows it, and the time has to cover both. For anything shorter, "
+        + "set the block lengths yourself in Settings.")
   }
 
   /// **The shortest workable budget is not fifteen; it is fifteen with the long break on and ten
@@ -117,18 +119,51 @@ struct ShapeScreenTests {
     #expect(short.pomCount == 3)
     #expect(
       try #require(short.underMinimumLine)
-        == "45 minutes fits 3 pomodoros. A full sprint needs 60 minutes.")
+        == "45 minutes fits 3 pomodoros. A full sprint needs 60 minutes. This shape still runs — "
+        + "Save to settings makes it your default.")
 
     let shorter = Self.model(20)
     #expect(shorter.state == .underSuggestedMinimum)
     #expect(
       try #require(shorter.underMinimumLine)
-        == "20 minutes fits 1 pomodoro. A full sprint needs 60 minutes.")
+        == "20 minutes fits 1 pomodoro. A full sprint needs 60 minutes. This shape still runs — "
+        + "Save to settings makes it your default.")
 
     // Not a verdict, and not a nudge.
     for banned in ["only", "just", "unfortunately", "try", "!"] {
       #expect(try #require(short.underMinimumLine).contains(banned) == false)
     }
+  }
+
+  /// **The copy's two factual claims, checked against the things they claim about.**
+  ///
+  /// `O38` replaced both sentences with the owner's, and each makes an assertion about somewhere
+  /// else in the app. A sentence that is merely well written and wrong is worse than the agent's
+  /// draft it replaced, so both are pinned here rather than trusted.
+  @Test("theCopysClaimsAreTrueOfTheAppItDescribes")
+  func theCopysClaimsAreTrueOfTheAppItDescribes() throws {
+    // CLAIM 1: "set the block lengths yourself in Settings" — only honest if Settings really does
+    // allow blocks shorter than this screen's floors. It allows 1 to 120 minutes, and the shaper
+    // will not go below a 10-minute pom or a 5-minute break, so the sentence is true and is the
+    // whole reason it is worth saying.
+    let shaperFloor = try #require(
+      ShapeBudgets.smallestBudgetMinutes(settings: Self.settings, endsWithLongBreak: true))
+    #expect(SettingsBounds.minutes.lowerBound == 1)
+    #expect(SettingsBounds.minutes.lowerBound < shaperFloor)
+
+    // CLAIM 2: "Save to settings makes it your default" — only honest if that button is on screen
+    // in this state. `ShapeSheet` draws it whenever `saveDetail` is non-nil, and an earlier draft
+    // of this copy sent the reader to the Settings menu instead, walking them past it.
+    let short = Self.model(45)
+    #expect(short.state == .underSuggestedMinimum)
+    #expect(short.saveDetail != nil)
+    #expect(try #require(short.underMinimumLine).contains(ShapeScreenModel.saveLabel))
+
+    // And the words the copy uses are the ratified ones. `cycle` is a pom plus its break; the
+    // refused reading was that a POMODORO includes the break. See docs/specs/definitions.md.
+    let body = ShapeScreenModel.nothingFitsBody(shortestMinutes: 15)
+    #expect(body.contains("A cycle is one pomodoro plus the break that follows it"))
+    #expect(body.contains("sprint") == false)
   }
 
   /// Sixty minutes is the minimum, not under it — so nothing is warned about at all.
@@ -159,7 +194,8 @@ struct ShapeScreenTests {
     #expect(model.state == .ok)
     #expect(
       try #require(Self.model(50, longBreak: false).underMinimumLine)
-        == "50 minutes fits 3 pomodoros. A full sprint needs 55 minutes.")
+        == "50 minutes fits 3 pomodoros. A full sprint needs 55 minutes. This shape still runs — "
+        + "Save to settings makes it your default.")
   }
 
   // MARK: The presets, at a budget where they do something
