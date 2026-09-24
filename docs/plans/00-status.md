@@ -36,6 +36,7 @@ Status is what the unit's own plan file declares. What has landed in git is deli
 | C28 | chore | — | `docs/chores/C28.md` | 0 planned |
 | C29 | chore | — | `docs/chores/C29.md` | 0 planned |
 | C32 | chore | — | `docs/chores/C32.md` | 0 planned |
+| C33 | chore | built; not merged. **Two adversarial review passes have run.** The first returned four blocking and… | `docs/chores/C33.md` | 0 planned |
 | F1 | feature | — | `docs/plans/F1.md` | 9 planned |
 | F2 | feature | — | `docs/plans/F2.md` | 6 planned |
 | F2b | feature | — | `docs/plans/F2b.md` | 0 planned |
@@ -73,11 +74,12 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Register | Rows | Open | Unknown | Closed |
 |---|---|---|---|---|
 | Decisions (`D`) | 1 | 1 | 0 | 0 |
-| Risks (`RR`) | 0 | 0 | 0 | 0 |
+| Risks (`RR`) | 4 | 4 | 0 | 0 |
 | Owner items (`O`) | 31 | 25 | 0 | 6 |
-| Hooks (`H`) | 0 | 0 | 0 | 0 |
-| Mutations (`M`) | 0 | 0 | 0 | 0 |
-| Chores (`C`) | 20 | 3 | 8 | 9 |
+| Hooks (`H`) | 32 | 19 | 0 | 13 |
+| Mutations (`M`) | 103 | 42 | 0 | 61 |
+| Chores (`C`) | 26 | 4 | 9 | 13 |
+| Agent items (`A`) | 19 | 7 | 0 | 12 |
 
 `Unknown` is not a third kind of open. It means the source document said nothing about status, so this page will not guess — the row is a question for the owner.
 
@@ -86,19 +88,58 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Register | Status | Count |
 |---|---|---|
 | `D` | proposed | 1 |
+| `RR` | open | 4 |
 | `O` | closed | 6 |
 | `O` | held | 1 |
 | `O` | open | 24 |
-| `C` | closed | 9 |
-| `C` | open | 3 |
-| `C` | unknown | 8 |
+| `H` | closed | 13 |
+| `H` | open | 19 |
+| `M` | closed | 61 |
+| `M` | open | 42 |
+| `C` | closed | 13 |
+| `C` | open | 4 |
+| `C` | unknown | 9 |
+| `A` | closed | 12 |
+| `A` | open | 7 |
 
 ## Hooks
 
-**0 of 0 built.** Prose is advisory; hooks are not. A hook's status is what the register says — this page does not go looking in `scripts/` for a file and infer that the hook works, because a file existing is not evidence that it has ever failed.
+**13 of 32 built.** Prose is advisory; hooks are not. A hook's status is what the register says — this page does not go looking in `scripts/` for a file and infer that the hook works, because a file existing is not evidence that it has ever failed.
 
 | ID | Hook | Status |
 |---|---|---|
+| H1 | the delta-integrity walk | closed |
+| H2 | the spec-amendment ratchet | closed |
+| H3 | the read-before-overwrite guard | closed |
+| H4 | the licence-redescription guard | closed |
+| H5 | the lint gate | open |
+| H6 | the MusicKit App ID check | open |
+| H7 | the register renders as tables | open |
+| H8 | the shipping configuration compiles clean | closed |
+| H9 | the secret scan | closed |
+| H10 | three Todoist API facts against a live token | open |
+| H11 | the Todoist endpoint allowlist | closed |
+| H12 | the watch app can actually install | open |
+| H13 | the status page is generated, not hand-written | closed |
+| H14 | the mechanism that tests the mechanisms | closed |
+| H15 | Palette outside the token layer | open |
+| H16 | the amendment declaration rule | closed |
+| H17 | the citation walk's own surface | open |
+| H18 | the licence fence | open |
+| H19 | the F4 fence | open |
+| H20 | no capture in the music picker's search | open |
+| H21 | the no-capture surface | open |
+| H22 | the polish fence | closed |
+| H23 | the privacy manifest holds its word | open |
+| H24 | the reflection sheet waits for the alarm | open |
+| H25 | the session-plan fence | open |
+| H26 | the shape screen writes nothing | closed |
+| H27 | running a shape never writes the settings | closed |
+| H28 | the silence control's shape | open |
+| H29 | the F6 fence | open |
+| H30 | what may live on the wrist | open |
+| H31 | branch protection on `main` | open |
+| H32 | the Todoist write is the only Todoist write | open |
 
 ## Open, and owned by whom
 
@@ -107,6 +148,10 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | Owner | ID | P | Status | Item |
 |---|---|---|---|---|
 | owner | D30 | P0 | proposed | A watch-face complication |
+| unassigned | RR1 | P0 | open | iCloud/CloudKit sync would put the log where a conflict can lose it |
+| unassigned | RR2 | P0 | open | Changing the bundle identifier orphans the SwiftData store holding… |
+| unassigned | RR3 | P1 | open | The shape cursor and `TimerState` advance non-atomically, and control… |
+| unassigned | RR4 | P1 | open | `O1` will be judged against a tally the app itself inflated, and… |
 | owner | O1 | P0 | open | One real day's export, read beside the Rhodia |
 | owner | O8 | P0 | open | VoiceOver on hardware |
 | owner | O9 | P1 | open | The merged stop sheet with taps in it, at AX5 |
@@ -132,10 +177,79 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | owner | O45 | P2 | open | Whether v1.5's amendment ledger belongs inside the baseline |
 | owner | O46 | P1 | open | The v1.5 ratchet still cannot see D33, the delta it was built for |
 | owner | O47 | P1 | open | A refused dedup read drops the wrist tap, and `Distraction.id` still… |
+| unassigned | H5 | — | open | the lint gate |
+| unassigned | H6 | — | open | the MusicKit App ID check |
+| unassigned | H7 | — | open | the register renders as tables |
+| unassigned | H10 | — | open | three Todoist API facts against a live token |
+| unassigned | H12 | — | open | the watch app can actually install |
+| unassigned | H15 | — | open | Palette outside the token layer |
+| unassigned | H17 | — | open | the citation walk's own surface |
+| unassigned | H18 | — | open | the licence fence |
+| unassigned | H19 | — | open | the F4 fence |
+| unassigned | H20 | — | open | no capture in the music picker's search |
+| unassigned | H21 | — | open | the no-capture surface |
+| unassigned | H23 | — | open | the privacy manifest holds its word |
+| unassigned | H24 | — | open | the reflection sheet waits for the alarm |
+| unassigned | H25 | — | open | the session-plan fence |
+| unassigned | H28 | — | open | the silence control's shape |
+| unassigned | H29 | — | open | the F6 fence |
+| unassigned | H30 | — | open | what may live on the wrist |
+| unassigned | H31 | — | open | branch protection on `main` |
+| unassigned | H32 | — | open | the Todoist write is the only Todoist write |
+| unassigned | F10-M1 | — | open | Add `@Parameter var taskName: String` to `StartSprintIntent` and use… |
+| unassigned | F10-M2 | — | open | Make `perform()` call `TimerEngineHolder`/`TimerEngine.start()`… |
+| unassigned | F10-M3 | — | open | Point Fence A's scan at a path that does not exist |
+| unassigned | F10-M4 | — | open | Make `BlockLauncher` answer `started` instead of `alreadyRunning` and… |
+| unassigned | F10-M5 | — | open | Make `BlockLauncher` treat an intent-sourced request as a local one… |
+| unassigned | F14-M1 | — | open | Delete the freshness check — honour a request of any age |
+| unassigned | F14-M10 | — | open | Send the launch by `transferUserInfo` instead of the fail-fast channel |
+| unassigned | F14-M2 | — | open | Honour a request id that has already been honoured |
+| unassigned | F14-M3 | — | open | Let a remote launch through while authorization is `.notDetermined` |
+| unassigned | F14-M4 | — | open | Attach a wrist-launched pom from the previous block instead of… |
+| unassigned | F14-M5 | — | open | Add a second call site of `engine.start()` in a view |
+| unassigned | F14-M6 | — | open | Point `startHasOneCaller`'s scan at a directory that does not exist |
+| unassigned | F14-M7 | — | open | Add `@Parameter var taskName: String` to any file under `ZenTomato/` |
+| unassigned | F14-M8 | — | open | Give `Source` a `mayPromptForPermission` that returns `true` for… |
+| unassigned | F14-M9 | — | open | Leave the queued block's length out of `WatchStatePublisher.Signature` |
+| unassigned | F15-M1 | — | open | Add `.font(.system(size: 12))` to `ZenTomato/Views/TimerScreen.swift` |
+| unassigned | F15-M2 | — | open | Add a 21st case to `ColorRole` with both halves supplied |
+| unassigned | F15-M3 | — | open | Name `import SwiftData` in a `ZenTomato/DesignSystem/` file |
+| unassigned | F15-M4 | — | open | Restore one `Font.system(size: 11)` in… |
+| unassigned | F15-M5 | — | open | Change one hex in `Design/icon/AppIcon-dark.svg` and leave the PNG… |
+| unassigned | F15-M6 | — | open | *(only if Ruling A admits `F15-T4`)* make the running segment's fill… |
+| unassigned | F16-M1 | — | open | Add a `consecutiveDays` value derived from the day rows and let it… |
+| unassigned | F16-M2 | — | open | Change the growth function to take `[StatsDayRow]` instead of `Int`… |
+| unassigned | F16-M3 | — | open | Make the garden shrink by one plant when the most recent pom is more… |
+| unassigned | F16-M4 | — | open | Feed the garden from a stored count written at each block boundary… |
+| unassigned | F17-M1 | — | open | Change the App Group identifier in one target's entitlement and not… |
+| unassigned | F17-M2 | — | open | Delete the `dependencies:` embed entry that puts this extension… |
+| unassigned | F17-M3 | — | open | Add `ZenTomato/Timer/TimerEngine.swift` to the complication target's… |
+| unassigned | F17-M4 | — | open | Replace the entry's absolute `endsAt` with a remaining duration… |
+| unassigned | F17-M5 | — | open | Make the entry at `endsAt` render *completed* |
+| unassigned | F17-M6 | — | open | Make the idle entry render a count of poms completed today |
+| unassigned | F17-M7 | — | open | Make the rectangular view read a task title directly and fall back to… |
+| unassigned | F17-M8 | — | open | Declare a start intent of the face's own inside… |
+| unassigned | F17-M9 | — | open | Remove `ZenTomatoComplication` from the `ZenTomato` scheme's build… |
+| unassigned | F18-M1 | — | open | Give this intent an `@Parameter` naming a task to start on |
+| unassigned | F18-M2 | — | open | Return a bare `.result()` on the unreachable path |
+| unassigned | F18-M3 | — | open | Add a second `sendMessage` call site in the watch target |
+| unassigned | F18-M4 | — | open | Build the intent's request with no `requestedAt`, or a zeroed one |
+| unassigned | F19-M1 | — | open | Widen the window predicate to always return `true` |
+| unassigned | F19-M2 | — | open | Make the project filter return every task in the mirror rather than… |
+| unassigned | F19-M3 | — | open | Delete the allowlist line and leave the constant — then the reverse |
+| unassigned | F19-M4 | — | open | Make the reopen path write its record but leave the completion counted |
+| unassigned | C21 | P1 | open | zenpom Focus runbook |
 | unassigned | C26 | P0 | open | ZenTomato is still the app's name where the store looks |
 | unassigned | C33 | P0 | open | the missing registers, backfilled — A, M, H and RR |
 | unassigned | C34 | P0 | open | the register's Decisions section, generated rather than maintained |
+| unassigned | A1 | P1 | open | `try?` on the three `StatsQuery` fetches |
+| unassigned | A8 | P2 | open | Time-zone change re-attributes historical days — *researched, ruled… |
+| unassigned | A14 | P2 | open | The rewind that could not be reproduced |
+| unassigned | A16 | P2 | open | The query costs 57 ms for an all-time range |
+| unassigned | A17 | P1 | open | Why the alarm is silent when the phone is silent |
+| unassigned | A18 | P1 | open | Watchdog kill: `playbackState` is a blocking XPC call on the main… |
+| unassigned | A19 | P2 | open | Five `F8` mutation IDs are defined only in commit messages and cannot… |
 
 ---
 
-29 open register rows.
+102 open register rows.

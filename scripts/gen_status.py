@@ -56,13 +56,44 @@ CLOSED = {"closed", "done", "struck", "superseded", "rejected", "abandoned"}
 # The registers conventions.md names, in the order it names them. A register
 # with no rows still gets a line, so that "we have no risk register" is visible
 # rather than absent.
+# ("A", "Agent items") is APPENDED and not inserted. A known register always
+# gets a line, and A currently sorts last as an "extra", so appending leaves
+# every existing row of the generated table exactly where it is. It is here
+# because without it the page printed `A (`A`)` as the register's own name, on
+# a page CI keeps current - the register D36 opened, unnamed. Proved by C33-M4.
 KNOWN_REGISTERS = [("D", "Decisions"), ("RR", "Risks"), ("O", "Owner items"),
-                   ("H", "Hooks"), ("M", "Mutations"), ("C", "Chores")]
+                   ("H", "Hooks"), ("M", "Mutations"), ("C", "Chores"),
+                   ("A", "Agent items")]
 
 # The two registers whose own text says only the owner can close a row.
 OWNER_REGISTERS = {"O", "D"}
 
 CELL_LIMIT = 100
+
+# What counts as a register row id, and it is deliberately two shapes rather
+# than one. The bare form - O1, D30, RR4 - is what every register used until
+# C33. THE SECOND FORM IS THE SCOPED MUTATION ID, F8-M1 or C32-M7, and it is
+# here because 81 of this project's 103 mutation ids carry a unit scope and a
+# bare-only filter dropped every one of them IN SILENCE: the backfilled
+# `## Mutations (M)` section would have reported 22 rows on a page CI keeps
+# current, which is the failure D38 opened the register to prevent.
+#
+# The two alternatives were refused and are named so they are not re-proposed.
+# Renumbering the scoped ids into a global sequence breaks citations in shipped
+# Swift - ShapeSeamTests, ShapeScreenTests, ShapeStore.swift and four more cite
+# `F8-M<n>` by name - and conventions.md forbids it outright: an identifier, not
+# an index. Putting a synthetic bare id in the ID column invents identifiers
+# nothing cites.
+#
+# The trailing `[a-z]?` on the mutation number is the retrofit letter, and it is
+# here because C32-M4b exists: conventions.md allows a letter on an identifier
+# and the population already uses one. Without it that row would have been
+# dropped in silence, which is the same defect one character over.
+#
+# IT IS WIDENED BY EXACTLY ONE ALTERNATIVE AND NO MORE. A filter that accepted
+# any hyphenated token would count `MUTATION-X`, and a widening that counts
+# anything is not a filter. C33-M3 is the mutation that pins that half.
+ROW_ID = re.compile(r"[A-Z]{1,2}\d+|[A-Z]{1,2}\d+[a-z]?-M\d+[a-z]?")
 
 
 def read(path: Path) -> str:
@@ -135,7 +166,7 @@ def register_rows() -> dict[str, list[dict[str, str]]]:
         if not m or not rows:
             continue
         out.setdefault(m.group(1), []).extend(
-            r for r in rows if re.fullmatch(r"[A-Z]{1,2}\d+", r.get("id", ""))
+            r for r in rows if ROW_ID.fullmatch(r.get("id", ""))
         )
     return out
 
