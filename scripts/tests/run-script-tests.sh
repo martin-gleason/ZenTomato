@@ -740,6 +740,132 @@ REG
 # that the splice wrote rows or that the prose outside the markers survived - the
 # `D46` pattern, a second artefact emitted by a feature whose primary output is
 # checked rigorously.
+# THE SPLIT THE FACTS SCRIPT DEPENDS ON, AND WHICH SHIPPED BROKEN.
+# `api_get` appends the HTTP status on its own last line, so every claim splits
+# the response into body and code. That split was written out seven times, and
+# two of the seven shipped as `sed '\$d'` — a stray backslash that sed rejects as
+# an unterminated regular expression. The body came back EMPTY, python got
+# nothing, and CLAIM 4 died in a JSONDecodeError on the owner's machine.
+#
+# `check_embedded_python.py` could not have caught it: the embedded Python
+# compiled perfectly. It was the shell feeding it that was broken — the
+# second-artefact problem `D46` names, one layer down.
+#
+# This drives the real functions out of the real script, on a fixture shaped like
+# a real response, and asserts BOTH halves. It does not need a token: it never
+# calls api_get.
+# CLAIM 4 OF THE FACTS SCRIPT, RUN — not merely compiled.
+# It shipped broken and the OWNER found it: the embedded python was fine, the
+# shell feeding it had `sed '\$d'` with a stray backslash, the body came back
+# empty, and python died in a JSONDecodeError on their machine. check_embedded_python
+# said OK throughout, because the python was never the problem.
+#
+# CI has no Todoist token, so the claim cannot be run against the real API. This
+# runs its REAL code — the script's own body/code helpers and its own embedded
+# programs, lifted out by scripts/tests/probe_facts_claim4.py — against a fixture.
+# The fixture is chosen so the two answers differ: one of three projects carries
+# no `color` key, and the three tasks do not all share a priority.
+test_facts_claim4_reports_from_a_fixture() {
+  local name="factsClaim4ReportsFromAFixture"
+  local out
+
+  out="$(bash <(python3 "${SCRIPT_DIR}/probe_facts_claim4.py") 2>&1)" || {
+    fail "$name" "CLAIM 4 exited non-zero against a fixture" "$out"
+    return 0
+  }
+
+  # The colour half: it must count the projects, name the colours, and single out
+  # the workspace-shaped one that sends no key.
+  local wanted
+  for wanted in \
+    "3 project(s), 2 carrying a color key" \
+    "berry_red" \
+    "olive_green" \
+    "1 project(s) send NO color key" \
+    "Shared" \
+    "VERDICT: colour is present as a NAME"
+  do
+    if [[ "$out" != *"$wanted"* ]]; then
+      fail "$name" "CLAIM 4 did not report the colours" "missing: ${wanted}" "$out"
+      return 0
+    fi
+  done
+
+  # The priority half: the tally, and the one task whose priority is not the
+  # default — which is the line the owner reads to answer the direction question.
+  for wanted in \
+    "3 task(s), 3 carrying a priority key" \
+    "{1: 2, 4: 1}" \
+    "lowest=1  highest=4  most common=1" \
+    "priority=4  id=t1  File the form" \
+    "P1 (most urgent) on the wire is"
+  do
+    if [[ "$out" != *"$wanted"* ]]; then
+      fail "$name" "CLAIM 4 did not report the priorities" "missing: ${wanted}" "$out"
+      return 0
+    fi
+  done
+
+  # AND NO TRACEBACK, which is how the real failure presented.
+  if [[ "$out" == *"Traceback"* || "$out" == *"unterminated"* ]]; then
+    fail "$name" "CLAIM 4 produced an error rather than a report" "$out"
+    return 0
+  fi
+  pass "$name"
+}
+
+test_the_facts_script_splits_body_from_status() {
+  local name="factsScriptSplitsBodyFromStatus"
+
+  # The functions are defined above the token prompt, so the file cannot simply
+  # be sourced. Take the two definitions out of the shipped file — by name, so a
+  # renamed or deleted helper fails this test rather than skipping it.
+  local defs
+  defs="$(grep -E '^(body|code)\(\) \{' "${SCRIPTS_DIR}/check-todoist-facts.sh")"
+
+  if [[ "$(grep -c . <<<"$defs")" != "2" ]]; then
+    fail "$name" "check-todoist-facts.sh no longer defines both body() and code()" \
+      "got: ${defs}"
+    return 0
+  fi
+
+  # A response shaped like the real thing: JSON, then the status on its own line.
+  # The JSON deliberately contains a `$` and a trailing brace, so a split that
+  # mangles either shows up.
+  local response='{"results":[{"id":"p1","color":"berry_red","name":"A $ sign"}]}
+200'
+  # `|| got_body=""` IS NOT DEFENSIVE CLUTTER. The whole point of this test is a
+  # `body()` whose sed fails, and under `set -e` a failing command substitution in
+  # an assignment aborts the runner — which is how the first version of this test
+  # killed the suite instead of failing, for the THIRD time today after
+  # gen_or_fail and expect_validator_catches. A test about a broken command must
+  # survive the command being broken.
+  local got_body got_code
+  got_body="$(eval "$defs"; body "$response" 2>/dev/null)" || got_body=""
+  got_code="$(eval "$defs"; code "$response" 2>/dev/null)" || got_code=""
+
+  if [[ "$got_code" != "200" ]]; then
+    fail "$name" "code() did not return the status line" "wanted: 200" "got: ${got_code}"
+    return 0
+  fi
+  if [[ "$got_body" != '{"results":[{"id":"p1","color":"berry_red","name":"A $ sign"}]}' ]]; then
+    fail "$name" "body() did not return the response without its status line" \
+      "got: ${got_body}"
+    return 0
+  fi
+  # AND IT MUST BE PARSEABLE, which is the thing the script actually needs and
+  # the assertion the broken version would have failed: an empty body is a
+  # perfectly good string and a useless one.
+  if ! printf '%s' "$got_body" | python3 -c '
+import json,sys
+d=json.load(sys.stdin)
+sys.exit(0 if d["results"][0]["color"] == "berry_red" else 1)'; then
+    fail "$name" "body() produced something python could not read as the response"
+    return 0
+  fi
+  pass "$name"
+}
+
 test_open_regions_are_written_and_prose_survives() {
   local name="openRegionsAreWrittenAndProseSurvives"
   local dir="${work_dir}/open-splice"
@@ -1532,6 +1658,8 @@ test_validator_refuses_an_empty_read() {
 
 test_status_page_names_the_agent_register
 test_open_regions_are_written_and_prose_survives
+test_the_facts_script_splits_body_from_status
+test_facts_claim4_reports_from_a_fixture
 test_open_generator_refuses_a_missing_marker
 test_status_page_counts_a_scoped_mutation_id
 test_no_writes_hook_catches_new_endpoint

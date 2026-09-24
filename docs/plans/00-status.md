@@ -80,7 +80,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
 | Owner items (`O`) | 48 | 24 | 0 | 24 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
-| Mutations (`M`) | 140 | 44 | 0 | 96 |
+| Mutations (`M`) | 142 | 44 | 0 | 98 |
 | Chores (`C`) | 29 | 5 | 9 | 15 |
 | Agent items (`A`) | 19 | 7 | 0 | 12 |
 
@@ -100,7 +100,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `O` | open | 23 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
-| `M` | closed | 96 |
+| `M` | closed | 98 |
 | `M` | open | 44 |
 | `C` | closed | 15 |
 | `C` | open | 5 |
