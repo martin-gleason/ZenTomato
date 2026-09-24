@@ -39,6 +39,7 @@ Status is what the unit's own plan file declares. What has landed in git is deli
 | C33 | chore | built; not merged. **Two adversarial review passes have run.** The first returned four blocking and… | `docs/chores/C33.md` | 0 planned |
 | C34 | chore | — | `docs/chores/C34.md` | 0 planned |
 | C37 | chore | closed 2026-09-24, after one adversarial review that found seven blocking defects and was right… | `docs/chores/C37.md` | 0 planned |
+| C38 | chore | closed 2026-09-24. **Owner:** agent. No user-visible change. **Found by running it**, when the… | `docs/chores/C38.md` | 0 planned |
 | F1 | feature | — | `docs/plans/F1.md` | 9 planned |
 | F2 | feature | — | `docs/plans/F2.md` | 6 planned |
 | F2b | feature | — | `docs/plans/F2b.md` | 0 planned |
@@ -80,8 +81,8 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
 | Owner items (`O`) | 50 | 26 | 0 | 24 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
-| Mutations (`M`) | 147 | 42 | 0 | 105 |
-| Chores (`C`) | 29 | 5 | 9 | 15 |
+| Mutations (`M`) | 149 | 42 | 0 | 107 |
+| Chores (`C`) | 30 | 5 | 9 | 16 |
 | Agent items (`A`) | 19 | 7 | 0 | 12 |
 
 `Unknown` is not a third kind of open. It means the source document said nothing about status, so this page will not guess — the row is a question for the owner.
@@ -100,9 +101,9 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `O` | open | 25 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
-| `M` | closed | 105 |
+| `M` | closed | 107 |
 | `M` | open | 42 |
-| `C` | closed | 15 |
+| `C` | closed | 16 |
 | `C` | open | 5 |
 | `C` | unknown | 9 |
 | `A` | closed | 12 |
