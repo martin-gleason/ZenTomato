@@ -83,7 +83,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
 | Mutations (`M`) | 149 | 42 | 0 | 107 |
 | Chores (`C`) | 30 | 5 | 9 | 16 |
-| Agent items (`A`) | 19 | 7 | 0 | 12 |
+| Agent items (`A`) | 20 | 8 | 0 | 12 |
 
 `Unknown` is not a third kind of open. It means the source document said nothing about status, so this page will not guess — the row is a question for the owner.
 
@@ -107,7 +107,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `C` | open | 5 |
 | `C` | unknown | 9 |
 | `A` | closed | 12 |
-| `A` | open | 7 |
+| `A` | open | 8 |
 
 ## Hooks
 
@@ -259,7 +259,8 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | unassigned | A17 | P1 | open | Why the alarm is silent when the phone is silent |
 | unassigned | A18 | P1 | open | Watchdog kill: `playbackState` is a blocking XPC call on the main… |
 | unassigned | A19 | P2 | open | Five `F8` mutation IDs are defined only in commit messages and cannot… |
+| unassigned | A20 | P2 | open | Seven open owner items carry no mode, so they sit in the owner's… |
 
 ---
 
-105 open register rows.
+106 open register rows.
