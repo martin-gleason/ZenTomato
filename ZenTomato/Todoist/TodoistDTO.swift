@@ -77,6 +77,13 @@ struct TodoistProjectDTO: Decodable, Sendable, Equatable {
   /// `nil` is ordinary: a workspace project has no `color` key at all. Optional,
   /// so Swift asks for it with *decode if present* and neither a missing key nor
   /// an explicit `null` can fail the task, the row, or the page.
+  ///
+  /// **WHAT OPTIONALITY DOES NOT BUY, because the first version of this comment
+  /// implied it did.** It tolerates an ABSENT value, not a wrong TYPE. A `color`
+  /// arriving as a number still raises `typeMismatch` and still refuses the whole
+  /// page. `Due` above has a hand-written lenient `init(from:)` for precisely that
+  /// reason and this field does not; `O49` is the decision, because new tolerance
+  /// on a shipped decode path is not a comment fix.
   let color: String?
 
   private enum CodingKeys: String, CodingKey {
@@ -163,10 +170,15 @@ struct TodoistTaskDTO: Decodable, Sendable, Equatable {
   /// decided later without re-fetching anything, and it is why no line of `F13-T2`
   /// contains a prediction.
   ///
-  /// `nil` is the ordinary case on most accounts. Optional for the same reason
-  /// `due` is: a required field here would fail the whole page the day Todoist
-  /// ships a shape this app did not anticipate. `F13-M2` is that tolerance
-  /// removed.
+  /// `nil` is the ordinary case on most accounts — **except that it is not: all 50
+  /// tasks on the account `CLAIM 4` was run against carried this key.** There is no
+  /// "no priority" on the wire; the unflagged state is the value `1`. The optional
+  /// is the shape of a mirrored column, not Todoist declining to answer.
+  ///
+  /// Optional for the same reason `due` is: a required field would fail the whole
+  /// page the day Todoist ships a shape this app did not anticipate. `F13-M2` is
+  /// that tolerance removed. **It tolerates an absent value and not a wrong type** —
+  /// a `priority` arriving as a string still refuses the page. `O49`.
   let priority: Int?
 
   /// The one thing this app reads out of a due date.

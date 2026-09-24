@@ -26,8 +26,18 @@ import Foundation
 ///
 /// Same rule as `Palette`: no view, no screen, no model may name this type. The
 /// `palette_outside_token_layer` rule in `.swiftlint.yml` covers both tables by
-/// name, and it was widened to cover this one **in the commit that created it**,
-/// so the guard has never had a hole for it to fall through.
+/// name, and it was widened to cover this one **in the commit that created it**.
+///
+/// **WHAT THE RULE DOES AND DOES NOT CATCH, stated plainly because the first
+/// version of this paragraph claimed more.** It said the guard "has never had a
+/// hole for it to fall through", and it had one: the regex matched
+/// `TodoistPalette.` and a line break between the name and the dot defeated it,
+/// which is the form a line-length fix produces. It now matches across the break
+/// (`F13-M14`). It still will not catch an alias — `typealias TPal =
+/// TodoistPalette` then `TPal.berryRed` — because a text rule cannot resolve a
+/// name. That is a known limit, not a guarantee, and `.swiftlint.yml:141` says
+/// why the difference matters: a comment claiming a guarantee nobody implemented
+/// is worse than claiming none.
 enum TodoistPalette {
   static let berryRed = RGBColor(hex: 0xB825_5F)
   static let red = RGBColor(hex: 0xDB40_35)

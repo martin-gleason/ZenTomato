@@ -102,13 +102,7 @@ struct TaskPickerView: View {
     ToolbarItem(placement: .principal) {
       HStack(spacing: Spacing.xs) {
         if let tint = picker.tint(ofProject: projectID) {
-          RoundedRectangle(cornerRadius: Radius.sm)
-            .fill(Color(tint))
-            .overlay(
-              RoundedRectangle(cornerRadius: Radius.sm)
-                .strokeBorder(Color(.borderStrong), lineWidth: 1))
-            .frame(width: Spacing.sm, height: Spacing.sm)
-            .accessibilityHidden(true)
+          ProjectSwatch(tint: tint)
         }
         Text(projectName)
           .font(Typography.label)

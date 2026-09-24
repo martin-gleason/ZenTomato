@@ -765,6 +765,43 @@ REG
 # programs, lifted out by scripts/tests/probe_facts_claim4.py — against a fixture.
 # The fixture is chosen so the two answers differ: one of three projects carries
 # no `color` key, and the three tasks do not all share a priority.
+# THE FACTS SCRIPT MUST NOT SWALLOW A BROKEN EMBEDDED PROGRAM.
+# `json()` was `python3 -c "$1" 2>/dev/null`, and that is why CLAIM 2's phase-2
+# verdict block — which had never compiled — printed nothing at all for as long as
+# the script existed. An instrument that reports "no evidence" exactly as it
+# reports "no finding" is the worst failure mode there is.
+#
+# The fix was one character class, and until this test existed NOTHING held it:
+# restoring `2>/dev/null` left all 46 script tests green, because
+# probe_facts_claim4.py defined its own `json()` and shadowed the shipped one.
+# This drives the REAL function and asserts the error is visible. F13-M15.
+test_the_facts_script_does_not_swallow_errors() {
+  local name="factsScriptDoesNotSwallowErrors"
+  local def
+  def="$(grep -E '^json\(\) \{' "${SCRIPTS_DIR}/check-todoist-facts.sh")"
+
+  if [[ -z "$def" ]]; then
+    fail "$name" "check-todoist-facts.sh no longer defines json()"
+    return 0
+  fi
+
+  # A program that cannot compile. The question is not whether it fails — it is
+  # whether anybody is told.
+  local err
+  err="$(eval "$def"; json 'this is not python(' 2>&1 >/dev/null)" || true
+
+  if [[ -z "$err" ]]; then
+    fail "$name" "json() discarded a SyntaxError: a broken embedded program is silent" \
+      "the definition in the shipped script is: ${def}"
+    return 0
+  fi
+  if [[ "$err" != *"SyntaxError"* ]]; then
+    fail "$name" "json() reported something, but not the syntax error" "got: ${err}"
+    return 0
+  fi
+  pass "$name"
+}
+
 test_facts_claim4_reports_from_a_fixture() {
   local name="factsClaim4ReportsFromAFixture"
   local out
@@ -1660,6 +1697,7 @@ test_status_page_names_the_agent_register
 test_open_regions_are_written_and_prose_survives
 test_the_facts_script_splits_body_from_status
 test_facts_claim4_reports_from_a_fixture
+test_the_facts_script_does_not_swallow_errors
 test_open_generator_refuses_a_missing_marker
 test_status_page_counts_a_scoped_mutation_id
 test_no_writes_hook_catches_new_endpoint

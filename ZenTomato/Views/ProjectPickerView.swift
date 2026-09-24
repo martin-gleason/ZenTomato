@@ -298,7 +298,7 @@ struct PickerRowView: View {
   private var label: some View {
     HStack(spacing: Spacing.sm) {
       if let tint {
-        swatch(tint)
+        ProjectSwatch(tint: tint)
       }
 
       VStack(alignment: .leading, spacing: Spacing.xxs) {
@@ -358,40 +358,6 @@ struct PickerRowView: View {
       .accessibilityHidden(true)
   }
 
-  /// The project's colour, as a mark you can recognise rather than read (`F13`).
-  ///
-  /// **A fill, never an ink, and never the only signal.** These colours are
-  /// chosen in another app and this one cannot influence them, so no contrast
-  /// floor can be guaranteed for any pairing involving one — Todoist's charcoal
-  /// on our dark page is genuinely invisible and there is nothing to be done
-  /// about that from here. The project's name stays in `textPrimary` exactly as
-  /// before, so colour never carries information on its own.
-  ///
-  /// **So the `borderStrong` ring is unconditional.** That role is measured at
-  /// 3.12:1 or better on every ground in both appearances, which is what makes
-  /// the swatch a visible object whatever its fill — the thing WCAG 1.4.11 is
-  /// actually asking for. It costs one modifier and removes a whole class of
-  /// per-tint contrast argument.
-  ///
-  /// **It must not read as a second control.** `toggleButton` is already the
-  /// leading control and this file goes out of its way to keep that from looking
-  /// like a Todoist completion checkbox. So the swatch is small, sits between the
-  /// toggle and the title, is a rounded rectangle rather than a circle, and has
-  /// no tap target of its own.
-  ///
-  /// **Hidden from VoiceOver**, because it duplicates the project name and offers
-  /// a reader nothing to act on. Priority is the opposite case and is treated as
-  /// the opposite case: it is information, and it reaches VoiceOver as words.
-  private func swatch(_ tint: TodoistTint) -> some View {
-    RoundedRectangle(cornerRadius: Radius.sm)
-      .fill(Color(tint))
-      .overlay(
-        RoundedRectangle(cornerRadius: Radius.sm)
-          .strokeBorder(Color(.borderStrong), lineWidth: 1))
-      .frame(width: Spacing.sm, height: Spacing.sm)
-      .accessibilityHidden(true)
-  }
-
   /// The one control that means the same thing at every level of the picker, so
   /// it is learned once.
   ///
@@ -411,6 +377,55 @@ struct PickerRowView: View {
     .accessibilityLabel(Text(Self.spokenToggleLabel(
       title: title, subtitle: subtitle, ordinal: ordinal, priority: priority)))
     .accessibilityHint(Text(isSelected ? "Takes it out of your plan." : "Puts it in your plan."))
+  }
+}
+
+// MARK: - ProjectSwatch
+
+/// The project's colour, as a mark you can recognise rather than read (`F13`).
+///
+/// **One view, used in both places it appears** — the picker row and
+/// `TaskPickerView`'s heading. It was written twice, and the `borderStrong` ring is
+/// the entire accessibility mechanism the WCAG 1.4.11 argument rests on: two copies
+/// of that is two places it can drift out of agreement. Found by `F13`'s
+/// adversarial review.
+///
+/// **A fill, never an ink, and never the only signal.** These colours are chosen in
+/// another app and this one cannot influence them, so no contrast floor can be
+/// guaranteed for any pairing involving one — Todoist's charcoal on our dark page is
+/// genuinely invisible and there is nothing to be done about that from here. The
+/// project's name stays `textPrimary`, so colour never carries information alone.
+///
+/// **So the ring is unconditional.** `borderStrong` is measured at 3.12:1 or better
+/// on every ground in both appearances, which is what makes the swatch a visible
+/// object whatever its fill — the thing WCAG 1.4.11 actually asks for. It costs one
+/// modifier and removes a whole class of per-tint contrast argument.
+///
+/// **It must not read as a second control.** The row already has a leading control
+/// and this file goes out of its way to keep that from looking like a Todoist
+/// completion checkbox. So the swatch is small, sits between the toggle and the
+/// title, is a rounded rectangle rather than a circle, and has no tap target.
+///
+/// **Hidden from VoiceOver**, because it duplicates the project name beside it.
+/// Priority is the opposite case and is treated as the opposite case: it is
+/// information, and it is spoken as words.
+struct ProjectSwatch: View {
+  let tint: TodoistTint
+
+  /// It grows with the reader's text size. `@ScaledMetric` ties the side to the
+  /// body font, so the swatch and the priority flag — which scales because it is
+  /// `Typography.label` — do not diverge at the large accessibility sizes. A fixed
+  /// 12pt square beside text at AX5 is a dot beside a headline.
+  @ScaledMetric(relativeTo: .body) private var side: CGFloat = Spacing.sm
+
+  var body: some View {
+    RoundedRectangle(cornerRadius: Radius.sm)
+      .fill(Color(tint))
+      .overlay(
+        RoundedRectangle(cornerRadius: Radius.sm)
+          .strokeBorder(Color(.borderStrong), lineWidth: 1))
+      .frame(width: side, height: side)
+      .accessibilityHidden(true)
   }
 }
 
