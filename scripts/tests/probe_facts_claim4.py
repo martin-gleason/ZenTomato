@@ -59,7 +59,19 @@ def main() -> int:
     print('API="https://example.invalid/api/v1"')
     print("phase2=false")
     print("""say() { printf '\\n%s\\n' "$1"; }""")
-    print("""json() { python3 -c "$1"; }""")
+
+    # THE SHIPPED `json()`, LIFTED — not a copy. Defining one here would shadow
+    # the thing a third of the CLAIM 4 fix consists of: `json()` used to be
+    # `python3 -c "$1" 2>/dev/null`, which is why a SyntaxError in an embedded
+    # program printed nothing at all. A probe that supplies its own helper cannot
+    # notice the silencing coming back — and it did not: restoring `2>/dev/null`
+    # left all 46 script tests green. `F13-M15`.
+    shipped_json = re.search(r"^json\(\) \{.*$", text, re.M)
+    if shipped_json is None:
+        print("probe_facts_claim4.py: check-todoist-facts.sh no longer defines json()",
+              file=sys.stderr)
+        return 2
+    print(shipped_json.group())
     print(helpers.group(1))
     print("api_get() {")
     print('  case "$1" in')

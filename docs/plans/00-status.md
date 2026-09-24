@@ -78,9 +78,9 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 |---|---|---|---|---|
 | Decisions (`D`) | 44 | 1 | 0 | 43 |
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
-| Owner items (`O`) | 48 | 24 | 0 | 24 |
+| Owner items (`O`) | 50 | 26 | 0 | 24 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
-| Mutations (`M`) | 143 | 42 | 0 | 101 |
+| Mutations (`M`) | 147 | 42 | 0 | 105 |
 | Chores (`C`) | 29 | 5 | 9 | 15 |
 | Agent items (`A`) | 19 | 7 | 0 | 12 |
 
@@ -97,10 +97,10 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `RR` | open | 4 |
 | `O` | closed | 24 |
 | `O` | held | 1 |
-| `O` | open | 23 |
+| `O` | open | 25 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
-| `M` | closed | 101 |
+| `M` | closed | 105 |
 | `M` | open | 42 |
 | `C` | closed | 15 |
 | `C` | open | 5 |
@@ -182,6 +182,8 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | owner | O45 | P2 | open | Whether v1.5's amendment ledger belongs inside the baseline |
 | owner | O46 | P1 | open | The v1.5 ratchet still cannot see D33, the delta it was built for |
 | owner | O47 | P1 | open | A refused dedup read drops the wrist tap, and `Distraction.id` still… |
+| owner | O49 | P2 | open | A wrong JSON type on a mirrored field still fails the whole page |
+| owner | O50 | P2 | open | The owner's real account data is committed to the tree |
 | unassigned | H5 | — | open | the lint gate |
 | unassigned | H6 | — | open | the MusicKit App ID check |
 | unassigned | H7 | — | open | the register renders as tables |
@@ -258,4 +260,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-102 open register rows.
+104 open register rows.

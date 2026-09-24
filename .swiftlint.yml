@@ -154,7 +154,12 @@ custom_rules:
     # the thing the comment above already says is worth avoiding. Widened in the
     # commit that created the second table rather than in a retrofit after
     # somebody named it from a screen.
-    regex: "\\b(Palette|TodoistPalette)\\."
+    # `\s*` BEFORE THE DOT, because the rule without it is defeated by a line
+    # break — `TodoistPalette\n  .berryRed` in a view passed `--strict` silently,
+    # and that wrapped form is exactly what a line-length fix produces. Found by
+    # F13's adversarial review, which also found the doc comment claiming the rule
+    # covered what it did not. `F13-M14`.
+    regex: "\\b(Palette|TodoistPalette)\\s*\\."
     message: "Screens may only name a ColorRole or a TodoistTint, never a raw palette step."
     severity: error
 

@@ -33,13 +33,27 @@ struct TodoistPriorityTests {
     let wire: Int
     let id: String
     let title: String
+
+    /// **Stated, not derived.** The first version of this test computed
+    /// `expected = row.wire == 4`, which re-derives the expectation from the input
+    /// and makes the ids and titles decoration — they appeared only in a failure
+    /// message, and replacing them with anything at all changed no outcome. That is
+    /// the re-derived-expected-value failure `docs/conventions.md` names, and
+    /// `F13`'s adversarial review caught it. Each row now carries the reading a
+    /// human took from the owner's account.
+    let isMostUrgent: Bool
   }
 
   private static let captured = [
-    CapturedTask(wire: 4, id: "6fMv5XxhHQvmVx67", title: "Select 1 to 3 MITs"),
-    CapturedTask(wire: 4, id: "658m9CV63xqmqhV7", title: "AM Check Inboxes"),
-    CapturedTask(wire: 1, id: "6848wXp22GPJ8PH7", title: "Clean the downstairs bathroom @cleaning"),
-    CapturedTask(wire: 1, id: "6hP83rmMx7R4PH5q", title: "fix printer")
+    // The owner's most-important-task selection and morning inbox sweep: the two
+    // things a day is planned around, and the reason wire 4 reads as P1.
+    CapturedTask(wire: 4, id: "6fMv5XxhHQvmVx67", title: "Select 1 to 3 MITs", isMostUrgent: true),
+    CapturedTask(wire: 4, id: "658m9CV63xqmqhV7", title: "AM Check Inboxes", isMostUrgent: true),
+    // Household chores, which nobody marks most-urgent.
+    CapturedTask(
+      wire: 1, id: "6848wXp22GPJ8PH7",
+      title: "Clean the downstairs bathroom @cleaning", isMostUrgent: false),
+    CapturedTask(wire: 1, id: "6hP83rmMx7R4PH5q", title: "fix printer", isMostUrgent: false)
   ]
 
   @Test("priorityIsReadInTodoistsDirection")
@@ -57,9 +71,10 @@ struct TodoistPriorityTests {
     // the household chores are not. An inverted mapping fails here on all four.
     for row in Self.captured {
       let priority = TodoistPriority(wire: row.wire)
-      let expected = row.wire == 4
-      #expect(priority?.isMarked == expected,
+      #expect(priority?.isMarked == row.isMostUrgent,
               "\(row.title) (wire \(row.wire), id \(row.id)) marked=\(priority?.isMarked ?? false)")
+      #expect((priority?.todoistLabel == "P1") == row.isMostUrgent,
+              "\(row.title) reads as \(priority?.todoistLabel ?? "nothing")")
     }
   }
 
@@ -73,14 +88,17 @@ struct TodoistPriorityTests {
     #expect(TodoistPriority.moderate.isMarked == false)
     #expect(TodoistPriority.natural.isMarked == false)
 
+    // The owner's live tally, and what `isMarked` selects out of it. Eight of
+    // fifty. Widening `isMarked` to `.high` gives thirty, so this number is what
+    // makes that a deliberate change rather than a one-line nudge.
+    //
+    // The count of 50 is NOT asserted here: it would be arithmetic over a literal
+    // declared three lines above, which proves nothing about anything.
     let tally = [1: 9, 2: 11, 3: 22, 4: 8]
     let marked = tally.reduce(into: 0) { total, entry in
       if TodoistPriority(wire: entry.key)?.isMarked == true { total += entry.value }
     }
-    // Eight of fifty. Recorded as a number so that widening `isMarked` has to
-    // come back here and change it deliberately.
     #expect(marked == 8)
-    #expect(tally.values.reduce(0, +) == 50)
   }
 
   @Test("aPriorityOutsideTodoistsRangeIsNotGuessedAt")
