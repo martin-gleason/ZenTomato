@@ -206,7 +206,16 @@ then
   die "the build failed." "" "$(tail -25 "$build_log")"
 fi
 
-app="$(find "$DERIVED_DATA/Build/Products" -maxdepth 2 -name 'ZenTomato.app' -path '*iphoneos*' | head -1)"
+  # THE PRODUCT NAME IS NOT HARDCODED, AND `C26` IS WHY.
+  # `CFBundleName` still expands to the target name `ZenTomato` while the app shows
+  # as ZenPom, and the fix is `PRODUCT_NAME: ZenPom` in project.yml — which renames
+  # the BUNDLE ON DISK from ZenTomato.app to ZenPom.app. Three scripts named that
+  # file literally, so the rename would have broken them all, and
+  # install-device.sh's failure would have read "the build succeeded but produced
+  # no .app bundle" — the exact misleading message `C38` was just fixed to stop
+  # printing. A path that must change when a build setting changes is a path that
+  # should be discovered, not typed.
+  app="$(find "$DERIVED_DATA/Build/Products" -maxdepth 2 -name '*.app' -path '*iphoneos*' | head -1)"
 [[ -n "$app" ]] || die "the build succeeded but produced no .app bundle." "" "$(tail -15 "$build_log")"
 
 # --- 4 · install -----------------------------------------------------------
