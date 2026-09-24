@@ -691,6 +691,12 @@ struct TimerScreen: View {
 #Preview("Alarm ringing, largest text") {
   TimerScreen(model: .previewAlarmRingingIdle)
     .environment(\.dynamicTypeSize, .accessibility5)
+    // Every other preview in this file states its appearance; this one did not,
+    // so it was the only one whose colours depended on the Xcode canvas setting
+    // rather than on the preview. An AX5 preview exists to be looked at, and one
+    // that renders differently for two readers is worth less than one that does
+    // not. Corrected under `O35`.
+    .preferredColorScheme(.light)
 }
 
 #Preview("Focus running") {

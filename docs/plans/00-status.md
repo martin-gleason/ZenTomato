@@ -79,7 +79,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 |---|---|---|---|---|
 | Decisions (`D`) | 45 | 2 | 0 | 43 |
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
-| Owner items (`O`) | 50 | 26 | 0 | 24 |
+| Owner items (`O`) | 50 | 25 | 0 | 25 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
 | Mutations (`M`) | 149 | 42 | 0 | 107 |
 | Chores (`C`) | 30 | 5 | 9 | 16 |
@@ -96,9 +96,9 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `D` | rejected | 1 |
 | `D` | resolved | 1 |
 | `RR` | open | 4 |
-| `O` | closed | 24 |
+| `O` | closed | 25 |
 | `O` | held | 1 |
-| `O` | open | 25 |
+| `O` | open | 24 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
 | `M` | closed | 107 |
@@ -174,7 +174,6 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | owner | O32 | P1 | open | A watch-face complication does not exist |
 | owner | O33 | P1 | open | The watch makes a noise when the phone is told not to |
 | owner | O34 | P1 | open | From the lock screen, slide-to-stop worked |
-| owner | O35 | P2 | open | Documentation accuracy left over from F2d/F2e's eight review passes |
 | owner | O36 | P1 | open | The zenpom Focus runbook, followed once on the phone |
 | owner | O37 | P1 | held | The shape screen, on a phone — F8-T3's device check |
 | owner | O38 | P2 | open | The two sentences on the shape screen are the agent's words, not the… |
@@ -263,4 +262,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-106 open register rows.
+105 open register rows.
