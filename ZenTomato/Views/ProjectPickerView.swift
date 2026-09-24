@@ -139,6 +139,7 @@ struct ProjectPickerView: View {
               onToggle: {
                 toggle(.init(todoistID: project.id, titleSnapshot: project.name, kind: .project))
               },
+              tint: project.tint,
               onOpen: { onOpenProject(project) })
 
           case .section:
@@ -162,6 +163,7 @@ struct ProjectPickerView: View {
       ordinal: ordinal(for: project.id),
       isSelected: isSelected(project.id),
       onToggle: { toggle(.init(todoistID: project.id, titleSnapshot: project.name, kind: .project)) },
+      tint: project.tint,
       onOpen: { onOpenProject(project) })
   }
 
@@ -216,6 +218,14 @@ struct PickerRowView: View {
   let isSelected: Bool
   let onToggle: () -> Void
 
+  /// The project's own colour, drawn as a small swatch before the title (`F13`).
+  ///
+  /// `nil` on a task row and on a section, which is why it is optional rather
+  /// than defaulting to `.unknown`: a task has no colour of its own, and drawing
+  /// Todoist's default grey beside every task would put a mark on every row in
+  /// the picker and spend the reader's attention on nothing.
+  var tint: TodoistTint?
+
   /// Set only on a project row. A task row has nowhere further to go, so the
   /// whole of it toggles instead.
   var onOpen: (() -> Void)?
@@ -265,6 +275,10 @@ struct PickerRowView: View {
 
   private var label: some View {
     HStack(spacing: Spacing.sm) {
+      if let tint {
+        swatch(tint)
+      }
+
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(title)
           .font(Typography.body)
@@ -292,6 +306,40 @@ struct PickerRowView: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .frame(minHeight: Spacing.controlHeight)
     .contentShape(Rectangle())
+  }
+
+  /// The project's colour, as a mark you can recognise rather than read (`F13`).
+  ///
+  /// **A fill, never an ink, and never the only signal.** These colours are
+  /// chosen in another app and this one cannot influence them, so no contrast
+  /// floor can be guaranteed for any pairing involving one — Todoist's charcoal
+  /// on our dark page is genuinely invisible and there is nothing to be done
+  /// about that from here. The project's name stays in `textPrimary` exactly as
+  /// before, so colour never carries information on its own.
+  ///
+  /// **So the `borderStrong` ring is unconditional.** That role is measured at
+  /// 3.12:1 or better on every ground in both appearances, which is what makes
+  /// the swatch a visible object whatever its fill — the thing WCAG 1.4.11 is
+  /// actually asking for. It costs one modifier and removes a whole class of
+  /// per-tint contrast argument.
+  ///
+  /// **It must not read as a second control.** `toggleButton` is already the
+  /// leading control and this file goes out of its way to keep that from looking
+  /// like a Todoist completion checkbox. So the swatch is small, sits between the
+  /// toggle and the title, is a rounded rectangle rather than a circle, and has
+  /// no tap target of its own.
+  ///
+  /// **Hidden from VoiceOver**, because it duplicates the project name and offers
+  /// a reader nothing to act on. Priority is the opposite case and is treated as
+  /// the opposite case: it is information, and it reaches VoiceOver as words.
+  private func swatch(_ tint: TodoistTint) -> some View {
+    RoundedRectangle(cornerRadius: Radius.sm)
+      .fill(Color(tint))
+      .overlay(
+        RoundedRectangle(cornerRadius: Radius.sm)
+          .strokeBorder(Color(.borderStrong), lineWidth: 1))
+      .frame(width: Spacing.sm, height: Spacing.sm)
+      .accessibilityHidden(true)
   }
 
   /// The one control that means the same thing at every level of the picker, so

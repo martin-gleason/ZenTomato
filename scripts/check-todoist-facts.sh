@@ -83,7 +83,14 @@ api_get() {
 say() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 verdict() { printf '  VERDICT: %s\n' "$1"; }
 
-json() { python3 -c "$1" 2>/dev/null; }
+# NOT `2>/dev/null`, since 2026-09-24. It swallowed stderr, and that hid a real
+# defect for as long as this script has existed: CLAIM 2's phase-2 verdict block
+# used a backslash-escaped quote inside an f-string expression, which no Python
+# accepts at any version — PEP 701 allows quote REUSE inside f-strings, never a
+# backslash escape — so `--phase2` printed its heading and then nothing at all.
+# A silent SyntaxError in a script whose whole job is to settle a question is the
+# worst failure mode there is: it reports "no evidence" as if it were "no finding".
+json() { python3 -c "$1"; }
 
 # ---------------------------------------------------------------------------
 if [ "${phase2}" = false ]; then
@@ -239,7 +246,11 @@ import json,sys
 d=json.load(sys.stdin); p=d.get("projects",[])
 print(f"  {len(p)} project(s) in the delta.")
 for x in p:
-    print(f"    - {x.get(\"name\",\"?\")}  id={x.get(\"id\")}  is_deleted={x.get(\"is_deleted\",\"absent\")}  is_archived={x.get(\"is_archived\",\"absent\")}")
+    nm = x.get("name","?")
+    pid = x.get("id")
+    dele = x.get("is_deleted","absent")
+    arch = x.get("is_archived","absent")
+    print(f"    - {nm}  id={pid}  is_deleted={dele}  is_archived={arch}")
 tomb=[x for x in p if x.get("is_deleted")]
 print()
 if tomb:
@@ -254,6 +265,96 @@ elif p:
 else:
     print("  VERDICT: empty delta — nothing changed since the stored token.")
     print("  → Make the change described in phase 1, then re-run --phase2.")'
+
+fi
+
+# ---------------------------------------------------------------------------
+# CLAIM 4 — F13-T5 step 1. Added 2026-09-24.
+#
+# F13 draws a project's colour and a task's priority. Two things about those
+# fields are not settled by reading, and the build is written against the answer:
+#
+#   * Are `color` and `priority` actually on the responses this app is allowed to
+#     call? Both are on GET /projects and GET /tasks per the documentation, and
+#     the documentation is not the account.
+#   * WHICH DIRECTION DOES `priority` RUN? Todoist's UI says P1 for the most
+#     urgent. The wire sends an integer. Whether P1 is 1 or 4 decides the whole
+#     mapping, and getting it backwards draws a red flag on the task somebody
+#     cared least about. Nothing in the tree contains a guess: CachedTask stores
+#     the wire number verbatim and F13-T4 maps it AFTER this has run.
+#
+# Read-only, like the rest of this script, and on already-allowlisted endpoints.
+if [ "${phase2}" = false ]; then
+
+say "CLAIM 4 — are colour and priority on the responses, and which way does priority run?"
+
+projects_body="$(api_get "${API}/projects?limit=200")"
+projects_code="$(printf '%s' "${projects_body}" | tail -n1)"
+projects_json="$(printf '%s' "${projects_body}" | sed '\$d')"
+
+if [ "${projects_code}" != "200" ]; then
+  echo "  GET /projects returned HTTP ${projects_code}" >&2
+  exit 1
+fi
+
+printf '%s' "${projects_json}" | json '
+import json,sys
+rows=json.load(sys.stdin).get("results",[])
+withc=[r for r in rows if r.get("color") is not None]
+print(f"  GET /projects -> HTTP 200, {len(rows)} project(s), {len(withc)} carrying a color key.")
+if not rows:
+    print("  UNTESTED - no projects on this account.")
+else:
+    names=sorted({r.get("color") for r in withc if r.get("color")})
+    print(f"  distinct colour names seen: {len(names)}")
+    for n in names:
+        print(f"    - {n}")
+    missing=[r.get("name","?") for r in rows if r.get("color") is None]
+    if missing:
+        print(f"  {len(missing)} project(s) send NO color key - the workspace shape F13-M1 is about:")
+        for m in missing[:5]:
+            print(f"    - {m}")
+    print()
+    print("  VERDICT: colour is present as a NAME." if withc else "  VERDICT: no colour on any project.")
+    print("  -> Each name above must exist in TodoistTint, or it draws as .unknown.")'
+
+tasks4_body="$(api_get "${API}/tasks?limit=200")"
+tasks4_code="$(printf '%s' "${tasks4_body}" | tail -n1)"
+tasks4_json="$(printf '%s' "${tasks4_body}" | sed '\$d')"
+
+if [ "${tasks4_code}" != "200" ]; then
+  echo "  GET /tasks returned HTTP ${tasks4_code}" >&2
+  exit 1
+fi
+
+printf '%s' "${tasks4_json}" | json '
+import json,sys
+from collections import Counter
+rows=json.load(sys.stdin).get("results",[])
+withp=[r for r in rows if r.get("priority") is not None]
+tally=Counter(r.get("priority") for r in withp)
+print(f"  GET /tasks -> HTTP 200, {len(rows)} task(s), {len(withp)} carrying a priority key.")
+print(f"  priority values seen: {dict(sorted(tally.items()))}")
+if not withp:
+    print("  UNTESTED - no task carries a priority.")
+else:
+    lo, hi = min(tally), max(tally)
+    common = tally.most_common(1)[0][0]
+    print(f"  lowest={lo}  highest={hi}  most common={common}")
+    print()
+    print("  READ THIS AND ANSWER IT YOURSELF - the script cannot:")
+    print("  The most common value is almost certainly the DEFAULT, i.e. no flag.")
+    print("  Open Todoist, find a task you have marked P1, and look for its id below.")
+    for r in withp:
+        if r.get("priority") != common:
+            pr = r.get("priority")
+            tid = r.get("id")
+            title = r.get("content","")[:60]
+            print(f"    priority={pr}  id={tid}  {title}")
+    print()
+    print("  VERDICT TO RECORD IN docs/reviews/F13.md, in your own words:")
+    print("    P1 (most urgent) on the wire is ____ ; the default is ____ .")
+    print("  F13-T4 is written against that sentence and F13-M3 inverts it.")'
 
 fi
 

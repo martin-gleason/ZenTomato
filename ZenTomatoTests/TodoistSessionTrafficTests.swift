@@ -154,7 +154,7 @@ struct TodoistSessionTrafficTests {
   /// The picker as it stands during the break, with the ticked-off task already
   /// out of the copy.
   private static let pickerAfterTheFirstTaskWentAway = PickerScreenModel(
-    projects: [PickerScreenModel.Project(id: "p1", name: "Deep work", openTaskCount: 1)],
+    projects: [PickerScreenModel.Project(id: "p1", name: "Deep work", openTaskCount: 1, tint: .berryRed)],
     sections: [],
     tasks: [
       PickerScreenModel.TaskItem(

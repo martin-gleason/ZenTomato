@@ -198,15 +198,56 @@ struct PickerScreenModelTests {
 
   // MARK: Private
 
+  // MARK: F13 — a project's own colour
+
+  /// The heading of a task list finds its project's tint from the model.
+  ///
+  /// `TaskPickerView` knows an id and a name, because that is what its route
+  /// carries, and the lookup lives in the model so it can be read without a
+  /// screen. The fixture gives all four projects DIFFERENT tints: one where they
+  /// agreed would be satisfied by a lookup that always returned the first.
+  @Test("aProjectsTintIsFoundByItsID")
+  func aProjectsTintIsFoundByItsID() {
+    #expect(Self.corpus.tint(ofProject: "p1") == .berryRed)
+    #expect(Self.corpus.tint(ofProject: "p2") == .oliveGreen)
+    #expect(Self.corpus.tint(ofProject: "p4") == .teal)
+  }
+
+  /// A project whose colour Todoist never sent still has a tint, and it is drawn.
+  ///
+  /// `.unknown` is a value, not an absence: it resolves to Todoist's own default
+  /// so a project with no colour looks the way it looks in Todoist rather than
+  /// looking broken, and the swatch stays the same size so rows do not jump about
+  /// depending on somebody's account.
+  @Test("aProjectWithNoColourStillHasATint")
+  func aProjectWithNoColourStillHasATint() {
+    #expect(Self.corpus.tint(ofProject: "p3") == .unknown)
+    #expect(TodoistTint.unknown.value(dark: false) == TodoistTint.charcoal.value(dark: false))
+  }
+
+  /// An id the mirror does not hold has NO tint, rather than a default one.
+  ///
+  /// The case is a project deleted in Todoist while its task list was open. A
+  /// swatch drawn there would claim the project still exists; drawing nothing is
+  /// the honest answer, and it is the difference between `nil` and `.unknown`.
+  @Test("anIDTheMirrorDoesNotHoldHasNoTint")
+  func anIDTheMirrorDoesNotHoldHasNoTint() {
+    #expect(Self.corpus.tint(ofProject: "p-deleted") == nil)
+    #expect(Self.corpus.tint(ofProject: "") == nil)
+  }
+
   /// A small account: two projects with things in them, one empty, one holding
   /// nothing but an emptied section, two sections, one loose task, and one
   /// accented title.
   private static let corpus = PickerScreenModel(
     projects: [
-      PickerScreenModel.Project(id: "p1", name: "Deep work", openTaskCount: 3),
-      PickerScreenModel.Project(id: "p2", name: "Café admin", openTaskCount: 1),
-      PickerScreenModel.Project(id: "p3", name: "Someday", openTaskCount: 0),
-      PickerScreenModel.Project(id: "p4", name: "Errands", openTaskCount: 0)
+      // F13: four DIFFERENT tints, and one of them `.unknown`. A fixture where
+      // every project shared a colour would satisfy both a correct lookup and one
+      // that always returned the first project.
+      PickerScreenModel.Project(id: "p1", name: "Deep work", openTaskCount: 3, tint: .berryRed),
+      PickerScreenModel.Project(id: "p2", name: "Café admin", openTaskCount: 1, tint: .oliveGreen),
+      PickerScreenModel.Project(id: "p3", name: "Someday", openTaskCount: 0, tint: .unknown),
+      PickerScreenModel.Project(id: "p4", name: "Errands", openTaskCount: 0, tint: .teal)
     ],
     sections: [
       PickerScreenModel.Section(id: "s1", name: "This week", projectID: "p1"),
