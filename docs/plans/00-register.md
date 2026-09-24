@@ -137,6 +137,7 @@ makes the generator refuse to run at all and write nothing.
 | D40 | D33 is applied, and CLAUDE.md stops enumerating the order | — | ratified |  |
 | D41 | The amendment ratchet learns both spellings, and gains a second baseline | — | ratified |  |
 | D42 | The register is authoritative and `OPEN.md` is a view | — | ratified |  |
+| D43 | The shape screen lets you set the number of pomodoros | — | proposed |  |
 <!-- END GENERATED: decisions -->
 
 ### Decisions — owner fields
