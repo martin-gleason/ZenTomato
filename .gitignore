@@ -185,3 +185,22 @@ docs/sounds/sources/*.wav
 # changed on every run thereafter.
 __pycache__/
 *.pyc
+
+# Xcode archives and exports. Added 2026-09-24, after a release-testing export
+# landed at `Config/ZenPom 2026-09-24 17-21-22/` — a 1.7 MB signed .ipa, one
+# `git add -A` away from the repository, sitting in the directory that also holds
+# the git-ignored Secrets.xcconfig.
+#
+# THIS HAS ALREADY HAPPENED ONCE TODAY: `docs/ZenTomato redesign scope.zip` was
+# committed by a sweep and removed again, and `C13` had removed the same class of
+# file before that. A build artefact does not belong in a source tree, and the
+# fix is a rule rather than remembering.
+#
+# Xcode's export directory is named "<product> <date> <time>", so the date is
+# what makes it matchable wherever somebody points the export sheet.
+*.xcarchive/
+*.ipa
+ExportOptions.plist
+DistributionSummary.plist
+Packaging.log
+**/[A-Za-z]* 20[0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
