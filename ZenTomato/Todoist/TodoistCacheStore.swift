@@ -185,7 +185,11 @@ final class TodoistCacheStore {
         id: project.id,
         name: project.name,
         childOrder: project.childOrder,
-        syncedAt: syncedAt))
+        syncedAt: syncedAt,
+        // F13. Copied across unread: the name Todoist sent, straight onto the
+        // row. A colour this build has never heard of survives the trip and is
+        // interpreted — or falls back — in `TodoistTint`, not here.
+        colorName: project.color))
     }
 
     for section in Self.deduplicated(sections, by: \.id) {
@@ -208,7 +212,11 @@ final class TodoistCacheStore {
         // D21, and the one place this boolean enters the app. Todoist puts it
         // inside the due object, and a task with no due date has no object at
         // all — which is an ordinary task, and not recurring.
-        isRecurring: task.due?.isRecurring ?? false))
+        isRecurring: task.due?.isRecurring ?? false,
+        // F13, and uninterpreted on purpose: the number Todoist sent, not a
+        // level. Which end of the range is urgent is F13-T5's to establish and
+        // F13-T4's to draw, so nothing in the fetch path holds a prediction.
+        priority: task.priority))
     }
 
     do {
