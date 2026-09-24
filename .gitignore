@@ -179,3 +179,9 @@ docs/sounds/sources/
 # never reach CI or another clone — the silent-install shape project.yml already
 # records three instances of.
 docs/sounds/sources/*.wav
+
+# Python bytecode. gen_status.py is run by make, pre-commit and CI, so its cache is
+# regenerated constantly. C33 committed one by way of `git add -A` (eb79e5b) and it
+# changed on every run thereafter.
+__pycache__/
+*.pyc

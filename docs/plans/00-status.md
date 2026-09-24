@@ -79,7 +79,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Owner items (`O`) | 31 | 25 | 0 | 6 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
 | Mutations (`M`) | 103 | 42 | 0 | 61 |
-| Chores (`C`) | 28 | 5 | 9 | 14 |
+| Chores (`C`) | 29 | 6 | 9 | 14 |
 | Agent items (`A`) | 19 | 7 | 0 | 12 |
 
 `Unknown` is not a third kind of open. It means the source document said nothing about status, so this page will not guess — the row is a question for the owner.
@@ -98,7 +98,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `M` | closed | 61 |
 | `M` | open | 42 |
 | `C` | closed | 14 |
-| `C` | open | 5 |
+| `C` | open | 6 |
 | `C` | unknown | 9 |
 | `A` | closed | 12 |
 | `A` | open | 7 |
@@ -244,6 +244,7 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | unassigned | C33 | P0 | open | the missing registers, backfilled — A, M, H and RR |
 | unassigned | C34 | P0 | open | the register's Decisions section, generated rather than maintained |
 | unassigned | C35 | P2 | open | sweep the test suite for the guessed-yield idiom |
+| unassigned | C37 | P1 | open | generate docs/reviews/OPEN.md from the register |
 | unassigned | A1 | P1 | open | `try?` on the three `StatsQuery` fetches |
 | unassigned | A8 | P2 | open | Time-zone change re-attributes historical days — *researched, ruled… |
 | unassigned | A14 | P2 | open | The rewind that could not be reproduced |
@@ -254,4 +255,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-103 open register rows.
+104 open register rows.
