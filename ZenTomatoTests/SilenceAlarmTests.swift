@@ -69,9 +69,23 @@ struct SilenceAlarmTests {
     watcher?.cancel()
   }
 
-  /// **The flag does not stick when the watcher stops.** Start and Stop are both
-  /// disabled while it is set, so a stale `true` is a screen with three controls
-  /// on it and nothing that can be pressed — no way out short of a relaunch.
+  /// **The flag does not stick when the watcher stops.**
+  ///
+  /// `engine.ringingAlarmID` is what drives `TimerScreenModel.alarmIsRinging`, and
+  /// that is what makes the primary control become **Silence** instead of Start or
+  /// Stop (`TimerScreen.swift:498`). So a stale `true` is not a cosmetic leftover:
+  /// it is a button offering to silence an alarm that is not ringing, sitting where
+  /// the control you actually wanted used to be.
+  ///
+  /// **THIS COMMENT USED TO DESCRIBE A DESIGN THAT WAS ABANDONED**, and it cited it
+  /// as the reason the test mattered — *"Start and Stop are both disabled while it
+  /// is set, so a stale `true` is a screen with three controls on it and nothing
+  /// that can be pressed."* `D26` rejected that arrangement: `TimerScreen.swift`'s
+  /// note on the Silence control records the first attempt putting it above and
+  /// disabling Start and Stop, which *"produced a screen with three controls and
+  /// nothing pressable when iOS refused to stop the alarm."* What shipped swaps the
+  /// button, so **nothing is disabled at any point** and the old sentence was not
+  /// merely stale but backwards. Corrected under `O35`.
   @Test("theFlagClearsWhenWatchingEnds")
   func theFlagClearsWhenWatchingEnds() async throws {
     _ = try await runToTheAlarm()
