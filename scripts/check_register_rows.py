@@ -152,8 +152,14 @@ def main() -> int:
     for index, line in enumerate(lines):
         lineno = index + 1
 
-        if line.startswith("## "):
-            heading = line[3:].strip()
+        # A `###` ENDS A SECTION TOO, matching gen_status.parse_tables. The owner ruled
+        # 2026-09-24 on `O48` that docs/conventions.md is contract: "one `##` per
+        # register", so the owner-fields overlay is a `###` inside the `D` section. If
+        # only `##` ended a section, the overlay's three-column rows would be checked
+        # against the `D` table's five-column header and every one of them reported.
+        # It carries no register symbol, so it is walked and never counted.
+        if line.startswith("## ") or line.startswith("### "):
+            heading = line[4:].strip() if line.startswith("### ") else line[3:].strip()
             m = SECTION_SYMBOL.search(heading)
             symbol = m.group(1) if m else ""
             if symbol:
