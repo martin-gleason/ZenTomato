@@ -46,7 +46,8 @@ XCODEBUILD_FLAGS := \
 .DEFAULT_GOAL := help
 
 .PHONY: help generate simulator build test device script-tests lint \
-        check-todoist check-secrets check-licence check-register check-release checks ci hooks clean
+        check-todoist check-secrets check-licence check-register check-register-rows \
+        status check-status check-release checks ci hooks clean
 
 # --- Entry points ----------------------------------------------------------
 
@@ -109,10 +110,16 @@ check-licence: ## Fail if the licences are described as alternatives
 check-register: ## Fail if a table in OPEN.md has stopped rendering as a table
 	@./scripts/check-open-register.sh
 
-status: ## Regenerate docs/plans/00-status.md from the register and the plans
+# C33 malformed ten rows of 00-register.md and its audit reported zero; C36 found
+# the eleventh, caused by C33's own fix. A check performed once by hand is a
+# snapshot, not a gate.
+check-register-rows: ## Fail if a row in 00-register.md is malformed
+	@python3 scripts/check_register_rows.py
+
+status: ## Regenerate 00-register.md's decisions region and 00-status.md
 	@python3 scripts/gen_status.py
 
-check-status: ## Fail if 00-status.md is stale or was edited by hand
+check-status: ## Fail if 00-register.md's region or 00-status.md is stale or hand-edited
 	@python3 scripts/gen_status.py --check
 
 device: generate ## Build and install on a connected iPhone (needs DEVELOPMENT_TEAM)
@@ -121,7 +128,7 @@ device: generate ## Build and install on a connected iPhone (needs DEVELOPMENT_T
 script-tests: ## Run the shell-level tests for the secrets and hook scripts
 	@./scripts/tests/run-script-tests.sh
 
-checks: lint check-todoist check-secrets check-licence check-register script-tests ## Run every non-Xcode gate
+checks: lint check-todoist check-secrets check-licence check-register check-register-rows check-status script-tests ## Run every non-Xcode gate
 
 ci: checks test check-release ## Everything continuous integration runs, in the same order
 

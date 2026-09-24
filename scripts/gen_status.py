@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Generate docs/plans/00-status.md — the state of the project as one page.
+"""Generate docs/plans/00-status.md, and the register's generated decisions region.
+
+TWO OUTPUTS SINCE C34, AND ONE OF THEM IS AN INPUT TO THE OTHER.
+`docs/plans/00-register.md`'s `## Decisions (D)` table is written from
+`docs/plans/00-deltas.md` (D37 - nothing is maintained twice), between one
+BEGIN/END marker pair, and the page is then built from that SPLICED text rather
+than from what is on disk. Getting that order backwards makes `make status`
+immediately followed by `make check-status` fail for a reason nobody caused;
+C34-M14 is the mutation that pins it.
 
 WHY THIS EXISTS. The page it writes carried this header for the life of the
 project:
@@ -14,7 +22,8 @@ written, awaiting the gate. No code has been written" for six days while six F8
 commits sat on main, and nothing was ever going to notice. Filed as O42.
 
 WHAT IT MAY READ, AND WHAT IT MAY NOT. Everything here comes from the register,
-the plan headers and the specs. NOTHING COMES FROM GIT AND THERE IS NO DATE - a
+`docs/plans/00-deltas.md`, the plan headers and the specs. NOTHING COMES FROM GIT
+AND THERE IS NO DATE - a
 generated file that embeds anything moving on its own can never compare equal to
 a regeneration of itself, and --check would then fail for reasons nobody caused.
 A prior project's page reported which task IDs had appeared in a commit scope, so
@@ -29,8 +38,8 @@ title='ratified' for every row while fifteen assertions passed, and a status pag
 that reported `open` for rows nobody had given a status.
 
 USAGE
-    python3 scripts/gen_status.py           # write the page
-    python3 scripts/gen_status.py --check   # exit 1 if the page is out of date
+    python3 scripts/gen_status.py           # write 00-register.md's region and 00-status.md
+    python3 scripts/gen_status.py --check   # exit 1 if either file is out of date
 """
 
 from __future__ import annotations
@@ -43,6 +52,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 REGISTER = ROOT / "docs/plans/00-register.md"
 STATUS = ROOT / "docs/plans/00-status.md"
+DELTAS = ROOT / "docs/plans/00-deltas.md"
 PLANS_DIR = ROOT / "docs/plans"
 CHORES_DIR = ROOT / "docs/chores"
 SPECS_DIR = ROOT / "docs/specs"
@@ -51,7 +61,19 @@ PROJECT = "ZenTomato"
 
 # A status that means the row is finished. Everything else that is not blank is
 # open - `proposed` included, because a proposed decision is outstanding work.
-CLOSED = {"closed", "done", "struck", "superseded", "rejected", "abandoned"}
+#
+# `ratified` AND `resolved` WERE ADDED BY C34 AND THE ABSENCE OF `ratified` WAS A
+# DEFECT. The generated decisions region carries all 43 deltas, 40 of them
+# ratified; without `ratified` here every one of them was counted OPEN and
+# printed in the owner-owned open table - a wrong number of exactly the class
+# D37 was opened to fix. C34-M12 is the mutation that pins it.
+#
+# `held` IS DELIBERATELY NOT HERE. It is O37's status, since D39: outstanding
+# work parked on the owner, which is open. The page's behaviour - print it
+# verbatim, count it open - is already right, and C34-M13 makes the decision not
+# to bucket it a thing that can fail rather than an omission.
+CLOSED = {"closed", "done", "struck", "superseded", "rejected", "abandoned",
+          "ratified", "resolved"}
 
 # The registers conventions.md names, in the order it names them. A register
 # with no rows still gets a line, so that "we have no risk register" is visible
@@ -73,8 +95,10 @@ CELL_LIMIT = 100
 # What counts as a register row id, and it is deliberately two shapes rather
 # than one. The bare form - O1, D30, RR4 - is what every register used until
 # C33. THE SECOND FORM IS THE SCOPED MUTATION ID, F8-M1 or C32-M7, and it is
-# here because 81 of this project's 103 mutation ids carry a unit scope and a
-# bare-only filter dropped every one of them IN SILENCE: the backfilled
+# here because 81 of 103 mutation ids carried a unit scope as of C33 - a
+# historical justification for why this regex has two shapes, not a number that
+# must be chased - and a bare-only filter dropped every one of them IN SILENCE:
+# the backfilled
 # `## Mutations (M)` section would have reported 22 rows on a page CI keeps
 # current, which is the failure D38 opened the register to prevent.
 #
@@ -90,10 +114,95 @@ CELL_LIMIT = 100
 # and the population already uses one. Without it that row would have been
 # dropped in silence, which is the same defect one character over.
 #
+# THE SAME LETTER IS ON THE BARE FORM SINCE C34, AND ITS ABSENCE WAS A DEFECT.
+# The bare alternative read `[A-Z]{1,2}\d+`, which does not fullmatch `D6b` or
+# `D21b`. Both are real ratified deltas, so the generated decisions region would
+# have emitted 43 rows and the page would have counted 41 - the identical silent
+# drop the scoped widening above was written for, one character over. Measured
+# before the change: D6b False, D21b False. Verified to change nothing else -
+# every one of the seven sections matched the same rows before and after.
+#
 # IT IS WIDENED BY EXACTLY ONE ALTERNATIVE AND NO MORE. A filter that accepted
 # any hyphenated token would count `MUTATION-X`, and a widening that counts
-# anything is not a filter. C33-M3 is the mutation that pins that half.
-ROW_ID = re.compile(r"[A-Z]{1,2}\d+|[A-Z]{1,2}\d+[a-z]?-M\d+[a-z]?")
+# anything is not a filter. C33-M3 is the mutation that pins that half, and it
+# stays green under the letter: a letter is not a shape.
+ROW_ID = re.compile(r"[A-Z]{1,2}\d+[a-z]?|[A-Z]{1,2}\d+[a-z]?-M\d+[a-z]?")
+
+# A register section's heading, and the symbol in its parenthesis. A MODULE
+# CONSTANT RATHER THAN AN INLINE PATTERN because scripts/check_register_rows.py
+# imports it: a section the validator checks and the generator ignores, or the
+# reverse, is a disagreement about which rows are register rows at all.
+SECTION_SYMBOL = re.compile(r"\(([A-Z]{1,2})\)\s*$")
+
+# A CELL BOUNDARY IS AN UNESCAPED PIPE. `\|` inside a code span is a cell's
+# contents, not a boundary.
+#
+# ONE DEFINITION, TWO CONSUMERS, for the same reason sort_key is shared. This
+# module split on a bare "|" until C34, while check_register_rows.py split on
+# the escaped-pipe pattern - so a row containing `\|` passed the validator and
+# rendered SHIFTED BY ONE COLUMN on the page. C34-M6's own row was the instance:
+# its Status cell read `closed` in the file and the page printed the Mutations
+# register as 75 closed and one `unknown`, a confident wrong answer of exactly
+# the class this unit exists to stop. Two parsers that disagree about where a
+# cell ends cannot both be right about the same file.
+CELL_SPLIT = re.compile(r"(?<!\\)\|")
+
+
+def table_cells(line: str) -> list[str]:
+    """A table row's cells, split on unescaped pipes, leading and trailing dropped.
+
+    `| a |  |` yields two cells, the second empty. `| a |` yields one. That is the
+    distinction C36's defect turns on: rstrip(' |') took an empty trailing cell
+    away with the pipe, and a parser that cannot see the difference cannot report
+    it.
+
+    NOT `line.strip("|").split("|")`: that spelling strips the pipe off a row
+    ending in an escaped `\\|` and leaves a stray backslash as the last cell.
+    """
+    parts = CELL_SPLIT.split(line.strip())
+    if parts and not parts[0].strip():
+        parts = parts[1:]
+    if parts and not parts[-1].strip():
+        parts = parts[:-1]
+    return [p.strip() for p in parts]
+
+# The generated region inside 00-register.md. D37: the decisions register is
+# written from 00-deltas.md, so it is neither hand-maintained nor retired.
+#
+# A MARKER IS AN HTML COMMENT, AND marker_lines() REQUIRES THAT. The file's own
+# header names both markers in backticks, in prose, to tell a reader where the
+# region is - and a substring match counted those two mentions, so the first run
+# after that sentence was written refused with "2 BEGIN markers and 2 END
+# markers". A file that cannot document its own generated region is a worse
+# outcome than a slightly narrower match.
+BEGIN_MARKER = "BEGIN GENERATED: decisions"
+END_MARKER = "END GENERATED: decisions"
+
+# The hand-maintained overlay. ITS HEADING DELIBERATELY DOES NOT END IN `(D)`, so
+# SECTION_SYMBOL does not match it and D30 is not counted as a second D register.
+OVERLAY_HEADING = "Decisions — owner fields"
+
+# THE OVERLAY'S COLUMN NAMES ARE PART OF THE CONTRACT, AND THAT IS WHY THEY ARE A
+# CONSTANT. owner_overlay() reads `p` and `td` off this table's OWN lowercased
+# headers, so renaming a header makes the lookup MISS and the overlay yields "" -
+# the owner's priority and the live Todoist link deleted from the generated row in
+# silence, which is C33's dropped-TD defect with a different cause. The heading
+# carries no `(D)` symbol on purpose, and until C34's review that absence also
+# excluded it from the validator's header-shape rule (R8): the one table in the
+# repository holding hand-maintained owner data was the one table whose column
+# names nothing checked. Both consumers now read this tuple - owner_overlay
+# refuses a missing column, and check_register_rows.py imports it for R8.
+OVERLAY_COLUMNS = ("id", "p", "td")
+
+# A delta's status, as the FIRST match in the window below, in this order. THE
+# PRECEDENCE IS LOAD-BEARING: D37's own window reads "Proposed 2026-09-22.
+# Ratified by the owner 2026-09-22." and must come out `ratified`, not
+# `proposed`. This is the same window rule DeltaIntegrityTests'
+# everyDeltaCarriesAStatus already enforces, so the register's statuses rest on
+# an assertion that exists - the index table's Status column rests on nothing.
+DELTA_STATUS = (("REJECTED", "rejected"), ("RESOLVED", "resolved"),
+                ("Ratified", "ratified"), ("Proposed 2", "proposed"))
+DELTA_STATUS_WINDOW = 6
 
 
 def read(path: Path) -> str:
@@ -132,7 +241,13 @@ def parse_tables(md: str) -> list[tuple[str, list[dict[str, str]]]]:
     header: list[str] | None = None
     rows: list[dict[str, str]] = []
 
-    for line in md.splitlines():
+    # FENCED BLOCKS ARE BLANKED FIRST, so the same lines are table rows to this
+    # parser and to check_register_rows.py. The Mutations preamble embeds a python
+    # snippet that splits register rows on a pipe; a fenced line shaped like a row
+    # would be COUNTED by the generator and not CHECKED by the validator, which is
+    # the asymmetry the marker readers had, one mechanism over. Verified to change
+    # nothing about today's file: all seven sections match the same rows.
+    for line in blank_fences(md.splitlines()):
         if line.startswith("## "):
             if heading:
                 sections.append((heading, rows))
@@ -140,7 +255,7 @@ def parse_tables(md: str) -> list[tuple[str, list[dict[str, str]]]]:
             continue
         if not line.lstrip().startswith("|"):
             continue
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        cells = table_cells(line)
         if all(set(c) <= {"-", ":"} and c for c in cells):
             continue  # the |---|---| separator
         if header is None:
@@ -153,16 +268,20 @@ def parse_tables(md: str) -> list[tuple[str, list[dict[str, str]]]]:
     return sections
 
 
-def register_rows() -> dict[str, list[dict[str, str]]]:
+def register_rows(register_text: str) -> dict[str, list[dict[str, str]]]:
     """Map a register symbol to its rows, taken from the section heading.
 
     The symbol comes from the heading's own parenthesis - '## Owner items (O)' -
     and not from the IDs inside, so a section whose rows were mis-prefixed is
     visible as a section with the wrong rows rather than quietly redistributed.
+
+    IT TAKES THE TEXT RATHER THAN READING THE FILE, because since C34 the page is
+    built from the SPLICED register - the one with this run's generated decisions
+    region in it - and not from what is still on disk.
     """
     out: dict[str, list[dict[str, str]]] = {}
-    for heading, rows in parse_tables(read(REGISTER)):
-        m = re.search(r"\(([A-Z]{1,2})\)\s*$", heading)
+    for heading, rows in parse_tables(register_text):
+        m = SECTION_SYMBOL.search(heading)
         if not m or not rows:
             continue
         out.setdefault(m.group(1), []).extend(
@@ -179,6 +298,245 @@ def status_of(row: dict[str, str]) -> str:
 def is_open(row: dict[str, str]) -> bool:
     s = status_of(row)
     return s != "unknown" and s not in CLOSED
+
+
+# --- The generated decisions region (D37) -----------------------------------
+#
+# 00-deltas.md defined 43 deltas and 00-register.md's `## Decisions (D)` table
+# held one row, D30, so the page printed `Decisions (D) | 1`. Neither source was
+# wrong about itself and neither was complete - the second intake path
+# conventions.md forbids, already producing a wrong number on a CI-enforced page.
+
+
+def fail(message: str, *detail: str) -> None:
+    """Refuse loudly and write nothing.
+
+    A generator that cannot find its region and appends, or writes nothing and
+    prints success, is O42's defect - a page claiming a provenance it does not
+    have - rebuilt one layer in.
+    """
+    print(f"gen_status.py: FAIL — {message}", file=sys.stderr)
+    for line in detail:
+        print(f"  {line}", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def blank_fences(lines: list[str]) -> list[str]:
+    """The same lines with fenced blocks blanked, one blank line per fenced line.
+
+    BLANKING RATHER THAN DELETING, so a reported line number still matches the
+    file a reader opens. D15 quotes the export's own section headings inside a
+    fence - `## Days`, `## Distractions` - and a parser that cannot tell a heading
+    from a sample of one reports them as deltas with no status.
+
+    ONE DEFINITION, FOUR CONSUMERS, for the same reason table_cells and sort_key
+    are shared. This loop was written twice - here for 00-deltas.md and again in
+    check_register_rows.blank_fences - in the unit whose thesis is "one definition,
+    two consumers", and the copies had already diverged in reach: the validator
+    blanked fences before looking for the region markers and splice_decisions did
+    not, so a FENCED EXAMPLE of the marker pair in the register's own header - the
+    natural way to document the region - gave the validator a clean OK while the
+    generator refused with "2 BEGIN markers and 2 END markers". R9 exists to NAME
+    THE CAUSE rather than hand the reader a diff, and in the one case where the two
+    tokenizers differed it named the wrong file's problem.
+    """
+    out: list[str] = []
+    in_fence = False
+    for line in lines:
+        if line.startswith("```"):
+            in_fence = not in_fence
+            out.append("")
+            continue
+        out.append("" if in_fence else line)
+    return out
+
+
+def delta_lines() -> list[str]:
+    """00-deltas.md with fenced blocks blanked, exactly as DeltaIntegrityTests does."""
+    return blank_fences(read(DELTAS).splitlines())
+
+
+def deltas() -> list[tuple[str, str, str]]:
+    """Every delta as (id, status, title), from the DEFINITIONS and not the index.
+
+    The index is not the source for two reasons. Its titles are PARAPHRASES - the
+    index's D23 reads "…; scope was never exceeded" where the definition reads
+    "…. No spec text changes." - and no test checks its Status column at all,
+    while the window rule below is the one everyDeltaCarriesAStatus enforces.
+    """
+    lines = delta_lines()
+    found: list[tuple[str, str, str]] = []
+    for i, line in enumerate(lines):
+        m = re.match(r"^##\s+(D\d+[a-z]?)\s+—\s*(.*)$", line)
+        if not m:
+            if line.startswith("## D"):
+                fail(f"{DELTAS.relative_to(ROOT)}:{i + 1}: a `## D…` heading this parser "
+                     f"cannot read: {line.strip()}",
+                     "Expected `## D<n> — <title>`, with an em dash.")
+            continue
+        # THE WINDOW STOPS AT THE NEXT `## ` HEADING as well as at six lines. A
+        # fixed six-line window reaches into the FOLLOWING delta's heading when a
+        # delta's body is short, and D3's heading carries the word REJECTED, which
+        # is first in the precedence - so a short `proposed` delta above a rejected
+        # one would be reported rejected. Verified to change nothing about the 43
+        # deltas in this file, every one of which has a long enough body to hide
+        # the bug; found by building a three-delta fixture where it does not.
+        window_end = i + DELTA_STATUS_WINDOW
+        for offset, later in enumerate(lines[i + 1:window_end], start=i + 1):
+            if later.startswith("## "):
+                window_end = offset
+                break
+        window = " ".join(lines[i:window_end])
+        status = next((st for token, st in DELTA_STATUS if token in window), "")
+        if not status:
+            fail(f"{m.group(1)} carries no status in the {DELTA_STATUS_WINDOW} lines from its "
+                 f"heading ({DELTAS.relative_to(ROOT)}:{i + 1}).",
+                 "One of REJECTED, RESOLVED, Ratified or 'Proposed 2' must appear there.",
+                 "A blank status would render as `unknown`, which is silence dressed as an answer.")
+        found.append((m.group(1), status, m.group(2)))
+    return found
+
+
+def owner_overlay(register_text: str, defined: set[str]) -> dict[str, tuple[str, str]]:
+    """`P` and `TD` for the decisions the owner has given them, id -> (P, TD).
+
+    00-deltas.md has a column for neither, so regenerating the table from it alone
+    would DELETE D30's priority and the Todoist link the owner's own sync uses.
+    This section is the only hand-maintained part of the decisions register, and
+    the generator never writes it.
+
+    It refuses an id 00-deltas.md does not define, and a duplicate id. A Todoist
+    link keyed to a decision that does not exist is C33's dropped-`TD` cell one
+    file over, and the whole point of this unit is that such a loss is loud.
+    """
+    overlay: dict[str, tuple[str, str]] = {}
+    seen_section = False
+    for heading, rows in parse_tables(register_text):
+        if heading != OVERLAY_HEADING:
+            continue
+        seen_section = True
+        for row in rows:
+            # THE COLUMN NAMES ARE CHECKED BEFORE THEY ARE READ. row is keyed by
+            # this table's own headers, so `## Decisions — owner fields` with its
+            # `TD` column renamed `Todoist` yields "" for every link and the
+            # generated row loses P0 and a live Todoist id with every gate green.
+            # A rename does not show in a diff the way a deleted row does, so the
+            # loss has to be refused here rather than noticed later.
+            missing = [c for c in OVERLAY_COLUMNS if c not in row]
+            if missing:
+                fail(f"`## {OVERLAY_HEADING}` has no "
+                     f"{', '.join('`' + c.upper() + '`' for c in missing)} column: its header "
+                     f"reads {' | '.join(sorted(row)) or '(nothing this parser could read)'}.",
+                     "The overlay is read by column name, so a renamed column yields an empty",
+                     "cell and the owner's priority and Todoist link are deleted from the",
+                     "generated row in silence. Restore the header "
+                     f"{' | '.join(c.upper() for c in OVERLAY_COLUMNS)}.")
+            row_id = row.get("id", "").strip()
+            if row_id in overlay:
+                fail(f"`## {OVERLAY_HEADING}` names {row_id} twice.",
+                     "One row per decision, or the second silently wins.")
+            if row_id not in defined:
+                fail(f"`## {OVERLAY_HEADING}` names {row_id}, which "
+                     f"{DELTAS.relative_to(ROOT)} does not define.",
+                     "Owner fields keyed to a decision that does not exist are about to be lost",
+                     "in silence. Correct the id, or delete the row if the decision was renumbered.")
+            overlay[row_id] = (row.get("p", "").strip(), row.get("td", "").strip())
+
+    # THE FLOOR, and it is the same argument as MIN_SECTIONS in the validator: an
+    # overlay that has become empty is indistinguishable, from the generated table
+    # alone, from a project where the owner has set no fields. C34-M4 deleted the
+    # whole section and every gate stayed green while D30's `P0` and its Todoist id
+    # regenerated as `—` and an empty cell. The row count is deliberately NOT
+    # pinned - a number that churns is a number people edit to keep quiet - but
+    # ZERO is pinned, because the loss this section exists to prevent is total at
+    # zero and nowhere else.
+    if not seen_section or not overlay:
+        fail(f"`## {OVERLAY_HEADING}` "
+             f"{'is missing from' if not seen_section else 'names no decision in'} "
+             f"{REGISTER.relative_to(ROOT)}.",
+             "It is the only place the owner's `P` and Todoist link for a decision live;",
+             "00-deltas.md has a column for neither. Regenerating without it would delete",
+             "them, which is what C34-M4 demonstrated. Restore the section, or - if the",
+             "owner really has no fields on any decision - delete this floor deliberately.")
+    return overlay
+
+
+def render_decisions(register_text: str) -> str:
+    """The generated region's body: the header today's file already has, and 43 rows.
+
+    THE HEADER DOES NOT MOVE. `| ID | Title | P | Status | TD |` is byte-identical
+    to the one that was there by hand, which is what keeps parse_tables'
+    header-keyed lookup of `p`, `status` and `title` hitting.
+
+    ALL 43 ROWS, NOT A SUBSET. D37's own text refuses omission - "a register that
+    omits the largest register in the project is not a register" - and a subset
+    rule is a second judgement nobody ratified. It costs the page nothing: once
+    `ratified` and `resolved` are closed, D30 is the only open decision.
+    """
+    rows = deltas()
+    overlay = owner_overlay(register_text, {row_id for row_id, _, _ in rows})
+    out = ["| ID | Title | P | Status | TD |", "|---|---|---|---|---|"]
+    for row_id, status, title in sorted(rows, key=lambda r: sort_key(r[0])):
+        priority, todoist = overlay.get(row_id, ("", ""))
+        out.append(f"| {row_id} | {one_line(title)} | {priority or '—'} | {status} | {todoist} |")
+    return "\n".join(out)
+
+
+def marker_lines(lines: list[str], marker: str) -> list[int]:
+    """Indices of the HTML comments carrying `marker`, and not of prose about it.
+
+    scripts/check_register_rows.py imports this, so the generator's idea of where
+    the region is and the validator's R9 are one definition.
+    """
+    return [i for i, line in enumerate(lines)
+            if marker in line and line.lstrip().startswith("<!--")]
+
+
+def splice_decisions(register_text: str) -> str:
+    """Replace everything between the markers, and change no LINE outside that span.
+
+    Not "no byte": the file is rebuilt through splitlines() and "\n".join(...) plus a
+    final newline, so a CRLF ending or a missing final newline outside the region
+    would be normalised. No line of this file is either today; the earlier wording
+    claimed more than the code does, and a claim in a docstring is read as a check.
+
+    EXACTLY ONE BEGIN AND ONE END, BEGIN FIRST - and any other count refuses IN
+    WRITE MODE TOO, not only under --check. A generator that silently appends when
+    it cannot find its region, or writes nothing and prints success, is the O42
+    class of defect one layer in. Because this refuses, `make status` refuses,
+    `make check-status` fails, the pre-commit hook fails and CI fails, so a lost
+    marker cannot reach main.
+    """
+    lines = register_text.splitlines()
+    # THE MARKERS ARE LOOKED FOR IN THE FENCE-BLANKED LINES and the splice is done
+    # on the real ones - blanking preserves the line count, so the indices agree.
+    # check_register_rows.py's R9 has always read them this way; this reader did
+    # not, and the disagreement meant a fenced EXAMPLE of the marker pair passed
+    # the validator and made the generator refuse. Two readers of one file that
+    # disagree about where its region is cannot both be right about it.
+    scan = blank_fences(lines)
+    begins = marker_lines(scan, BEGIN_MARKER)
+    ends = marker_lines(scan, END_MARKER)
+    if len(begins) != 1 or len(ends) != 1 or begins[0] > ends[0]:
+        fail(f"{REGISTER.relative_to(ROOT)} has {len(begins)} '{BEGIN_MARKER}' markers and "
+             f"{len(ends)} 'END' markers; expected one of each, BEGIN first",
+             "Nothing was written. Restore the marker pair inside `## Decisions (D)`.")
+    body = render_decisions(register_text).splitlines()
+    return "\n".join(lines[:begins[0] + 1] + body + lines[ends[0]:]) + "\n"
+
+
+def generate() -> tuple[str, str]:
+    """Both artefacts, in the one order that works: splice, then build from the splice.
+
+    The region lives in the file this generator READS to build the page. Writing
+    the region first and then building the page from the on-disk pre-splice text
+    makes `make status` immediately followed by `make check-status` fail for a
+    reason nobody caused, and the obvious wrong fix is to run the generator twice.
+    C34-M14 is that bug as a mutation; C28's statusCheckPassesWhenGenerated is
+    what goes red.
+    """
+    spliced = splice_decisions(read(REGISTER))
+    return spliced, build(spliced)
 
 
 def plan_status(path: Path) -> str:
@@ -214,9 +572,25 @@ def unit_files() -> list[tuple[str, str, Path]]:
     return sorted(units, key=lambda u: sort_key(u[0]))
 
 
-def sort_key(unit_id: str) -> tuple[str, int, str]:
-    m = re.fullmatch(r"([A-Z]+)(\d+)([a-z]?)", unit_id)
-    return (m.group(1), int(m.group(2)), m.group(3)) if m else (unit_id, 0, "")
+def sort_key(unit_id: str) -> tuple[str, int, str, str, int, str]:
+    """The register's ID order: (prefix, number, letter, scope prefix, number, letter).
+
+    IT IS SCOPE-AWARE SINCE C34, AND IT HAD TO BECOME SO BEFORE `R6` COULD BE AN
+    ERROR. The previous key matched bare ids only and degraded to (unit_id, 0, "")
+    for a scoped mutation, so it compared them LEXICALLY and reported four
+    correctly-ordered pairs as out of order - C32-M9/C32-M10, F8-M9/F8-M10,
+    F8-M13/F10-M1, F14-M9/F14-M10. scripts/check_register_rows.py imports this
+    function rather than restating it, so the page's row order and the validator's
+    sortedness rule are ONE definition and cannot drift into disagreeing.
+
+    Widening it reorders the mutation rows in the page's `Open, and owned by whom`
+    table, which is why 00-status.md moves in the same commit.
+    """
+    m = re.fullmatch(r"([A-Z]+)(\d+)([a-z]?)(?:-([A-Z]+)(\d+)([a-z]?))?", unit_id)
+    if not m:
+        return (unit_id, 0, "", "", 0, "")
+    return (m.group(1), int(m.group(2)), m.group(3),
+            m.group(4) or "", int(m.group(5) or 0), m.group(6) or "")
 
 
 def task_count(unit_id: str, path: Path) -> int:
@@ -243,8 +617,8 @@ def vision() -> tuple[str, str]:
     return "", ""
 
 
-def build() -> str:
-    regs = register_rows()
+def build(register_text: str) -> str:
+    regs = register_rows(register_text)
     units = unit_files()
     out: list[str] = []
     w = out.append
@@ -256,7 +630,9 @@ def build() -> str:
     w("")
     w("Generated from `docs/plans/00-register.md`, the plan files in `docs/plans/` and `docs/chores/`, "
       "and the specs in `docs/specs/`, by `scripts/gen_status.py`. Hand edits are reverted by the next "
-      "run and fail CI in the meantime.")
+      "run and fail CI in the meantime. The same run writes the generated decisions region inside "
+      "`docs/plans/00-register.md` from `docs/plans/00-deltas.md` (`D37`), and this page is built from "
+      "that spliced register rather than from what was on disk when the run started.")
     w("")
     w("**Nothing on this page comes from git, and there is no date.** A generated file that embeds "
       "anything which moves on its own can never compare equal to a regeneration of itself — `--check` "
@@ -365,23 +741,9 @@ def build() -> str:
     return "\n".join(out)
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--check", action="store_true",
-                    help="exit 1 if the committed page is not what this run produces")
-    args = ap.parse_args()
-
-    fresh = build()
-    if not args.check:
-        STATUS.write_text(fresh, encoding="utf-8")
-        print(f"gen_status.py: wrote {STATUS.relative_to(ROOT)}")
-        return 0
-
-    current = read(STATUS)
-    if current == fresh:
-        print("gen_status.py: OK — 00-status.md is up to date.")
-        return 0
-    print("gen_status.py: FAIL — 00-status.md is out of date or hand-edited.", file=sys.stderr)
+def report_diff(path: Path, current: str, fresh: str) -> None:
+    print(f"gen_status.py: FAIL — {path.relative_to(ROOT)} is out of date or hand-edited.",
+          file=sys.stderr)
     print("  Regenerate with: python3 scripts/gen_status.py", file=sys.stderr)
     import difflib
     diff = list(difflib.unified_diff(current.splitlines(), fresh.splitlines(),
@@ -390,7 +752,38 @@ def main() -> int:
         print("  " + line, file=sys.stderr)
     if len(diff) > 40:
         print(f"  … {len(diff) - 40} more diff lines", file=sys.stderr)
-    return 1
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--check", action="store_true",
+                    help="exit 1 if either committed file is not what this run produces")
+    args = ap.parse_args()
+
+    # TWO ARTEFACTS, AND --check JUDGES BOTH. conventions.md's validate-every-
+    # artefact rule (D46): a feature can judge its main output rigorously and
+    # still emit a second one nothing checks. The FAIL line NAMES THE FILE, which
+    # the previous message did not need to do because there was only one.
+    register, page = generate()
+
+    if not args.check:
+        REGISTER.write_text(register, encoding="utf-8")
+        STATUS.write_text(page, encoding="utf-8")
+        print(f"gen_status.py: wrote {REGISTER.relative_to(ROOT)}'s decisions region "
+              f"and {STATUS.relative_to(ROOT)}")
+        return 0
+
+    stale = False
+    for path, fresh in ((REGISTER, register), (STATUS, page)):
+        current = read(path)
+        if current != fresh:
+            report_diff(path, current, fresh)
+            stale = True
+    if stale:
+        return 1
+    print("gen_status.py: OK — 00-register.md's decisions region and 00-status.md "
+          "are up to date.")
+    return 0
 
 
 if __name__ == "__main__":
