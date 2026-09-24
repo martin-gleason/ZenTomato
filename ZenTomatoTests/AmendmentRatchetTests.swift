@@ -38,9 +38,14 @@ extension DeltaIntegrityTests {
       document: "docs/specs/SPEC.md",
       appliedList: "docs/specs/SPEC.md",
       baselineFile: "docs/specs/AMENDMENT-BASELINE.txt"),
+    // `D44`, ratified by the owner 2026-09-24: v1.5's ledger moved INSIDE the
+    // baseline, so this row is now identical in shape to `SPEC.md`'s above. The
+    // asymmetry this struct was built to carry — a ledger beside the spec, because
+    // the agent may not edit a ratified baseline — is gone. `O45` was the row that
+    // asked, and the answer was the owner's to give.
     WatchedBaseline(
       document: "docs/specs/zenpom-v1.5.md",
-      appliedList: "docs/specs/V15-AMENDMENTS-APPLIED.md",
+      appliedList: "docs/specs/zenpom-v1.5.md",
       baselineFile: "docs/specs/V15-AMENDMENT-BASELINE.txt")
   ]
 

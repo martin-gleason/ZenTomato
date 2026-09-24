@@ -209,7 +209,20 @@ Existing hooks carry forward. Two are added:
    it, and this is the one place a later change would quietly undo a decision made on the log's
    behalf.
 
+## Amendments applied
+
+D31 D33
+
+Ratified deltas whose text has been written into this file. `DeltaIntegrityTests` reads this list;
+`docs/specs/V15-AMENDMENT-BASELINE.txt` counts what is still outstanding, and the evidence for each
+— what changed, and where — is in `docs/specs/V15-AMENDMENTS-APPLIED.md`.
+
+Added by `D44`, ratified by the owner 2026-09-24. Until then this list lived beside the spec rather
+than inside it, because the agent does not edit a ratified baseline; `D44` is the decision that made
+the edit legitimate, and `SPEC.md` has carried the same section in the same shape all along.
+
 -----
 September 9, 2026
+Amended September 24, 2026 by `D44`.
 
 #AI/Claude

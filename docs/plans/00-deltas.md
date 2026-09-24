@@ -63,9 +63,11 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D40** | ratified | no — v1.5 | — | D33 is applied; CLAUDE.md stops enumerating the order |
 | **D41** | ratified | no | — | The amendment ratchet learns both spellings, and gains a second baseline |
 | **D42** | ratified | no | — | The register is authoritative; OPEN.md is a view generated from it |
-| **D43** | **proposed** | no | — | The shape screen lets you set the number of pomodoros (F8 re-gate) |
+| **D43** | ratified | no | — | The shape screen lets you set the number of pomodoros (F8 re-gate) |
+| **D44** | ratified | **yes — v1.5** | 1 | v1.5's amendment ledger moves inside the baseline |
+| **D45** | **proposed** | no | — | A silent alarm and a haptic on the watch when the phone's sound is off |
 
-*45 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*47 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
@@ -2145,7 +2147,24 @@ is exactly why it needed one.
 
 ## D43 — The shape screen lets you set the number of pomodoros
 
-**Proposed 2026-09-24. NOT RATIFIED.** Raised by the owner after using the build:
+**Proposed 2026-09-24. Ratified by the owner 2026-09-24**, with the hard question answered in the
+same breath: *"it is ratified. if both are stated and it cannot be honored, refuse and name the
+floor. if users don't like this, we should gather feedback on it and see how we can change it."*
+
+**THE RULING, and it is the whole design.** When a count and a total are both stated and both cannot
+be honoured, the screen **refuses and names the floor it hit**. It does not quietly reduce the count,
+which is today's behaviour and which overrides what the reader just typed; and it does not shorten
+below the floor. A control that silently ignores its own input is worse than no control.
+
+**And the owner named the review condition rather than leaving it implicit:** if refusing turns out
+to annoy people in use, that is feedback to gather and act on, not a decision to re-litigate now.
+Recorded because *"we will see how it feels"* is the kind of intention that evaporates unless it is
+written where the next reader finds it.
+
+**Still not built.** `F8` is halted at `T3` by `D39` and owes a re-gate; this is item 1 of that pack,
+now with its central question already answered.
+
+Raised by the owner after using the build:
 
 > *"when in the 'fit a sprint' screen, a user should also be allowed to change the number of
 > pomodoros."*
@@ -2188,6 +2207,85 @@ only this sprint? The ruled design changes the setting when it reduces the count
 edit made by a transient screen.
 
 **Not ratified, and nothing is built.** It is item 1 of `F8`'s re-gate pack.
+
+-----
+September 24, 2026
+
+#AI/Claude
+
+## D44 — v1.5's amendment ledger moves inside the baseline
+
+**Proposed 2026-09-24. Ratified by the owner 2026-09-24**, in their own words: *"add the amendment ledger of
+1.5 to the baseline. That should solve `O45`."*
+
+**This is the decision `O45` was opened to get, and it could not be made by the agent.**
+`docs/specs/zenpom-v1.5.md` is a ratified baseline, and `docs/conventions.md` is explicit that *"the
+agent never edits the contract it is held to."* `C32` therefore put v1.5's ledger and its outstanding
+count in two files *beside* the spec — `V15-AMENDMENTS-APPLIED.md` and `V15-AMENDMENT-BASELINE.txt`
+— and recorded the asymmetry as an open question rather than resolving it: `SPEC.md` carries its
+`## Amendments applied` list inline **because the owner edits `SPEC.md`**.
+
+**Therefore:**
+
+1. **`docs/specs/zenpom-v1.5.md` gains a `## Amendments applied` section**, in the same shape and
+   the same words as `SPEC.md`'s: the ids on one line, and one sentence naming the files that hold
+   the outstanding count and the replacement text.
+2. **`AmendmentRatchetTests.watchedBaselines` points its `appliedList` at the spec itself**, so v1.5
+   and `SPEC.md` are declared identically. The asymmetry the ratchet had to carry is gone.
+3. **`V15-AMENDMENTS-APPLIED.md` keeps the evidence and stops being the list.** Its per-amendment
+   record — what text changed, and where — is worth keeping and does not belong in a baseline. Its
+   `## Amendments applied` heading is renamed so that nothing can read a second list: `C32-M6` is
+   the mutation for a parser that found a *mention* of that heading instead of the heading, and two
+   live lists would be that defect with the safety catch removed.
+
+**The agent applied the edit rather than handing it back.** The owner ruled on 2026-09-11 — *"why am
+I re-editing? this feels like an extra step"* — when the same situation arose for `SPEC.md` under
+`D40`; the waiver was recorded in `65240a7` and this follows it. **The rule that the agent does not
+edit a baseline is intact**: what makes an edit legitimate is a ratified decision, not whose hands
+are on the keyboard, and this row is that decision.
+
+**What this does not change.** The outstanding count still lives in
+`docs/specs/V15-AMENDMENT-BASELINE.txt`, pinned, and `everyRatifiedV15AmendmentIsApplied` still
+fails if it grows. `D33` still does not go red for the reason `O46` records, and moving the list
+does not touch that.
+
+-----
+September 24, 2026
+
+#AI/Claude
+
+## D45 — A silent alarm and a haptic on the watch when the phone's sound is off
+
+**Proposed 2026-09-24. NOT RATIFIED.** Raised by the owner from `O33`'s device check, test four:
+
+> *"Watch on ZenPom focus. Sounds are off on the phone. Result: No alarm on the watch goes off. I
+> think it should be a silent alarm, and a buzzing to let the user know the pom is done and the cycle
+> is either on a break or a long break."*
+
+**This is a new want, not the defect `O33` recorded, and separating them is the point.** `O33` was
+*"the watch makes a noise when the phone is told not to"*, and tests four and five show that no
+longer happens: sound off is honoured on the wrist. The feature closed correctly. **What the owner
+found is that the correct behaviour is not the wanted behaviour** — silence is honest but it also
+means a block ends with no signal at all on the wrist, which is the case the watch app exists for.
+
+**The distinction the delta has to hold.** *Sound off* is a statement about **noise**, not about
+notification. A haptic is not a sound, and the phone's sound setting arguably says nothing about it.
+That reading is not obvious enough to act on without a ruling — a reasonable person can hold that
+"silence the alarm" means "do not interrupt me by any channel", and the whole reason `O33` was filed
+is that the app had been noisier than it was told to be.
+
+**Open questions for the gate, and the first is the feature:**
+
+1. **Does the haptic fire when the phone's sound is off, or always?** If always, this is not really
+   about the sound setting at all; it is the wrist signal the watch app should have had from the
+   start, and the sound setting only governs the noise on top of it.
+2. **Does it respect the watch's own Focus and silent modes?** Test one shows those are honoured
+   today and the owner called that *"working as intended"*, so a haptic that ignores theatre mode
+   would undo a result already accepted.
+3. **Does it distinguish a short break from a long one?** The owner's sentence asks for the reader to
+   know *"the cycle is either on a break or a long break"*, which is two signals, not one.
+
+**Nothing is built.** `F7` shipped and this changes its behaviour on the wrist.
 
 -----
 September 24, 2026
