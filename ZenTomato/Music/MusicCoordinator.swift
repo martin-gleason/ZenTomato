@@ -721,6 +721,24 @@ final class MusicCoordinator {
     func awaitPendingPlaybackRead() async {
       await playbackReadTask?.value
     }
+
+    /// Waits for the attempt to make sound to finish. **Tests only.**
+    ///
+    /// The sibling helper above waits for the *reading*; this waits for the
+    /// *loading*, and a test that wants to know whether the skip button is
+    /// visible needs both — the load decides whether anything is playing and the
+    /// read decides whether this object has noticed.
+    ///
+    /// **Added because the argument above turned out to be right.** Two tests in
+    /// `MusicSkipVisibilityTests` drove the load with `await Task.yield()` twice
+    /// and hoped. On this machine two hops were not enough, so `isPlaying` stayed
+    /// `false` and `#expect(isPlaying == false)` passed without the pause under
+    /// test having been noticed at all; on CI two hops were enough, the assertion
+    /// became real, and it failed — reported against a branch that changes no
+    /// Swift. Vacuous here, red there, one cause.
+    func awaitPendingSound() async {
+      await soundTask?.value
+    }
   #endif
 
   private var soundTask: Task<Void, Never>?

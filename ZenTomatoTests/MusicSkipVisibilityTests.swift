@@ -35,17 +35,24 @@ struct MusicSkipVisibilityTests {
   @Test("a late status change is picked up")
   func lateStatusChangeIsPickedUp() async {
     coordinator.blockChanged(to: .work, isRunning: true)
-    await Task.yield()
-    await Task.yield()
+    // BOTH TASKS ARE AWAITED, NOT GUESSED AT. This test drove the load with two
+    // `Task.yield()` calls, which was two hops of hope: on the machine this was
+    // written on it was enough, and elsewhere it was not. `F4g`.
+    await coordinator.awaitPendingSound()
 
     // Whatever the spy reports synchronously, the coordinator must be LISTENING
     // — that is what makes a late flip reach the screen. Announce a change and
     // the coordinator must re-read rather than keep its first answer.
     player.announceStatusChange()
-    // The reading is off the main actor now, so it lands a turn later. Awaiting
-    // the task itself rather than yielding a guessed number of times.
     await coordinator.awaitPendingPlaybackRead()
-    #expect(coordinator.isPlaying == player.isPlaying,
+
+    // ASSERTED AGAINST `true`, NOT AGAINST THE PLAYER. `isPlaying == player.isPlaying`
+    // is satisfied when BOTH are false, which is what a load that never completed
+    // leaves behind — so the original form could not tell "re-read correctly" from
+    // "nothing happened at all".
+    #expect(player.isPlaying == true,
+            "the fixture must actually be playing, or the comparison below is vacuous")
+    #expect(coordinator.isPlaying == true,
             "a status change after the call must be re-read, not remembered")
   }
 
@@ -58,15 +65,41 @@ struct MusicSkipVisibilityTests {
 
   /// A pause the app did not cause — Control Centre, headphones unplugged —
   /// hides the button, because there is nothing to skip.
+  ///
+  /// **THIS TEST WAS VACUOUS IN ONE DIRECTION AND FALSE-FAILING IN THE OTHER, and
+  /// the cause was one missing `await`.** `A18` moved the playback read off the
+  /// main actor, so `isPlaying` lands a turn after the announcement. The sibling
+  /// test above was updated for that and says so; this one was not. One test of a
+  /// matched pair changed and the other did not — the same shape as `F8`'s
+  /// breakless-shape defect.
+  ///
+  /// What that cost, measured rather than assumed. **Locally the assertion passed
+  /// for the wrong reason:** the load's own off-actor read had not landed either,
+  /// so `isPlaying` was still `false` before the pause and `== false` succeeded
+  /// without the pause having been noticed at all. A probe asserting the
+  /// precondition failed on this machine. **On CI the load did land**, `isPlaying`
+  /// was `true`, the assertion became real, and it failed — reported as a defect
+  /// in a documentation-only branch that changes no Swift.
+  ///
+  /// So the fix is two things. **The precondition is asserted**, so the test can
+  /// never again pass because the button was hidden the whole time; and **both
+  /// reads are awaited at the task rather than by yielding a guessed number of
+  /// times**, which is the pattern the sibling test already established.
   @Test("a pause from elsewhere hides the button")
   func externalPauseIsNoticed() async {
     coordinator.blockChanged(to: .work, isRunning: true)
-    await Task.yield()
-    await Task.yield()
+    await coordinator.awaitPendingSound()
+    await coordinator.awaitPendingPlaybackRead()
+
+    // THE SETUP IS ASSERTED BEFORE ANYTHING IS CONCLUDED FROM IT. Without this
+    // line the expectation below is satisfied by a button that was never shown.
+    #expect(coordinator.isPlaying == true,
+            "the skip button must be visible before a pause can hide it")
 
     // A pause this app did not cause. The coordinator must follow the player.
     player.pause()
     player.announceStatusChange()
+    await coordinator.awaitPendingPlaybackRead()
     #expect(coordinator.isPlaying == false,
             "a pause from Control Centre must hide the skip button")
   }

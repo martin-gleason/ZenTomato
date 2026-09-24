@@ -49,6 +49,7 @@ Status is what the unit's own plan file declares. What has landed in git is deli
 | F4d | feature | — | `docs/plans/F4d.md` | 0 planned |
 | F4e | feature | — | `docs/plans/F4e.md` | 5 planned |
 | F4f | feature | — | `docs/plans/F4f.md` | 5 planned |
+| F4g | feature | **built and merged as a defect fix.** No gate: the app was failing to do what the contract already… | `docs/plans/F4g.md` | 0 planned |
 | F5 | feature | — | `docs/plans/F5.md` | 4 planned |
 | F6 | feature | — | `docs/plans/F6.md` | 5 planned |
 | F6b | feature | — | `docs/plans/F6b.md` | 7 planned |
