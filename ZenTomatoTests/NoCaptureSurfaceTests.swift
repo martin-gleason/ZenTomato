@@ -319,6 +319,7 @@ struct NoCaptureSurfaceTests {
         title: "Draft the Q3 summary",
         projectID: "p1",
         projectName: "Deep work",
-        sectionID: "s1")
+        sectionID: "s1",
+        priority: .urgent)
     ])
 }

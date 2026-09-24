@@ -162,7 +162,8 @@ struct TodoistSessionTrafficTests {
         title: "Reply to Anna",
         projectID: "p1",
         projectName: "Deep work",
-        sectionID: nil)
+        sectionID: nil,
+        priority: nil)
     ])
 
   /// Reads the whole request log back and asserts the rule.

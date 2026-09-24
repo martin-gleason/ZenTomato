@@ -323,9 +323,21 @@ struct SprintCompletionsTests {
       timerView.contains("SprintBoundaryObserver.sprintHasEnded("),
       "D21b's write is not gated on a live sprint: an id recorded at rest withholds that task for an extra sprint.")
 
+    // THE READ IS NOW IN TWO HALVES, AND BOTH ARE PINNED. `F13` moved the model
+    // construction out of `PlanBuilderView` — it sat at the 400-line cap — so the
+    // environment lookup stayed in the view and the filter went with the builder.
+    // Both halves still fail open, which is the property this test exists for:
+    // `completedThisSprint?.taskIDs` is nil when the environment is missing, and
+    // `nil?.contains(id) != true` is `true`, so every task is kept.
     let planBuilder = try String(contentsOf: root.appending(path: "ZenTomato/Views/PlanBuilderView.swift"))
     #expect(
-      planBuilder.contains("completedThisSprint?.contains("),
+      planBuilder.contains("completedThisSprint?.taskIDs"),
+      "D21b's read is not wired into the picker: the set never reaches the builder.")
+
+    let builder = try String(
+      contentsOf: root.appending(path: "ZenTomato/Views/PickerScreenModel+Build.swift"))
+    #expect(
+      builder.contains("completedThisSprint?.contains("),
       "D21b's only read is gone: the picker would offer back work already done.")
   }
 

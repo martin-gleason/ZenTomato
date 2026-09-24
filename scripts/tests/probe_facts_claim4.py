@@ -5,7 +5,8 @@ WHY THIS EXISTS. `CLAIM 4` shipped broken and the owner found it, not a test. Th
 embedded Python compiled — `scripts/check_embedded_python.py` said so — but the
 shell feeding it had `sed '\\$d'` with a stray backslash, so the body came back
 EMPTY and python died in a `JSONDecodeError` on the owner's machine. That is the
-second-artefact problem (`D46`) one layer down: the thing a human is told to run
+second-artefact problem one layer down — `docs/conventions.md`, *validate every
+artefact, not just the primary one*: the thing a human is told to run
 was never run by anything.
 
 It cannot be run in CI against the real API, because it needs the owner's token.

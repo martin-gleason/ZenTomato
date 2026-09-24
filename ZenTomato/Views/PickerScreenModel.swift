@@ -71,6 +71,19 @@ struct PickerScreenModel: Sendable {
 
     /// Which section it sits in, or `nil` when it is loose in the project.
     let sectionID: String?
+
+    /// Todoist's priority for this task, already read into a level (`F13`).
+    ///
+    /// Converted once here rather than in a view, for the same reason as
+    /// `Project.tint`: the wire number is data and the level is a reading of it,
+    /// and a screen that did the reading itself would be a screen deciding what
+    /// somebody else's number means.
+    ///
+    /// `nil` for an absent column or a number outside `1...4`. In practice every
+    /// task Todoist sends carries a priority — all 50 did on the account
+    /// `CLAIM 4` was run against — so the ordinary "no flag" case is
+    /// `.natural`, not this.
+    let priority: TodoistPriority?
   }
 
   /// One heading inside a project, and the tasks under it.
