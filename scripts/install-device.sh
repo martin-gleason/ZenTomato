@@ -63,19 +63,56 @@ try:
     devices = json.load(open(sys.argv[1]))["result"]["devices"]
 except Exception:
     devices = []
-for d in devices:
-    hardware = d.get("hardwareProperties", {})
-    if "iPhone" in (hardware.get("marketingName") or ""):
-        properties = d.get("deviceProperties", {})
-        # The name is printed with non-breaking spaces so that a phone called
-        # "Marty's iPhone" stays ONE whitespace-delimited field and does not
-        # shift the OS version into the wrong variable. Undone below.
-        print(hardware.get("udid", ""),
-              (properties.get("name") or "iPhone").replace(" ", "\u00a0"),
-              properties.get("osVersionNumber", "?"))
-        break
+# A SIMULATOR IS NOT A DEVICE, AND `devicectl list devices` LISTS BOTH.
+# This picked the first entry whose marketing name contained "iPhone" and broke,
+# so on a Mac with an iPhone simulator it chose the simulator — built for
+# `Debug-iphonesimulator` and then died with "the build succeeded but produced no
+# .app bundle", which names the symptom and not the cause. It cost the owner a
+# device check.
+#
+# `transportType == "sameMachine"` is what separates them. `hardwareProperties`
+# has no usable flag: `isSimulated` is ABSENT on every entry, simulator and phone
+# alike, so a truthiness test on it selects nothing and a falsiness test selects
+# everything.
+def physical_iphones(devices):
+    for d in devices:
+        hardware = d.get("hardwareProperties", {})
+        connection = d.get("connectionProperties", {})
+        if connection.get("transportType") == "sameMachine":
+            continue
+        if "iPhone" in (hardware.get("marketingName") or ""):
+            yield d
+
+
+candidates = list(physical_iphones(devices))
+if candidates:
+    # Prefer one the Mac can currently reach, but do not require it: a phone that
+    # is merely paired still builds, and step 4 gives a specific error if the
+    # install itself cannot reach it.
+    candidates.sort(
+        key=lambda d: d.get("connectionProperties", {}).get("tunnelState") != "connected")
+    chosen = candidates[0]
+    hardware = chosen.get("hardwareProperties", {})
+    properties = chosen.get("deviceProperties", {})
+    # The name is printed with non-breaking spaces so that a phone called
+    # "Marty's iPhone" stays ONE whitespace-delimited field and does not
+    # shift the OS version into the wrong variable. Undone below.
+    print(hardware.get("udid", ""),
+          (properties.get("name") or "iPhone").replace(" ", "\u00a0"),
+          properties.get("osVersionNumber", "?"))
 else:
-    print("", "", "")
+    # Say WHICH failure it is. "No iPhone" and "only simulators" have different
+    # fixes, and the previous version could report neither because it never knew
+    # the difference.
+    simulated = sum(
+        1 for d in devices
+        if d.get("connectionProperties", {}).get("transportType") == "sameMachine"
+        and "iPhone" in (d.get("hardwareProperties", {}).get("marketingName") or ""))
+    # `NONE` AND NOT THREE EMPTY FIELDS. `read -r udid name os note` strips leading
+    # whitespace, so printing `"" "" "" note` put the NOTE into `udid`, the empty
+    # check passed, and the build ran with `-destination id=simulators=2`. An
+    # explicit sentinel cannot collapse.
+    print("NONE", "-", "-", f"simulators={simulated}")
 PYEOF
 )"; then
   die "could not read the list of attached devices." \
@@ -84,9 +121,19 @@ PYEOF
       "  xcode-select --install"
 fi
 
-read -r udid name os <<<"$device_line" || true
+read -r udid name os note <<<"$device_line" || true
 
-if [[ -z "${udid:-}" ]]; then
+if [[ -z "${udid:-}" || "${udid}" == "NONE" ]]; then
+  if [[ "${note:-}" == simulators=* && "${note#simulators=}" != "0" ]]; then
+    die "no PHYSICAL iPhone is paired with this Mac — only ${note#simulators=} simulator(s)." \
+        "" \
+        "A simulator cannot be the target of a device build, and choosing one is" \
+        "how this script used to fail with 'the build succeeded but produced no" \
+        ".app bundle'." \
+        "" \
+        "Plug the phone in with a cable, unlock it, and tap Trust when it asks." \
+        "For a simulator build instead:  make test"
+  fi
   die "no iPhone is paired with this Mac." \
       "" \
       "Plug the phone in with a cable, unlock it, and tap Trust when it asks." \
