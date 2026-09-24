@@ -83,6 +83,21 @@ api_get() {
 say() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 verdict() { printf '  VERDICT: %s\n' "$1"; }
 
+# `api_get` appends the HTTP status on its own last line, so every caller has to
+# split the response into a body and a code. That split was written out seven
+# times as `printf '%s' "$x" | sed '$d'`, and on 2026-09-24 two of the seven
+# shipped as `sed '\$d'` — a stray backslash that survived into the file, which
+# sed rejects as an unterminated regular expression. The body came back EMPTY,
+# python was handed nothing, and CLAIM 4 died in a JSONDecodeError on the owner's
+# machine rather than in anybody's test.
+#
+# So it is one definition with one place to get wrong, and `scripts/tests/run-script-tests.sh`
+# exercises both halves against a fixture. `check_embedded_python.py` could never
+# have caught this: the embedded PYTHON compiled perfectly — it was the shell
+# feeding it that was broken, which is the second-artefact problem again.
+body() { printf '%s' "$1" | sed '$d'; }
+code() { printf '%s' "$1" | tail -n1; }
+
 # NOT `2>/dev/null`, since 2026-09-24. It swallowed stderr, and that hid a real
 # defect for as long as this script has existed: CLAIM 2's phase-2 verdict block
 # used a backslash-escaped quote inside an f-string expression, which no Python
@@ -98,8 +113,8 @@ if [ "${phase2}" = false ]; then
 say "CLAIM 1 — does an archived project still resolve by id?"
 
 archived_body="$(api_get "${API}/projects/archived?limit=200")"
-archived_code="$(printf '%s' "${archived_body}" | tail -n1)"
-archived_json="$(printf '%s' "${archived_body}" | sed '$d')"
+archived_code="$(code "${archived_body}")"
+archived_json="$(body "${archived_body}")"
 
 if [ "${archived_code}" != "200" ]; then
   echo "  GET /projects/archived returned HTTP ${archived_code}" >&2
@@ -129,8 +144,8 @@ print(d["results"][0].get("name",""))')"
   echo "  Testing archived project \"${first_name}\"."
 
   single="$(api_get "${API}/projects/${first_id}")"
-  single_code="$(printf '%s' "${single}" | tail -n1)"
-  single_json="$(printf '%s' "${single}" | sed '$d')"
+  single_code="$(code "${single}")"
+  single_json="$(body "${single}")"
   echo "  GET /projects/{id} → HTTP ${single_code}"
 
   if [ "${single_code}" = "200" ]; then
@@ -154,8 +169,8 @@ fi
 say "CLAIM 3 — do old all-numeric task ids still resolve?"
 
 tasks_body="$(api_get "${API}/tasks?limit=200")"
-tasks_code="$(printf '%s' "${tasks_body}" | tail -n1)"
-tasks_json="$(printf '%s' "${tasks_body}" | sed '$d')"
+tasks_code="$(code "${tasks_body}")"
+tasks_json="$(body "${tasks_body}")"
 
 if [ "${tasks_code}" = "200" ]; then
   printf '%s' "${tasks_json}" | json '
@@ -178,7 +193,7 @@ fi
 if [ -n "${legacy_task_id}" ]; then
   echo "  Testing supplied id ${legacy_task_id}:"
   one="$(api_get "${API}/tasks/${legacy_task_id}")"
-  one_code="$(printf '%s' "${one}" | tail -n1)"
+  one_code="$(code "${one}")"
   echo "  GET /tasks/{id} → HTTP ${one_code}"
   if [ "${one_code}" = "200" ]; then
     verdict "LEGACY ID RESOLVES — old ids are still keys."
@@ -194,8 +209,8 @@ sync1="$(curl -sS --max-time 20 \
   -H @<(printf 'Authorization: Bearer %s\n' "${TODOIST_TOKEN}") \
   -d 'sync_token=*' -d 'resource_types=["projects"]' \
   -w '\n%{http_code}' "${API}/sync")"
-sync1_code="$(printf '%s' "${sync1}" | tail -n1)"
-sync1_json="$(printf '%s' "${sync1}" | sed '$d')"
+sync1_code="$(code "${sync1}")"
+sync1_json="$(body "${sync1}")"
 
 if [ "${sync1_code}" != "200" ]; then
   echo "  POST /sync → HTTP ${sync1_code}. Cannot test tombstones." >&2
@@ -235,8 +250,8 @@ sync2="$(curl -sS --max-time 20 \
   -H @<(printf 'Authorization: Bearer %s\n' "${TODOIST_TOKEN}") \
   --data-urlencode "sync_token=${stored}" -d 'resource_types=["projects"]' \
   -w '\n%{http_code}' "${API}/sync")"
-sync2_code="$(printf '%s' "${sync2}" | tail -n1)"
-sync2_json="$(printf '%s' "${sync2}" | sed '$d')"
+sync2_code="$(code "${sync2}")"
+sync2_json="$(body "${sync2}")"
 
 echo "  POST /sync (incremental) → HTTP ${sync2_code}"
 if [ "${sync2_code}" != "200" ]; then exit 1; fi
@@ -289,8 +304,8 @@ if [ "${phase2}" = false ]; then
 say "CLAIM 4 — are colour and priority on the responses, and which way does priority run?"
 
 projects_body="$(api_get "${API}/projects?limit=200")"
-projects_code="$(printf '%s' "${projects_body}" | tail -n1)"
-projects_json="$(printf '%s' "${projects_body}" | sed '\$d')"
+projects_code="$(code "${projects_body}")"
+projects_json="$(body "${projects_body}")"
 
 if [ "${projects_code}" != "200" ]; then
   echo "  GET /projects returned HTTP ${projects_code}" >&2
@@ -319,8 +334,8 @@ else:
     print("  -> Each name above must exist in TodoistTint, or it draws as .unknown.")'
 
 tasks4_body="$(api_get "${API}/tasks?limit=200")"
-tasks4_code="$(printf '%s' "${tasks4_body}" | tail -n1)"
-tasks4_json="$(printf '%s' "${tasks4_body}" | sed '\$d')"
+tasks4_code="$(code "${tasks4_body}")"
+tasks4_json="$(body "${tasks4_body}")"
 
 if [ "${tasks4_code}" != "200" ]; then
   echo "  GET /tasks returned HTTP ${tasks4_code}" >&2

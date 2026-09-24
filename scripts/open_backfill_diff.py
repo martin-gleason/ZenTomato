@@ -67,7 +67,7 @@ OPEN = ROOT / "docs/reviews/OPEN.md"
 DEFAULT_REV = "62fce7c"
 
 RUN = 3          # an unaligned run this long is content, not a reflow
-PAIR_FLOOR = 0.45  # below this, no after row is this row's counterpart at all
+PAIR_FLOOR = 0.55  # below this coverage, no after row is this row's counterpart
 
 # Lost runs ruled BY HAND as paraphrase, keyed by the id that carries them. Each
 # string is the exact run the alignment reports; change the wording and the run
@@ -115,46 +115,65 @@ def bare_id(cell: str) -> str:
     return cell.replace("~", "").strip()
 
 
-def pair(before: list[list[str]], after: list[list[str]]) -> list[list[str] | None]:
-    """One after row per before row: best text match, with a thumb on the id.
+def covered(own: list[str], theirs: list[str]) -> float:
+    """What fraction of `own`'s words align, in order, inside `theirs`.
 
-    NOT "the first row with the same id", which crossed the two `O23`s - the
-    struck bell row claimed the progress-bar row's id and the progress-bar row
-    was then reported GONE. A shared id is evidence and not an answer, because
-    the ids in the before-file collide; the text decides, and the id breaks ties.
-
-    An after row is claimed at most once. Without that, two before rows both
-    match the closest neighbour and the second one's disappearance is reported as
-    a rewording of the first.
+    NOT `SequenceMatcher.ratio()`, WHICH IS A SIMILARITY AND THEREFORE SYMMETRIC.
+    Ratio falls when the candidate grows, so `O12` — which gained 850 characters
+    of live-token results and lost nothing — scored under the pairing floor
+    against its own former self and was reported GONE. Coverage asks the question
+    this check actually has: is every word of the old row still here? Appending to
+    a row cannot lower it, and deleting from one does.
     """
-    ID_BONUS = 0.15
+    if not own:
+        return 1.0
+    sm = difflib.SequenceMatcher(None, own, theirs)
+    return sum(b.size for b in sm.get_matching_blocks()) / len(own)
+
+
+def pair(before: list[list[str]], after: list[list[str]]) -> list[list[str] | None]:
+    """One after row per before row: best coverage, with a thumb on a shared id.
+
+    Two false pairings were fixed here, in opposite directions, and both were
+    found by the check firing on a change that had lost nothing:
+
+    * `O23` appears TWICE in the before-file — a struck bell row and an open
+      progress-bar row — so taking "the row with this id" gave the bell row the
+      progress-bar row's counterpart and reported the other GONE. The id cannot
+      simply decide.
+    * `O12` grew from 250 characters to 1100, and a length-sensitive similarity
+      put it under the floor against itself. The text cannot simply decide either.
+
+    So: coverage decides, a shared id adds a small margin for ties, and an after
+    row is claimed at most once — without that, two before rows both match the
+    closest neighbour and the second one's disappearance reads as a rewording of
+    the first.
+    """
+    ID_MARGIN = 0.10
     taken: set[int] = set()
-    out: list[list[str] | None] = []
+    chosen: dict[int, list[str] | None] = {}
     # Longest rows first: they discriminate best, and a short row left to choose
     # from what remains cannot steal a long row's counterpart.
     order = sorted(range(len(before)), key=lambda i: -len(" ".join(before[i][1:])))
-    chosen: dict[int, list[str] | None] = {}
     for i in order:
         row = before[i]
         own = words(" ".join(row[1:]))
         key = bare_id(row[0])
-        best, score = None, 0.0
+        best, score = None, -1.0
         for j, cand in enumerate(after):
             if j in taken:
                 continue
-            r = difflib.SequenceMatcher(None, own, words(" ".join(cand[1:]))).ratio()
+            s = covered(own, words(" ".join(cand[1:])))
             if bare_id(cand[0]) == key:
-                r += ID_BONUS
-            if r > score:
-                best, score = j, r
+                s += ID_MARGIN
+            if s > score:
+                best, score = j, s
         if best is not None and score >= PAIR_FLOOR:
             taken.add(best)
             chosen[i] = after[best]
         else:
             chosen[i] = None
-    for i in range(len(before)):
-        out.append(chosen[i])
-    return out
+    return [chosen[i] for i in range(len(before))]
 
 
 def lost_runs(cells: list[str], counterpart: list[str]) -> list[str]:
