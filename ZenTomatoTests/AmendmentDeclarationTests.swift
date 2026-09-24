@@ -6,7 +6,7 @@ import Testing
 /// **WHY A THIRD FILE.** `.swiftlint.yml` sets no `file_length`, so SwiftLint's default 400-line cap
 /// applies and `scripts/check-lint.sh` passes `--strict`, which makes it an error. The same budget
 /// that pushed the ratchet out of `DeltaIntegrityTests.swift` pushes the declaration rule out of
-/// `AmendmentRatchetTests.swift`. Widening the config is the silence-the-instrument move this
+/// `DeltaIntegrityTests.swift`. Widening the config is the silence-the-instrument move this
 /// project refuses, so the code moves instead.
 ///
 /// It is also the better seam: `AmendmentRatchetTests` answers *"is this delta's text still in its
@@ -201,5 +201,56 @@ struct AmendmentDeclarationTests {
     #expect(
       DeltaIntegrityTests.watchedBaseline(named: "v1.5.md")?.document == nil,
       "'v1.5.md' is not a watched baseline; resolution must be on the last path component.")
+  }
+  /// **Every watched baseline's `appliedList` must be a file that actually carries the list.**
+  ///
+  /// THIS EXISTS BECAUSE THE DECLARATION WAS INERT, AND BOTH ROWS WERE. Pointing either
+  /// `appliedList` at `docs/specs/NO-SUCH-FILE.md` left the whole suite green: `appliedAmendments`
+  /// returns an empty set for an unreadable path, and the outstanding count for both baselines
+  /// happens not to depend on suppression today. So the field could name anything — a typo, a moved
+  /// file, a path that never existed — and nothing would say so.
+  ///
+  /// That was found while `D44` moved v1.5's list from a file beside the spec to the spec itself
+  /// (`O45`). The move is correct, and **nothing in the suite could tell whether it had been made
+  /// at all**, which is the same shape as a hook that has never been seen to fail.
+  ///
+  /// It asserts the thing the field promises rather than the thing it is used for: the file exists,
+  /// it carries the heading at the start of a line — `C32-M6`'s rule — and the ids parse. An empty
+  /// list is legitimate for a baseline that has never been amended; neither of these is that, and if
+  /// one becomes it, this assertion is the right place to say so deliberately.
+  @Test("everyWatchedBaselineDeclaresAReadableAppliedList")
+  func everyWatchedBaselineDeclaresAReadableAppliedList() throws {
+    for baseline in DeltaIntegrityTests.watchedBaselines {
+      let url = DeltaIntegrityTests.repositoryRoot.appending(path: baseline.appliedList)
+      let text = try #require(
+        try? String(contentsOf: url, encoding: .utf8),
+        Comment(rawValue: "\(baseline.document)'s appliedList names \(baseline.appliedList), "
+                + "which cannot be read. An unreadable path parses as an empty list and says nothing."))
+
+      #expect(
+        ("\n" + text).contains("\n## Amendments applied"),
+        Comment(rawValue: "\(baseline.appliedList) has no `## Amendments applied` heading at the "
+                + "start of a line, so the parser reads nothing from it."))
+
+      let ids = try DeltaIntegrityTests.appliedAmendments(in: baseline.appliedList)
+      #expect(
+        ids.isEmpty == false,
+        Comment(rawValue: "\(baseline.appliedList) parses to no ids. Both baselines carry "
+                + "amendments today; an empty list here means the section moved or was emptied."))
+    }
+  }
+
+  /// **v1.5's list lives in the baseline, and `SPEC.md`'s always did** — `D44`, `O45`.
+  ///
+  /// Stated as its own assertion because it is the whole content of that decision: before it, the
+  /// two rows differed, and the difference was the thing the owner was asked to rule on.
+  @Test("bothBaselinesCarryTheirOwnAppliedList")
+  func bothBaselinesCarryTheirOwnAppliedList() {
+    for baseline in DeltaIntegrityTests.watchedBaselines {
+      #expect(
+        baseline.appliedList == baseline.document,
+        Comment(rawValue: "\(baseline.document) reads its applied list from "
+                + "\(baseline.appliedList). D44 ruled that a baseline carries its own."))
+    }
   }
 }

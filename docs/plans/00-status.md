@@ -77,13 +77,13 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 
 | Register | Rows | Open | Unknown | Closed |
 |---|---|---|---|---|
-| Decisions (`D`) | 45 | 2 | 0 | 43 |
+| Decisions (`D`) | 47 | 2 | 0 | 45 |
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
-| Owner items (`O`) | 50 | 24 | 0 | 26 |
+| Owner items (`O`) | 51 | 23 | 0 | 28 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
 | Mutations (`M`) | 150 | 42 | 0 | 108 |
 | Chores (`C`) | 30 | 5 | 9 | 16 |
-| Agent items (`A`) | 20 | 8 | 0 | 12 |
+| Agent items (`A`) | 21 | 8 | 0 | 13 |
 
 `Unknown` is not a third kind of open. It means the source document said nothing about status, so this page will not guess — the row is a question for the owner.
 
@@ -92,13 +92,13 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Register | Status | Count |
 |---|---|---|
 | `D` | proposed | 2 |
-| `D` | ratified | 41 |
+| `D` | ratified | 43 |
 | `D` | rejected | 1 |
 | `D` | resolved | 1 |
 | `RR` | open | 4 |
-| `O` | closed | 26 |
+| `O` | closed | 28 |
 | `O` | held | 1 |
-| `O` | open | 23 |
+| `O` | open | 22 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
 | `M` | closed | 108 |
@@ -106,7 +106,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `C` | closed | 16 |
 | `C` | open | 5 |
 | `C` | unknown | 9 |
-| `A` | closed | 12 |
+| `A` | closed | 13 |
 | `A` | open | 8 |
 
 ## Hooks
@@ -155,7 +155,7 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | Owner | ID | P | Status | Item |
 |---|---|---|---|---|
 | owner | D30 | P0 | proposed | A watch-face complication |
-| owner | D43 | — | proposed | The shape screen lets you set the number of pomodoros |
+| owner | D45 | — | proposed | A silent alarm and a haptic on the watch when the phone's sound is off |
 | unassigned | RR1 | P0 | open | iCloud/CloudKit sync would put the log where a conflict can lose it |
 | unassigned | RR2 | P0 | open | Changing the bundle identifier orphans the SwiftData store holding… |
 | unassigned | RR3 | P1 | open | The shape cursor and `TimerState` advance non-atomically, and control… |
@@ -172,18 +172,17 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | owner | O30 | P0 | open | The locked settings screen and the sound preview, on a phone |
 | owner | O31 | P3 | open | The watch alarm's button says Stop, and ours says Done — PARKED… |
 | owner | O32 | P1 | open | A watch-face complication does not exist |
-| owner | O33 | P1 | open | The watch makes a noise when the phone is told not to |
 | owner | O34 | P1 | open | From the lock screen, slide-to-stop worked |
 | owner | O36 | P1 | open | The zenpom Focus runbook, followed once on the phone |
 | owner | O37 | P1 | held | The shape screen, on a phone — F8-T3's device check |
 | owner | O39 | P2 | open | Does the absorption preset control earn its place? |
 | owner | O40 | P2 | open | The App Group capability, in the developer portal |
 | owner | O43 | P2 | open | F8-M7 and F8-M8 each name two different mutations |
-| owner | O45 | P2 | open | Whether v1.5's amendment ledger belongs inside the baseline |
 | owner | O46 | P1 | open | The v1.5 ratchet still cannot see D33, the delta it was built for |
 | owner | O47 | P1 | open | A refused dedup read drops the wrist tap, and `Distraction.id` still… |
 | owner | O49 | P2 | open | A wrong JSON type on a mirrored field still fails the whole page |
 | owner | O50 | P2 | open | The owner's real account data is committed to the tree |
+| owner | O51 | P2 | open | Music did not resume after the break, with a playlist selected |
 | unassigned | H5 | — | open | the lint gate |
 | unassigned | H6 | — | open | the MusicKit App ID check |
 | unassigned | H7 | — | open | the register renders as tables |
@@ -261,4 +260,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-104 open register rows.
+103 open register rows.

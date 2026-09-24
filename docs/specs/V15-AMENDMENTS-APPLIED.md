@@ -7,9 +7,10 @@ it could change. `SPEC.md` carries its own `## Amendments applied` list because 
 *about* the baseline, in the same relationship `docs/specs/AMENDMENT-BASELINE.txt` already has to
 `SPEC.md`. Created by `C32` under `D41`.
 
-Whether this list should one day move inside `zenpom-v1.5.md` is an **open question for the owner**,
-recorded in `docs/chores/C32.md`. It would be an edit to a ratified baseline and would need a `D<n>`
-of its own.
+~~Whether this list should one day move inside `zenpom-v1.5.md` is an **open question for the
+owner**.~~ **ANSWERED: `D44`, ratified 2026-09-24 — it moved.** It was an edit to a ratified baseline
+and it needed a `D<n>` of its own, which is exactly what it got. `O45` was the row that carried the
+question.
 
 `docs/specs/V15-AMENDMENT-BASELINE.txt` counts what is still outstanding, and
 `DeltaIntegrityTests.everyRatifiedV15AmendmentIsApplied` fails if that number grows.
@@ -21,9 +22,18 @@ self-close — where an applied amendment still matches on an incidental fragmen
 that case today, so the outstanding count **does** currently depend on this list. Do not read this
 file as decorative.
 
-## Amendments applied
+## The applied amendments, and what each one changed
 
-D31 D33
+**THE LIST ITSELF NOW LIVES IN THE BASELINE.** `D44`, ratified by the owner 2026-09-24, moved
+`## Amendments applied` into `docs/specs/zenpom-v1.5.md`, so `SPEC.md` and v1.5 are now declared
+identically and `AmendmentRatchetTests` reads both lists from the specs themselves.
+
+**This heading is deliberately not `## Amendments applied`.** `C32-M6` is the mutation for a parser
+that matched that string anywhere in a document and read the ids out of a passing *mention* of it
+instead of the real section. Two live lists would be that defect with the safety catch removed, so
+this file keeps the evidence and holds no list.
+
+The ids are `D31` and `D33`; the authority for that is the spec, not this file.
 
 ## The evidence, one line each
 
