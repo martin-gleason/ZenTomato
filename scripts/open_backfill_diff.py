@@ -91,6 +91,10 @@ REWORDED: dict[str, tuple[str, ...]] = {
            "got the strikethrough which is exactly the second intake path failure docs "
            "conventions md warns about one caveat kept rather than smoothed over",),
     "O5": ("same staleness as",),
+    # Pre-existing, and only visible once `D44` grew the row: the pinned file said
+    # "if the owner wants the same shape for v1.5" where the register says "The
+    # owner may prefer the same shape for v1.5". Same clause, reworded before today.
+    "O45": ("if the owner wants",),
 }
 
 
