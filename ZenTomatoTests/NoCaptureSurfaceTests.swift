@@ -305,9 +305,9 @@ struct NoCaptureSurfaceTests {
 
   private static let corpus = PickerScreenModel(
     projects: [
-      PickerScreenModel.Project(id: "p1", name: "Deep work", openTaskCount: 1),
-      PickerScreenModel.Project(id: "p3", name: "Someday", openTaskCount: 0),
-      PickerScreenModel.Project(id: "p4", name: "Errands", openTaskCount: 0)
+      PickerScreenModel.Project(id: "p1", name: "Deep work", openTaskCount: 1, tint: .berryRed),
+      PickerScreenModel.Project(id: "p3", name: "Someday", openTaskCount: 0, tint: .unknown),
+      PickerScreenModel.Project(id: "p4", name: "Errands", openTaskCount: 0, tint: .teal)
     ],
     sections: [
       PickerScreenModel.Section(id: "s1", name: "This week", projectID: "p1"),

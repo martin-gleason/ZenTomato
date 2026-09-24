@@ -37,6 +37,20 @@ struct PickerScreenModel: Sendable {
     /// Todoist endpoints return active objects only, so it is a count of open
     /// tasks by construction rather than by filtering.
     let openTaskCount: Int
+
+    /// The project's own colour, as Todoist named it (`F13`).
+    ///
+    /// **A tint and not a name, because the screen may not do the lookup.** The
+    /// mirror stores the string Todoist sent; turning it into something paintable
+    /// is the token layer's job, and a view that called `TodoistTint(todoistName:)`
+    /// itself would be a screen deciding what a piece of data looks like. So the
+    /// conversion happens once, where this value is built, and the row draws what
+    /// it is handed.
+    ///
+    /// Never optional. A project whose colour Todoist did not send is
+    /// `.unknown`, which draws Todoist's own default — the swatch is always
+    /// there, so the rows do not jump about depending on somebody's account.
+    let tint: TodoistTint
   }
 
   /// One section inside a project.
@@ -252,6 +266,22 @@ struct PickerScreenModel: Sendable {
   /// Nothing is sorted here. The sections and the tasks arrive in Todoist's own
   /// order, which the mirror copied and this keeps — inventing an order is
   /// exactly what mirroring exists to avoid.
+  /// The tint of one project, for a screen that knows an id and not a project
+  /// (`F13`).
+  ///
+  /// `TaskPickerView` is handed a project id and a name by its route, and adding
+  /// a third payload to that route to carry a colour would put presentation into
+  /// navigation. So the lookup lives here, where it is a plain function of the
+  /// model and is read by a test with no screen behind it.
+  ///
+  /// `nil` when the id names no project the mirror holds — which happens if the
+  /// project was deleted in Todoist while this screen was open. The heading then
+  /// draws no swatch, rather than drawing a default one that would claim the
+  /// project still exists.
+  func tint(ofProject projectID: String) -> TodoistTint? {
+    projects.first { $0.id == projectID }?.tint
+  }
+
   func groups(inProject projectID: String) -> [TaskGroup] {
     let mine = tasks.filter { $0.projectID == projectID }
     let mySections = sections.filter { $0.projectID == projectID }

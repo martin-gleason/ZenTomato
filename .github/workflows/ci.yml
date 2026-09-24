@@ -145,6 +145,11 @@ jobs:
       - name: The status page is generated, not hand-written
         run: make check-status
 
+      - name: Embedded Python in the shell scripts compiles
+        # One of check-todoist-facts.sh's eleven embedded programs had never
+        # compiled, and the helper running them discarded stderr.
+        run: make check-embedded-python
+
       - name: Generating OPEN.md lost no row and no row's text
         # C37 made OPEN.md generated. This is the diff that says nothing was lost,
         # and it was added to `make checks` without being added here - CI

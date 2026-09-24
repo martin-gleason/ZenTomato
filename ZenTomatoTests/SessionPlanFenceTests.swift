@@ -103,10 +103,28 @@ struct SessionPlanFenceTests {
   /// task's `due` object; one derived boolean is mirrored and the object itself
   /// is not, which is the argument D21 had with `F3-contract.md` §3.2's
   /// not-mirrored table and which is recorded in that document.
+  ///
+  /// **`colorName` and `priority` joined the lists on 2026-09-24, and THIS TEST
+  /// IS WHY THAT WAS NOT A SMALL COMMIT.** `F13` added both columns and the whole
+  /// suite went red here — the fence did its job, which is to make a new column
+  /// an argument with a list somebody reads rather than a line nobody notices.
+  /// Both are fields Todoist sent, both are copies a refresh overwrites in full,
+  /// and both are optional so an existing store migrates without a versioned
+  /// schema. The argument with §3.2 is in `docs/plans/F13.md` §2 and in the
+  /// contract itself, where the two names are struck through with the authority
+  /// named: `docs/specs/zenpom-v1.5.md` lists `F13` in the ratified order and
+  /// lists it as owing no delta.
+  ///
+  /// **`colorName` and not `color`**, because it holds Todoist's colour *name* and
+  /// not a colour. **`priority` is the number on the wire and nothing else** — no
+  /// level, no direction — because which end of Todoist's range is urgent is
+  /// `F13-T5`'s to establish against a real account.
   @Test("theLocalCopyHasNoInventedColumns")
   func theLocalCopyHasNoInventedColumns() throws {
     let projects = try #require(Schema([CachedProject.self]).entities.first)
-    #expect(Set(projects.properties.map(\.name)) == ["id", "name", "childOrder", "syncedAt"])
+    #expect(Set(projects.properties.map(\.name)) == [
+      "id", "name", "childOrder", "syncedAt", "colorName"
+    ])
 
     let sections = try #require(Schema([CachedSection.self]).entities.first)
     #expect(Set(sections.properties.map(\.name)) == [
@@ -115,7 +133,8 @@ struct SessionPlanFenceTests {
 
     let tasks = try #require(Schema([CachedTask.self]).entities.first)
     #expect(Set(tasks.properties.map(\.name)) == [
-      "id", "content", "projectID", "sectionID", "childOrder", "syncedAt", "isRecurring"
+      "id", "content", "projectID", "sectionID", "childOrder", "syncedAt", "isRecurring",
+      "priority"
     ])
   }
 

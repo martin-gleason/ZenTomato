@@ -202,7 +202,8 @@ struct PlanBuilderView: View {
         PickerScreenModel.Project(
           id: project.id,
           name: project.name,
-          openTaskCount: countsByProject[project.id] ?? 0)
+          openTaskCount: countsByProject[project.id] ?? 0,
+          tint: TodoistTint(todoistName: project.colorName))
       },
       sections: sections.map {
         PickerScreenModel.Section(id: $0.id, name: $0.name, projectID: $0.projectID)

@@ -204,7 +204,9 @@ struct OfflinePickerTests {
   private static func picker(projects: [CachedProject], tasks: [CachedTask]) -> PickerScreenModel {
     PickerScreenModel(
       projects: projects.map {
-        PickerScreenModel.Project(id: $0.id, name: $0.name, openTaskCount: 1)
+        PickerScreenModel.Project(
+          id: $0.id, name: $0.name, openTaskCount: 1,
+          tint: TodoistTint(todoistName: $0.colorName))
       },
       sections: [],
       tasks: tasks.map {

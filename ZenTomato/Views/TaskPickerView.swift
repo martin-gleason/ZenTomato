@@ -75,12 +75,48 @@ struct TaskPickerView: View {
     .refreshable { await onRefresh() }
     .navigationTitle(projectName)
     .navigationBarTitleDisplayMode(.inline)
+    .toolbar { headingWithSwatch }
     .safeAreaInset(edge: .bottom, spacing: Spacing.none) {
       PlanBar(contents: planBar, onOpen: onOpenPlan)
     }
   }
 
   // MARK: Private
+
+  /// The project's name with its own colour beside it (`F13`).
+  ///
+  /// **`navigationTitle` is kept and not replaced.** A principal toolbar item
+  /// changes what is *drawn*; the modifier still supplies the screen's semantic
+  /// title, which is what a back button and VoiceOver's screen announcement read.
+  /// Dropping it to draw a swatch would have traded an accessibility fact for a
+  /// decoration.
+  ///
+  /// **This placement is the one taste call in `F13-T3`**, and the plan argued it
+  /// both ways: the project is not in question on this screen — you are already
+  /// inside it — so the mark carries no information here. It is drawn anyway, for
+  /// continuity with the row you tapped to arrive. It is one modifier to remove.
+  ///
+  /// The swatch is hidden from VoiceOver for the same reason as on a row: it
+  /// duplicates the name, which is right beside it.
+  @ToolbarContentBuilder private var headingWithSwatch: some ToolbarContent {
+    ToolbarItem(placement: .principal) {
+      HStack(spacing: Spacing.xs) {
+        if let tint = picker.tint(ofProject: projectID) {
+          RoundedRectangle(cornerRadius: Radius.sm)
+            .fill(Color(tint))
+            .overlay(
+              RoundedRectangle(cornerRadius: Radius.sm)
+                .strokeBorder(Color(.borderStrong), lineWidth: 1))
+            .frame(width: Spacing.sm, height: Spacing.sm)
+            .accessibilityHidden(true)
+        }
+        Text(projectName)
+          .font(Typography.label)
+          .foregroundStyle(Color(.textPrimary))
+          .lineLimit(1)
+      }
+    }
+  }
 
   /// The headings and their tasks, **worked out by the model** rather than here.
   ///
