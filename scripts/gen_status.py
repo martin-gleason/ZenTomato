@@ -52,6 +52,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 REGISTER = ROOT / "docs/plans/00-register.md"
 STATUS = ROOT / "docs/plans/00-status.md"
+OPEN = ROOT / "docs/reviews/OPEN.md"
 DELTAS = ROOT / "docs/plans/00-deltas.md"
 PLANS_DIR = ROOT / "docs/plans"
 CHORES_DIR = ROOT / "docs/chores"
@@ -209,7 +210,7 @@ def read(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
-def one_line(text: str, limit: int = CELL_LIMIT) -> str:
+def one_line(text: str, limit: int | None = CELL_LIMIT) -> str:
     """Collapse to a single table-safe cell.
 
     Three things, each of which has bitten this page. Pipes are escaped, because
@@ -219,10 +220,17 @@ def one_line(text: str, limit: int = CELL_LIMIT) -> str:
     an ellipsis, because the previous page cut F11's status mid-word at a full
     stop inside bold - "plan written, **awaiting the gate" - which reads as a
     status rather than as damage.
+
+    `limit=None` collapses without truncating, and OPEN.md's rows use it. That
+    file is the prose record, not a chart: `C29` is 15 register rows whose text
+    a truncating extractor cut at ~110 characters, and the first draft of
+    `open_row` reintroduced exactly that at 900 - it clipped `O47` from 3111
+    characters to 910. A limit is right for a fixed-width page and wrong for a
+    document whose whole job is to carry the reasoning.
     """
     text = re.sub(r"\s+", " ", text).strip()
     text = text.replace("|", r"\|")
-    if len(text) <= limit:
+    if limit is None or len(text) <= limit:
         return text
     cut = text[:limit].rsplit(" ", 1)[0].rstrip(" ,;:-")
     return cut + "…"
@@ -533,7 +541,56 @@ def splice_decisions(register_text: str) -> str:
     return "\n".join(lines[:begins[0] + 1] + body + lines[ends[0]:]) + "\n"
 
 
-def generate() -> tuple[str, str]:
+# C37. OPEN.md's two tables are generated from the register; its prose is not.
+#
+# WHY THIS IS A SPLICE AND NOT A REWRITE. `O44` measured what a rewrite would have
+# cost: 16 closed rows and 83 lines of prose lived only in this file, and the prose
+# lives BETWEEN and AFTER the tables - four `###` subsections and a `## Closed`
+# section that no register row can reconstruct. The rows are derived; everything
+# else is the file's own and is never touched.
+OPEN_REGIONS = (("owner", "O"), ("agent", "A"))
+
+
+def open_row(row: dict[str, str]) -> str:
+    """One OPEN.md row from one register row.
+
+    A closed item is struck, which is this file's own convention and the reason a
+    reader can see at a glance what is still live. `From` is a register column as
+    of `C37`; before that it existed only here, which is why generating without it
+    would have dropped the provenance of 67 items.
+
+    NOTHING IS TRUNCATED. The first draft passed limits of 200 and 900 here and
+    silently shortened 15 rows - `O47` lost 2201 characters of the reasoning it
+    exists to carry. `C37-M2` is that bug as a mutation.
+    """
+    rid = row.get("id", "")
+    title = one_line(row.get("title", ""), None)
+    closed = status_of(row) in CLOSED
+    ident = f"~~{rid}~~" if closed else rid
+    shown = f"~~**{title}**~~" if closed else f"**{title}**"
+    return f"| {ident} | {shown} | {row.get('from', '')} | {one_line(row.get('why', ''), None)} |"
+
+
+def splice_open(register_text: str, open_text: str) -> str:
+    """Replace each region's rows, changing no line outside the two spans."""
+    regs = register_rows(register_text)
+    lines = open_text.splitlines()
+    for name, symbol in OPEN_REGIONS:
+        begin, end = f"BEGIN GENERATED: {name}", f"END GENERATED: {name}"
+        scan = blank_fences(lines)
+        b, e = marker_lines(scan, begin), marker_lines(scan, end)
+        if len(b) != 1 or len(e) != 1 or b[0] > e[0]:
+            fail(f"{OPEN.relative_to(ROOT)} has {len(b)} '{begin}' markers and {len(e)} "
+                 f"'END' markers; expected one of each, BEGIN first",
+                 "Nothing was written. Restore the marker pair.")
+        rows = sorted(regs.get(symbol, []), key=lambda r: sort_key(r.get("id", "")))
+        body = ["| # | Item | From | Why it is still open |",
+                "|---|---|---|---|"] + [open_row(r) for r in rows]
+        lines = lines[:b[0] + 1] + body + lines[e[0]:]
+    return "\n".join(lines) + "\n"
+
+
+def generate() -> tuple[str, str, str]:
     """Both artefacts, in the one order that works: splice, then build from the splice.
 
     The region lives in the file this generator READS to build the page. Writing
@@ -544,7 +601,7 @@ def generate() -> tuple[str, str]:
     what goes red.
     """
     spliced = splice_decisions(read(REGISTER))
-    return spliced, build(spliced)
+    return spliced, build(spliced), splice_open(spliced, read(OPEN))
 
 
 def plan_status(path: Path) -> str:
@@ -772,25 +829,29 @@ def main() -> int:
     # artefact rule (D46): a feature can judge its main output rigorously and
     # still emit a second one nothing checks. The FAIL line NAMES THE FILE, which
     # the previous message did not need to do because there was only one.
-    register, page = generate()
+    register, page, openmd = generate()
 
     if not args.check:
         REGISTER.write_text(register, encoding="utf-8")
         STATUS.write_text(page, encoding="utf-8")
-        print(f"gen_status.py: wrote {REGISTER.relative_to(ROOT)}'s decisions region "
-              f"and {STATUS.relative_to(ROOT)}")
+        OPEN.write_text(openmd, encoding="utf-8")
+        print(f"gen_status.py: wrote {REGISTER.relative_to(ROOT)}'s decisions region, "
+              f"{STATUS.relative_to(ROOT)} and {OPEN.relative_to(ROOT)}'s two regions")
         return 0
 
     stale = False
-    for path, fresh in ((REGISTER, register), (STATUS, page)):
+    for path, fresh in ((REGISTER, register), (STATUS, page), (OPEN, openmd)):
         current = read(path)
         if current != fresh:
             report_diff(path, current, fresh)
             stale = True
     if stale:
         return 1
-    print("gen_status.py: OK — 00-register.md's decisions region and 00-status.md "
-          "are up to date.")
+    # It names all three. The message said two while checking three from the hour
+    # OPEN.md became generated, and a success line that under-reports what it
+    # covered is how a reader concludes a file is unguarded when it is guarded.
+    print("gen_status.py: OK — 00-register.md's decisions region, 00-status.md and "
+          "OPEN.md's two regions are up to date.")
     return 0
 
 
