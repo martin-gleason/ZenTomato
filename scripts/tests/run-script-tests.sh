@@ -1232,17 +1232,24 @@ validator_on() {
 # Every negative test has the same three steps: mutate, PROVE THE MUTATION
 # LANDED, then assert. statusCheckCatchesAHandEdit failed the first time it ran
 # for want of the middle step.
+# IT RETURNS 0 EVEN WHEN IT FAILS, and that is deliberate. It is the LAST
+# statement of nine test functions, so a `return 1` made each of those functions
+# return 1, and `set -e` then killed the runner at the top-level call - the exact
+# defect C37-M5 found at the sixteen generator sites, still live here. Trigger
+# that found it: make check_register_rows.py exit 0 unconditionally; the run
+# reported 33 of 44 tests and printed no summary line at all. `fail` has already
+# recorded the failure; the exit status carries nothing further.
 expect_validator_catches() {
   local name="$1" dir="$2" wanted="$3"
   local out
   if out=$(validator_on "$dir"); then
     fail "$name" "the validator passed a register it should have refused" "got: ${out}"
-    return 1
+    return 0
   fi
   if [[ "$out" != *"$wanted"* ]]; then
     fail "$name" "the finding did not say what it was supposed to say" \
       "wanted a message containing: ${wanted}" "got: ${out}"
-    return 1
+    return 0
   fi
   pass "$name"
 }

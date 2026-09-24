@@ -38,7 +38,7 @@ Status is what the unit's own plan file declares. What has landed in git is deli
 | C32 | chore | — | `docs/chores/C32.md` | 0 planned |
 | C33 | chore | built; not merged. **Two adversarial review passes have run.** The first returned four blocking and… | `docs/chores/C33.md` | 0 planned |
 | C34 | chore | — | `docs/chores/C34.md` | 0 planned |
-| C37 | chore | closed 2026-09-24. **Owner:** agent. No user-visible change. | `docs/chores/C37.md` | 0 planned |
+| C37 | chore | closed 2026-09-24, after one adversarial review that found seven blocking defects and was right… | `docs/chores/C37.md` | 0 planned |
 | F1 | feature | — | `docs/plans/F1.md` | 9 planned |
 | F2 | feature | — | `docs/plans/F2.md` | 6 planned |
 | F2b | feature | — | `docs/plans/F2b.md` | 0 planned |
@@ -76,11 +76,11 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 
 | Register | Rows | Open | Unknown | Closed |
 |---|---|---|---|---|
-| Decisions (`D`) | 43 | 1 | 0 | 42 |
+| Decisions (`D`) | 44 | 1 | 0 | 43 |
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
-| Owner items (`O`) | 48 | 25 | 0 | 23 |
+| Owner items (`O`) | 48 | 24 | 0 | 24 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
-| Mutations (`M`) | 125 | 42 | 0 | 83 |
+| Mutations (`M`) | 130 | 42 | 0 | 88 |
 | Chores (`C`) | 29 | 5 | 9 | 15 |
 | Agent items (`A`) | 19 | 7 | 0 | 12 |
 
@@ -91,16 +91,16 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Register | Status | Count |
 |---|---|---|
 | `D` | proposed | 1 |
-| `D` | ratified | 40 |
+| `D` | ratified | 41 |
 | `D` | rejected | 1 |
 | `D` | resolved | 1 |
 | `RR` | open | 4 |
-| `O` | closed | 23 |
+| `O` | closed | 24 |
 | `O` | held | 1 |
-| `O` | open | 24 |
+| `O` | open | 23 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
-| `M` | closed | 83 |
+| `M` | closed | 88 |
 | `M` | open | 42 |
 | `C` | closed | 15 |
 | `C` | open | 5 |
@@ -179,7 +179,6 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | owner | O39 | P2 | open | Does the absorption preset control earn its place? |
 | owner | O40 | P2 | open | The App Group capability, in the developer portal |
 | owner | O43 | P2 | open | F8-M7 and F8-M8 each name two different mutations |
-| owner | O44 | P1 | open | OPEN.md and the register are lossy in OPPOSITE directions, and… |
 | owner | O45 | P2 | open | Whether v1.5's amendment ledger belongs inside the baseline |
 | owner | O46 | P1 | open | The v1.5 ratchet still cannot see D33, the delta it was built for |
 | owner | O47 | P1 | open | A refused dedup read drops the wrist tap, and `Distraction.id` still… |
@@ -259,4 +258,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-103 open register rows.
+102 open register rows.

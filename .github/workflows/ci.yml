@@ -145,6 +145,14 @@ jobs:
       - name: The status page is generated, not hand-written
         run: make check-status
 
+      - name: Generating OPEN.md lost no row and no row's text
+        # C37 made OPEN.md generated. This is the diff that says nothing was lost,
+        # and it was added to `make checks` without being added here - CI
+        # enumerates targets one by one, so a target in `checks` and not in this
+        # file is not a merge gate at all. Needs full history: it reads OPEN.md at
+        # the revision before the migration, which `fetch-depth: 0` above provides.
+        run: make check-open-backfill
+
       - name: Todoist allowlist
         run: make check-todoist
 

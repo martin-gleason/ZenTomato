@@ -19,7 +19,9 @@ on its own, and was always the real reason.)
   `SPEC.md` and needed no file; anything with tasks and a verification step gets one.
 - `docs/reviews/F<N>.md` — adversarial review log, per feature.
 - `docs/reviews/OPEN.md` — every outstanding item from every review, in one table. A *Still open*
-  section inside one review is invisible from the next one.
+  section inside one review is invisible from the next one. **Since `D42` it is a VIEW, generated
+  from `docs/plans/00-register.md` between marker pairs; the register is authoritative and the
+  prose outside the markers is hand-maintained.**
 - `docs/plans/00-deltas.md` — every proposed and ratified change to the contract.
 
 ## Learning dial

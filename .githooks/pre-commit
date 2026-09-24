@@ -49,6 +49,10 @@ run_check "secret scan" ./scripts/check-secrets.sh --staged
 # sentence somebody ADDS believing it a helpful summary, rather than a file
 # somebody would notice was missing. See scripts/check-licence-wording.sh.
 run_check "licence wording" ./scripts/check-licence-wording.sh
+
+# C37 made OPEN.md generated, so a hand-edit inside its markers can lose text
+# that no other check reads. Cheap: one `git show` and a word alignment.
+run_check "OPEN.md lost nothing" python3 scripts/open_backfill_diff.py
 # The register is the mechanism for not losing work items. A malformed row ends
 # the table at that row in strict renderers, and six items vanished from the
 # owner's reader that way — see scripts/check-open-register.sh for the story.
