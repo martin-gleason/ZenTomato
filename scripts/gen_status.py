@@ -248,10 +248,18 @@ def parse_tables(md: str) -> list[tuple[str, list[dict[str, str]]]]:
     # the asymmetry the marker readers had, one mechanism over. Verified to change
     # nothing about today's file: all seven sections match the same rows.
     for line in blank_fences(md.splitlines()):
-        if line.startswith("## "):
+        # `###` IS A BOUNDARY TOO, and that is O48 ruled in code. The owner ruled
+        # 2026-09-24 that docs/conventions.md is CONTRACT, not implementation: it says
+        # "one `##` per register", so the owner-fields overlay cannot be a second
+        # `## Decisions` heading however carefully that heading avoided the `(D)`
+        # suffix. It is now `### Decisions — owner fields` inside the `D` section,
+        # which leaves one `##` per register. register_rows() still keys only on a
+        # `##` heading ending in a symbol, so a sub-heading is addressable without
+        # becoming a register of its own.
+        if line.startswith("## ") or line.startswith("### "):
             if heading:
                 sections.append((heading, rows))
-            heading, header, rows = line[3:].strip(), None, []
+            heading, header, rows = line[4:] if line.startswith("### ") else line[3:].strip(), None, []
             continue
         if not line.lstrip().startswith("|"):
             continue
@@ -424,7 +432,7 @@ def owner_overlay(register_text: str, defined: set[str]) -> dict[str, tuple[str,
             # loss has to be refused here rather than noticed later.
             missing = [c for c in OVERLAY_COLUMNS if c not in row]
             if missing:
-                fail(f"`## {OVERLAY_HEADING}` has no "
+                fail(f"`### {OVERLAY_HEADING}` has no "
                      f"{', '.join('`' + c.upper() + '`' for c in missing)} column: its header "
                      f"reads {' | '.join(sorted(row)) or '(nothing this parser could read)'}.",
                      "The overlay is read by column name, so a renamed column yields an empty",
@@ -433,10 +441,10 @@ def owner_overlay(register_text: str, defined: set[str]) -> dict[str, tuple[str,
                      f"{' | '.join(c.upper() for c in OVERLAY_COLUMNS)}.")
             row_id = row.get("id", "").strip()
             if row_id in overlay:
-                fail(f"`## {OVERLAY_HEADING}` names {row_id} twice.",
+                fail(f"`### {OVERLAY_HEADING}` names {row_id} twice.",
                      "One row per decision, or the second silently wins.")
             if row_id not in defined:
-                fail(f"`## {OVERLAY_HEADING}` names {row_id}, which "
+                fail(f"`### {OVERLAY_HEADING}` names {row_id}, which "
                      f"{DELTAS.relative_to(ROOT)} does not define.",
                      "Owner fields keyed to a decision that does not exist are about to be lost",
                      "in silence. Correct the id, or delete the row if the decision was renumbered.")
@@ -451,7 +459,7 @@ def owner_overlay(register_text: str, defined: set[str]) -> dict[str, tuple[str,
     # ZERO is pinned, because the loss this section exists to prevent is total at
     # zero and nowhere else.
     if not seen_section or not overlay:
-        fail(f"`## {OVERLAY_HEADING}` "
+        fail(f"`### {OVERLAY_HEADING}` "
              f"{'is missing from' if not seen_section else 'names no decision in'} "
              f"{REGISTER.relative_to(ROOT)}.",
              "It is the only place the owner's `P` and Todoist link for a decision live;",

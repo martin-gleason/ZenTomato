@@ -77,7 +77,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 |---|---|---|---|---|
 | Decisions (`D`) | 43 | 1 | 0 | 42 |
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
-| Owner items (`O`) | 32 | 26 | 0 | 6 |
+| Owner items (`O`) | 48 | 25 | 0 | 23 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
 | Mutations (`M`) | 119 | 42 | 0 | 77 |
 | Chores (`C`) | 29 | 6 | 9 | 14 |
@@ -94,9 +94,9 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `D` | rejected | 1 |
 | `D` | resolved | 1 |
 | `RR` | open | 4 |
-| `O` | closed | 6 |
+| `O` | closed | 23 |
 | `O` | held | 1 |
-| `O` | open | 25 |
+| `O` | open | 24 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
 | `M` | closed | 77 |
@@ -182,7 +182,6 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | owner | O45 | P2 | open | Whether v1.5's amendment ledger belongs inside the baseline |
 | owner | O46 | P1 | open | The v1.5 ratchet still cannot see D33, the delta it was built for |
 | owner | O47 | P1 | open | A refused dedup read drops the wrist tap, and `Distraction.id` still… |
-| owner | O48 | P2 | open | Whether the decisions register may carry a second `## Decisions`… |
 | unassigned | H5 | — | open | the lint gate |
 | unassigned | H6 | — | open | the MusicKit App ID check |
 | unassigned | H7 | — | open | the register renders as tables |
@@ -260,4 +259,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-105 open register rows.
+104 open register rows.
