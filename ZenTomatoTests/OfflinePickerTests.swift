@@ -215,7 +215,8 @@ struct OfflinePickerTests {
           title: $0.content,
           projectID: $0.projectID,
           projectName: "Deep work",
-          sectionID: $0.sectionID)
+          sectionID: $0.sectionID,
+          priority: TodoistPriority(wire: $0.priority))
       })
   }
 }

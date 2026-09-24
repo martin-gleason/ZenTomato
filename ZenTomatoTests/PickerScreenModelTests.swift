@@ -261,30 +261,41 @@ struct PickerScreenModelTests {
         title: "Draft the Q3 summary",
         projectID: "p1",
         projectName: "Deep work",
-        sectionID: "s1"),
+        sectionID: "s1",
+        // F13: the ONE marked task in the corpus. A fixture where every task
+        // shared a priority would satisfy a mapping that marked all of them.
+        priority: .urgent),
       PickerScreenModel.TaskItem(
         id: "t2",
         title: "Reply to Anna",
         projectID: "p1",
         projectName: "Deep work",
-        sectionID: "s1"),
+        sectionID: "s1",
+        // Second-highest, and deliberately NOT marked — this is the level the
+        // owner's account has 22 of, and marking it would mark 60% of rows.
+        priority: .high),
       PickerScreenModel.TaskItem(
         id: "t3",
         title: "Book the room",
         projectID: "p1",
         projectName: "Deep work",
-        sectionID: nil),
+        sectionID: nil,
+        priority: .natural),
       PickerScreenModel.TaskItem(
         id: "t4",
         title: "Order more beans for the café",
         projectID: "p2",
         projectName: "Café admin",
-        sectionID: nil),
+        sectionID: nil,
+        priority: .natural),
       PickerScreenModel.TaskItem(
         id: "t5",
         title: "Plan deep work for Thursday",
         projectID: "p2",
         projectName: "Café admin",
-        sectionID: nil)
+        // A task Todoist sent no priority for at all, which the mirror stores as
+        // an absent column.
+        sectionID: nil,
+        priority: nil)
     ])
 }

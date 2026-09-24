@@ -128,7 +128,8 @@ struct ProjectPickerView: View {
               subtitle: task.projectName,
               ordinal: ordinal(for: task.id),
               isSelected: isSelected(task.id),
-              onToggle: { toggle(.init(todoistID: task.id, titleSnapshot: task.title, kind: .task)) })
+              onToggle: { toggle(.init(todoistID: task.id, titleSnapshot: task.title, kind: .task)) },
+              priority: task.priority)
 
           case .project(let project):
             PickerRowView(
@@ -226,6 +227,13 @@ struct PickerRowView: View {
   /// the picker and spend the reader's attention on nothing.
   var tint: TodoistTint?
 
+  /// Todoist's priority for this task, when it has one worth marking (`F13`).
+  ///
+  /// `nil` on a project row and a section. On a task row it is whatever Todoist
+  /// said; whether it draws anything is `TodoistPriority.isMarked`'s decision, not
+  /// this row's.
+  var priority: TodoistPriority?
+
   /// Set only on a project row. A task row has nowhere further to go, so the
   /// whole of it toggles instead.
   var onOpen: (() -> Void)?
@@ -243,9 +251,23 @@ struct PickerRowView: View {
   ///
   /// A pure function of the three things a row draws, so it can be read by a
   /// test with no screen behind it.
-  static func spokenToggleLabel(title: String, subtitle: String?, ordinal: Int?) -> String {
+  static func spokenToggleLabel(
+    title: String,
+    subtitle: String?,
+    ordinal: Int?,
+    priority: TodoistPriority? = nil) -> String {
     var parts = [title]
     if let subtitle { parts.append(subtitle) }
+    // F13. PRIORITY REACHES VOICEOVER AS WORDS, and it is the opposite case from
+    // the tint: a swatch is hidden because it duplicates the project name right
+    // beside it, while a flag glyph that speaks as nothing is information withheld
+    // from exactly the reader who cannot see it. It speaks Todoist's own label —
+    // `P1` — because that is the word the owner set in the other app.
+    //
+    // Only a marked priority is spoken. Saying "priority P4" on the many tasks
+    // nobody has flagged would make every row longer to hear and tell a reader
+    // nothing, which is the audible version of marking 60% of the rows.
+    if let priority, priority.isMarked { parts.append(priority.spokenName) }
     parts.append(ordinal.map { "number \($0) in your plan" } ?? "not in your plan")
     return parts.joined(separator: ", ")
   }
@@ -297,6 +319,10 @@ struct PickerRowView: View {
 
       Spacer(minLength: Spacing.xs)
 
+      if let priority, priority.isMarked {
+        priorityFlag
+      }
+
       if let ordinal {
         Text("\(ordinal)")
           .font(Typography.data)
@@ -306,6 +332,30 @@ struct PickerRowView: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .frame(minHeight: Spacing.controlHeight)
     .contentShape(Rectangle())
+  }
+
+  /// Todoist's own priority flag, on the tasks that carry the top one (`F13`).
+  ///
+  /// **`danger`, and only for `urgent`.** The live account settled both halves:
+  /// wire `4` is the `P1` Todoist's app draws, and the tally over 50 tasks was
+  /// `{1: 9, 2: 11, 3: 22, 4: 8}`. The gate answer taken from the plan was *draw
+  /// the top two*, and that would have marked **30 rows in 50** — the plan's own
+  /// words were that *"a picker where half the rows are amber has spent that
+  /// budget on somebody else's data."* Eight rows in fifty is a mark worth
+  /// noticing. `TodoistPriority.isMarked` holds the decision and it is one line.
+  ///
+  /// It is a glyph and not a colour on the title: the task's name stays
+  /// `textPrimary`, so the flag adds a signal rather than changing an existing
+  /// one, and **colour is never the only signal** — the flag has a shape, and
+  /// VoiceOver hears the priority as words.
+  ///
+  /// No tap target of its own, for the same reason as the swatch: the row already
+  /// has one control and a second mark that looked tappable would compete with it.
+  private var priorityFlag: some View {
+    Image(systemName: "flag.fill")
+      .font(Typography.label)
+      .foregroundStyle(Color(.danger))
+      .accessibilityHidden(true)
   }
 
   /// The project's colour, as a mark you can recognise rather than read (`F13`).
@@ -358,7 +408,8 @@ struct PickerRowView: View {
         .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .accessibilityLabel(Text(Self.spokenToggleLabel(title: title, subtitle: subtitle, ordinal: ordinal)))
+    .accessibilityLabel(Text(Self.spokenToggleLabel(
+      title: title, subtitle: subtitle, ordinal: ordinal, priority: priority)))
     .accessibilityHint(Text(isSelected ? "Takes it out of your plan." : "Puts it in your plan."))
   }
 }

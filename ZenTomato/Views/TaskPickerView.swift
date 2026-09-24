@@ -147,7 +147,8 @@ struct TaskPickerView: View {
             title: task.title,
             ordinal: ordinal(for: task.id),
             isSelected: isSelected(task.id),
-            onToggle: { toggle(.init(todoistID: task.id, titleSnapshot: task.title, kind: .task)) })
+            onToggle: { toggle(.init(todoistID: task.id, titleSnapshot: task.title, kind: .task)) },
+            priority: task.priority)
         }
       } header: {
         Text(group.name)
