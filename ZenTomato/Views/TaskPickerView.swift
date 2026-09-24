@@ -9,11 +9,18 @@ import SwiftUI
 /// disclosure triangle. Drawing a hierarchy that the plan is forbidden to hold
 /// is how a plan starts becoming a task model one reasonable step at a time.
 ///
-/// A TASK ROW CARRIES ONLY ITS TITLE
-/// No due date, no priority, no labels, no flag, and above all no checkbox that
-/// writes anything. The mirror does not hold those fields, which is deliberate:
-/// a column that cannot be stored cannot be drawn, and a column that cannot be
-/// drawn cannot start an argument about sorting by it.
+/// A TASK ROW CARRIES ITS TITLE, AND SINCE F13 A PRIORITY MARK WHEN IT HAS ONE
+/// No due date, no labels, and above all no checkbox that writes anything.
+///
+/// **This paragraph used to say "no priority", and the reasoning it gave was
+/// load-bearing rather than decorative:** *a column that cannot be stored cannot
+/// be drawn, and a column that cannot be drawn cannot start an argument about
+/// sorting by it.* The first half stopped being true when `F13` mirrored
+/// `CachedTask.priority`, so the second half is now the live guarantee and is
+/// stated on its own: **nothing sorts by priority.** The order is Todoist's
+/// `child_order`, here and everywhere, and a mark that can be seen is not a key
+/// that can be sorted on. The corrected claim is in this commit rather than in a
+/// later tidy-up, because a comment that contradicts the code gets believed.
 ///
 /// AN EMPTY PROJECT OFFERS NOTHING
 /// One sentence — *"No tasks in this project."* — and no control of any kind.

@@ -40,7 +40,20 @@ struct TodoistPage<Element: Decodable & Sendable>: Decodable, Sendable {
 /// read the answer at all on any account that has a workspace, and would do it
 /// on that person's phone rather than in anybody's test. `id`, `name` and
 /// `child_order` are present in both, and they are also exactly what the cache
-/// mirrors. **Do not add a field here.**
+/// mirrors.
+///
+/// **`color` IS THE FOURTH FIELD, AND IT IS OPTIONAL FOR EXACTLY THE REASON
+/// ABOVE** (`F13`). The heading of this comment used to end *"Do not add a field
+/// here"*, and that instruction was right about the risk and is kept as the test a
+/// fifth field has to pass: a field is only safe here if it is present in both
+/// shapes **or** declared optional. `color` is declared optional, so a workspace
+/// project that carries no `color` key decodes exactly as it did before — and so
+/// does its whole page, which is the failure that matters. `F13-M1` is that
+/// tolerance removed, and the test it must break asserts on the page and not on
+/// the row.
+///
+/// Adding a *required* field here is still the real risk, and it is still
+/// forbidden.
 struct TodoistProjectDTO: Decodable, Sendable, Equatable {
   /// Todoist's identifier — an opaque string, never a number.
   let id: String
@@ -53,10 +66,24 @@ struct TodoistProjectDTO: Decodable, Sendable, Equatable {
   /// than in an order this app invented.
   let childOrder: Int
 
+  /// The project's colour, as the name Todoist sends — `berry_red`, `olive_green`.
+  ///
+  /// **A name, never a number and never a hex.** Todoist's API sends the key from
+  /// its own colour table; what that key looks like is `TodoistTint`'s business
+  /// and this type does not know. Kept as the raw string rather than decoded into
+  /// a tint here, so that a colour Todoist adds tomorrow survives the decoder
+  /// untouched and is interpreted — or not — one layer up.
+  ///
+  /// `nil` is ordinary: a workspace project has no `color` key at all. Optional,
+  /// so Swift asks for it with *decode if present* and neither a missing key nor
+  /// an explicit `null` can fail the task, the row, or the page.
+  let color: String?
+
   private enum CodingKeys: String, CodingKey {
     case id
     case name
     case childOrder = "child_order"
+    case color
   }
 }
 
@@ -125,6 +152,23 @@ struct TodoistTaskDTO: Decodable, Sendable, Equatable {
   /// nobody's test.
   let due: Due?
 
+  /// Todoist's priority for this task, **as the number on the wire and nothing
+  /// else**.
+  ///
+  /// **Deliberately uninterpreted here.** Which end of the range is urgent, and
+  /// how the number relates to the `P1`–`P4` labels Todoist's own app draws, is
+  /// not settled by reading and is not settled in this file. `F13-T5` step 1
+  /// settles it against the owner's real account, and `F13-T4` is what maps it
+  /// for the screen. Storing the wire value verbatim is what lets that mapping be
+  /// decided later without re-fetching anything, and it is why no line of `F13-T2`
+  /// contains a prediction.
+  ///
+  /// `nil` is the ordinary case on most accounts. Optional for the same reason
+  /// `due` is: a required field here would fail the whole page the day Todoist
+  /// ships a shape this app did not anticipate. `F13-M2` is that tolerance
+  /// removed.
+  let priority: Int?
+
   /// The one thing this app reads out of a due date.
   ///
   /// Verified against Doist's own API v1 client library before a line of this
@@ -164,5 +208,6 @@ struct TodoistTaskDTO: Decodable, Sendable, Equatable {
     case sectionID = "section_id"
     case childOrder = "child_order"
     case due
+    case priority
   }
 }

@@ -470,8 +470,8 @@ a change.
 Named here so a reviewer's grep has a document to land on, and so that adding one is a visible argument
 with this table rather than a small reasonable commit:
 
-`description` · ~~`due`~~ · `deadline` · `duration` · `priority` · `labels` · `parent_id` ·
-`checked` · `is_deleted` · `is_archived` · `is_collapsed` · `is_favorite` · `color` · `view_style` ·
+`description` · ~~`due`~~ · `deadline` · `duration` · ~~`priority`~~ · `labels` · `parent_id` ·
+`checked` · `is_deleted` · `is_archived` · `is_collapsed` · `is_favorite` · ~~`color`~~ · `view_style` ·
 `is_shared` · `order_key` · `day_order` · `completed_count` · `added_at` · `updated_at` ·
 `user_id` / `creator_uid` / `added_by_uid` / `responsible_uid` · `added_by`.
 
@@ -490,7 +490,27 @@ Three of those deserve their reason spelled out:
 - **`parent_id`** — nothing reads it. The picker is project → section → task and sub-tasks appear flat
   (§1.8). A hierarchy column with no reader is a local task hierarchy waiting for one.
 - **`color`** — F1's rule is that views may only name semantic roles. A Todoist colour could never be
-  drawn even if it were stored.
+  drawn even if it were stored. **THIS REASON NO LONGER HOLDS, AND IT IS WORTH SAYING WHY IT DID.** It
+  was not wrong: with one colour vocabulary, drawing `berry_red` would have meant either putting
+  twenty of Todoist's colours into `ColorRole` — where every entry names a *purpose* — or naming a raw
+  `Palette` step from a view, which the lint rule fails the build on. `F13` builds a second vocabulary
+  instead: `TodoistTint`, which a view may name, resolving through `TodoistPalette`, which it may not.
+  The rule is unchanged in substance — a screen still never chooses an appearance, it names a piece of
+  Todoist data and the token layer decides what that data looks like. See `docs/plans/F13.md` §3.
+
+**`color` and `priority` left this list under `F13`, on 2026-09-24, and by a different authority from
+`D21`'s.** `docs/specs/zenpom-v1.5.md` lists `F13` in the ratified order and lists it as owing no
+delta, which is the ratified authority `D21` had to be written to supply. What crossed is
+`CachedProject.colorName` — the *name* Todoist sent, not a colour — and `CachedTask.priority`, the
+number on the wire, uninterpreted. Both are optional, both are copies thrown away on every refresh,
+and neither is a field this app maintains. This paragraph is the visible argument the table above
+demands.
+
+**The test a fifth field still has to pass**, because the risk the old heading named is real and
+unchanged: a field is safe here only if it is present in **both** the personal and workspace project
+shapes, **or** declared optional. A *required* field added to `TodoistProjectDTO` fails the whole page
+on any account with a workspace — an empty picker on somebody's phone and a green suite everywhere
+else. `F13-M1` and `F13-M2` are that tolerance removed, and the tests they break assert on the page.
 
 ### 3.3 Refresh is a full replace, never a merge
 
@@ -637,7 +657,10 @@ reviewers check this list literally.
 
 - [ ] `content`, `notes`, `description`, `body` — a plan item is a reference, not a copy.
 - [ ] `dueDate`, `deadline`, `scheduledFor` — the first field somebody adds "so the plan can sort by urgency".
-- [ ] `priority`, `flag`, `importance`.
+- [ ] `priority`, `flag`, `importance`. **Still true of `SessionPlanItem`, and unaffected by `F13`:**
+      what `F13` added is a column on `CachedTask`, which is the photograph of Todoist that a refresh
+      overwrites. A plan item is a reference and holds four properties. Copying a priority onto one
+      would be the local task model this list exists to prevent.
 - [ ] `labels`, `tags`.
 - [ ] `parentID`, `childIDs`, `subItems`, `depth`, `indentLevel` — a plan is **flat**, even when it holds a project and tasks from inside that project.
 - [ ] `projectID` on a `.task` item — that is hierarchy, wearing a convenience.

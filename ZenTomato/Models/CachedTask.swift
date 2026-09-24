@@ -65,6 +65,20 @@ final class CachedTask {
   /// rather than a failure.
   var isRecurring: Bool = false
 
+  /// Todoist's priority for this task, **as the number on the wire**.
+  ///
+  /// Uninterpreted on purpose, exactly as `TodoistTaskDTO.priority` is: which end
+  /// of the range is urgent is settled by `F13-T5` step 1 against the owner's real
+  /// account, and mapped for the screen by `F13-T4`. A column that stored an
+  /// already-interpreted level would have to be rewritten if that reading turned
+  /// out to be backwards; the wire value never needs rewriting.
+  ///
+  /// `F13`'s second argument with `F3-contract.md` §3.2, which lists this field by
+  /// name. `nil` when Todoist did not say, which is most tasks on most accounts —
+  /// and a task with no priority draws no mark at all, which is what keeps the
+  /// mark worth noticing.
+  var priority: Int?
+
   /// Creates one mirrored row.
   ///
   /// - Parameter isRecurring: defaults to `false` so that the many tests which
@@ -80,7 +94,8 @@ final class CachedTask {
     sectionID: String?,
     childOrder: Int,
     syncedAt: Date,
-    isRecurring: Bool = false) {
+    isRecurring: Bool = false,
+    priority: Int? = nil) {
     self.id = id
     self.content = content
     self.projectID = projectID
@@ -88,5 +103,6 @@ final class CachedTask {
     self.childOrder = childOrder
     self.syncedAt = syncedAt
     self.isRecurring = isRecurring
+    self.priority = priority
   }
 }

@@ -53,12 +53,37 @@ final class CachedProject {
   /// not preparing for.
   var syncedAt: Date
 
+  /// The name of the colour this project is drawn in, as Todoist sends it —
+  /// `berry_red`, `olive_green`.
+  ///
+  /// **`colorName` and not `color`, because it is not a colour.** It holds the
+  /// key from Todoist's own palette; turning that key into something paintable is
+  /// `TodoistTint`'s job, one layer away from the database. A column called
+  /// `color` holding the seven characters `berry_red` is the kind of name that
+  /// makes the next reader look for a hex.
+  ///
+  /// It is a copy, like everything else here, and it is `F13`'s visible argument
+  /// with the build contract's not-mirrored table (`F3-contract.md` §3.2), which
+  /// lists this field by name. The v1.5 spec ratified drawing it; §3.2 is amended
+  /// in the same commit rather than in a later tidy-up.
+  ///
+  /// `nil` when Todoist did not say — which is the ordinary case for a workspace
+  /// project, not a failure. It is drawn as Todoist's own default, not skipped.
+  var colorName: String?
+
   /// Creates one mirrored row. Every value comes from Todoist except the
   /// timestamp, which is the moment of the refresh that fetched it.
-  init(id: String, name: String, childOrder: Int, syncedAt: Date) {
+  ///
+  /// - Parameter colorName: defaults to `nil` so the many tests that build a
+  ///   plain project need not state it. Safe here for the reason
+  ///   `CachedTask.isRecurring` gives: these rows are deleted and rewritten in
+  ///   full on every refresh from Todoist's own answer, so a wrong value corrects
+  ///   itself within one foreground.
+  init(id: String, name: String, childOrder: Int, syncedAt: Date, colorName: String? = nil) {
     self.id = id
     self.name = name
     self.childOrder = childOrder
     self.syncedAt = syncedAt
+    self.colorName = colorName
   }
 }
