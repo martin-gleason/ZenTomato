@@ -63,8 +63,9 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D40** | ratified | no — v1.5 | — | D33 is applied; CLAUDE.md stops enumerating the order |
 | **D41** | ratified | no | — | The amendment ratchet learns both spellings, and gains a second baseline |
 | **D42** | ratified | no | — | The register is authoritative; OPEN.md is a view generated from it |
+| **D43** | **proposed** | no | — | The shape screen lets you set the number of pomodoros (F8 re-gate) |
 
-*44 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*45 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
@@ -2141,3 +2142,54 @@ recording that the distraction tally over-reports for one block, which is a cave
 is exactly why it needed one.
 
 **Implementation is `C37`.** This row is the ruling.
+
+## D43 — The shape screen lets you set the number of pomodoros
+
+**Proposed 2026-09-24. NOT RATIFIED.** Raised by the owner after using the build:
+
+> *"when in the 'fit a sprint' screen, a user should also be allowed to change the number of
+> pomodoros."*
+
+**Why this is a delta and not a defect.** `F8`'s ruled design takes exactly one input — the total
+time — and derives every part from it, targeting `pomodorosPerSprint` from `AppSettings` and flexing
+the pom *length* to fit. Adding a second input changes the solver, so it is scope, not a fix.
+`F8` is halted at `T3` by `D39` and owes a re-gate; **this belongs in that gate rather than ahead of
+it**, which is why nothing has been built.
+
+**The evidence that the ruled design lost something the owner asked for.** `docs/plans/F8.md` quotes
+the requirement that produced the feature:
+
+> *"say I have 2 hours to work on something. I want to break it up into **3 sprints** over 120
+> minutes, with a good focus block and a minimum 5 minute break and a 10 minute long break."*
+
+**The owner named a count in the sentence the feature was built from**, and the design takes the count
+from settings instead — four, not three. The plan's own paraphrase says *"you rarely have 'four
+pomodoros'"*, and then targets four. So this is not a new want; it is a want that was in the original
+sentence and did not survive the solver.
+
+**What it would change.** Two numbers are known and one is derived, instead of one known and two
+derived:
+
+| | today | proposed |
+|---|---|---|
+| input | total minutes | total minutes **and** pom count |
+| derived | pom count (from settings), pom length, break lengths | pom length, break lengths |
+| when it will not fit | reduce the count, and `pomodorosPerSprint` with it | **refuse, and say which floor was hit** |
+
+**The hard question the gate has to answer**, because it is the whole of the design: when both are
+stated and they cannot both be honoured — three poms in 20 minutes is below the 10-minute floor —
+does the app reduce the count (today's behaviour, which silently overrides what you just typed),
+shorten below the floor, or refuse and say why? **A control that silently ignores its own input is
+worse than no control**, so the answer is probably *refuse and name the floor*, but it is the owner's
+and it interacts with `Ruling E` on where a shape is stored.
+
+**Second question, smaller:** does setting the count here change `pomodorosPerSprint` in settings, or
+only this sprint? The ruled design changes the setting when it reduces the count, which is a durable
+edit made by a transient screen.
+
+**Not ratified, and nothing is built.** It is item 1 of `F8`'s re-gate pack.
+
+-----
+September 24, 2026
+
+#AI/Claude

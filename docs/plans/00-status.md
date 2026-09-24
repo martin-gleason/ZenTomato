@@ -77,7 +77,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 
 | Register | Rows | Open | Unknown | Closed |
 |---|---|---|---|---|
-| Decisions (`D`) | 44 | 1 | 0 | 43 |
+| Decisions (`D`) | 45 | 2 | 0 | 43 |
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
 | Owner items (`O`) | 50 | 26 | 0 | 24 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
@@ -91,7 +91,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 
 | Register | Status | Count |
 |---|---|---|
-| `D` | proposed | 1 |
+| `D` | proposed | 2 |
 | `D` | ratified | 41 |
 | `D` | rejected | 1 |
 | `D` | resolved | 1 |
@@ -155,6 +155,7 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | Owner | ID | P | Status | Item |
 |---|---|---|---|---|
 | owner | D30 | P0 | proposed | A watch-face complication |
+| owner | D43 | — | proposed | The shape screen lets you set the number of pomodoros |
 | unassigned | RR1 | P0 | open | iCloud/CloudKit sync would put the log where a conflict can lose it |
 | unassigned | RR2 | P0 | open | Changing the bundle identifier orphans the SwiftData store holding… |
 | unassigned | RR3 | P1 | open | The shape cursor and `TimerState` advance non-atomically, and control… |
@@ -261,4 +262,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-104 open register rows.
+105 open register rows.
