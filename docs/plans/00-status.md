@@ -3,7 +3,7 @@
 
 # Status — ZenTomato
 
-Generated from `docs/plans/00-register.md`, the plan files in `docs/plans/` and `docs/chores/`, and the specs in `docs/specs/`, by `scripts/gen_status.py`. Hand edits are reverted by the next run and fail CI in the meantime.
+Generated from `docs/plans/00-register.md`, the plan files in `docs/plans/` and `docs/chores/`, and the specs in `docs/specs/`, by `scripts/gen_status.py`. Hand edits are reverted by the next run and fail CI in the meantime. The same run writes the generated decisions region inside `docs/plans/00-register.md` from `docs/plans/00-deltas.md` (`D37`), and this page is built from that spliced register rather than from what was on disk when the run started.
 
 **Nothing on this page comes from git, and there is no date.** A generated file that embeds anything which moves on its own can never compare equal to a regeneration of itself — `--check` would then fail for a reason nobody caused. A prior project's page reported which task IDs had appeared in a commit scope, so the commit that first shipped `F3-T1` was the thing that made `F3-T1` appear: the page was stale by the act of committing it. Everything here derives from the register, the plan headers and the specs, so it changes only when they change, and regenerating is part of that same edit.
 
@@ -37,6 +37,7 @@ Status is what the unit's own plan file declares. What has landed in git is deli
 | C29 | chore | — | `docs/chores/C29.md` | 0 planned |
 | C32 | chore | — | `docs/chores/C32.md` | 0 planned |
 | C33 | chore | built; not merged. **Two adversarial review passes have run.** The first returned four blocking and… | `docs/chores/C33.md` | 0 planned |
+| C34 | chore | — | `docs/chores/C34.md` | 0 planned |
 | F1 | feature | — | `docs/plans/F1.md` | 9 planned |
 | F2 | feature | — | `docs/plans/F2.md` | 6 planned |
 | F2b | feature | — | `docs/plans/F2b.md` | 0 planned |
@@ -74,11 +75,11 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 
 | Register | Rows | Open | Unknown | Closed |
 |---|---|---|---|---|
-| Decisions (`D`) | 1 | 1 | 0 | 0 |
+| Decisions (`D`) | 43 | 1 | 0 | 42 |
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
-| Owner items (`O`) | 31 | 25 | 0 | 6 |
+| Owner items (`O`) | 32 | 26 | 0 | 6 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
-| Mutations (`M`) | 103 | 42 | 0 | 61 |
+| Mutations (`M`) | 119 | 42 | 0 | 77 |
 | Chores (`C`) | 29 | 6 | 9 | 14 |
 | Agent items (`A`) | 19 | 7 | 0 | 12 |
 
@@ -89,13 +90,16 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Register | Status | Count |
 |---|---|---|
 | `D` | proposed | 1 |
+| `D` | ratified | 40 |
+| `D` | rejected | 1 |
+| `D` | resolved | 1 |
 | `RR` | open | 4 |
 | `O` | closed | 6 |
 | `O` | held | 1 |
-| `O` | open | 24 |
+| `O` | open | 25 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
-| `M` | closed | 61 |
+| `M` | closed | 77 |
 | `M` | open | 42 |
 | `C` | closed | 14 |
 | `C` | open | 6 |
@@ -178,6 +182,7 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | owner | O45 | P2 | open | Whether v1.5's amendment ledger belongs inside the baseline |
 | owner | O46 | P1 | open | The v1.5 ratchet still cannot see D33, the delta it was built for |
 | owner | O47 | P1 | open | A refused dedup read drops the wrist tap, and `Distraction.id` still… |
+| owner | O48 | P2 | open | Whether the decisions register may carry a second `## Decisions`… |
 | unassigned | H5 | — | open | the lint gate |
 | unassigned | H6 | — | open | the MusicKit App ID check |
 | unassigned | H7 | — | open | the register renders as tables |
@@ -203,7 +208,6 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | unassigned | F10-M4 | — | open | Make `BlockLauncher` answer `started` instead of `alreadyRunning` and… |
 | unassigned | F10-M5 | — | open | Make `BlockLauncher` treat an intent-sourced request as a local one… |
 | unassigned | F14-M1 | — | open | Delete the freshness check — honour a request of any age |
-| unassigned | F14-M10 | — | open | Send the launch by `transferUserInfo` instead of the fail-fast channel |
 | unassigned | F14-M2 | — | open | Honour a request id that has already been honoured |
 | unassigned | F14-M3 | — | open | Let a remote launch through while authorization is `.notDetermined` |
 | unassigned | F14-M4 | — | open | Attach a wrist-launched pom from the previous block instead of… |
@@ -212,6 +216,7 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | unassigned | F14-M7 | — | open | Add `@Parameter var taskName: String` to any file under `ZenTomato/` |
 | unassigned | F14-M8 | — | open | Give `Source` a `mayPromptForPermission` that returns `true` for… |
 | unassigned | F14-M9 | — | open | Leave the queued block's length out of `WatchStatePublisher.Signature` |
+| unassigned | F14-M10 | — | open | Send the launch by `transferUserInfo` instead of the fail-fast channel |
 | unassigned | F15-M1 | — | open | Add `.font(.system(size: 12))` to `ZenTomato/Views/TimerScreen.swift` |
 | unassigned | F15-M2 | — | open | Add a 21st case to `ColorRole` with both halves supplied |
 | unassigned | F15-M3 | — | open | Name `import SwiftData` in a `ZenTomato/DesignSystem/` file |
@@ -255,4 +260,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-104 open register rows.
+105 open register rows.

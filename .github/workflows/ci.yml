@@ -136,6 +136,12 @@ jobs:
       - name: The open-items register renders as tables
         run: make check-register
 
+      - name: The register's rows are well-formed
+        # C33 malformed ten rows and its hand audit reported zero; C36 found the
+        # eleventh. Before check-status, so a malformed register is reported as
+        # malformed rather than as a stale page.
+        run: make check-register-rows
+
       - name: The status page is generated, not hand-written
         run: make check-status
 

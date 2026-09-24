@@ -465,6 +465,7 @@ make_status_repo() {
   local dir="$1"
   mkdir -p "${dir}/scripts" "${dir}/docs/plans" "${dir}/docs/chores" "${dir}/docs/specs"
   cp "${SCRIPTS_DIR}/gen_status.py" "${dir}/scripts/gen_status.py"
+  cp "${SCRIPTS_DIR}/check_register_rows.py" "${dir}/scripts/check_register_rows.py"
 
   cat > "${dir}/docs/specs/thing.md" <<'SPEC'
 # Thing — spec
@@ -482,6 +483,47 @@ SPEC
 F1-T1 and F1-T2 and F1-T2 again.
 PLAN
 
+  # THE THREE FIXTURE DELTAS CARRY THREE DIFFERENT STATUSES ON PURPOSE - one
+  # ratified, one proposed, one rejected. A fixture where they agreed would
+  # distinguish nothing, which is why C28 wrote its unknown-status fixture with
+  # three differing rows. D3's heading carries the word REJECTED, which is FIRST
+  # in the status precedence, so it is also the fixture that catches a status
+  # window reaching into the following delta's heading.
+  cat > "${dir}/docs/plans/00-deltas.md" <<'DELTAS'
+# Proposed spec deltas — fixture
+
+## Index
+
+| Delta | Status | |
+|---|---|---|
+| **D1** | ratified | A decision that was ratified |
+| **D2** | proposed | A decision that is only proposed |
+| **D3** | REJECTED | A decision that was refused |
+
+*3 deltas.*
+
+## D1 — A decision that was ratified
+
+**Ratified 2026-01-01.**
+
+Body, so the status window does not reach the next heading.
+
+## D2 — A decision that is only proposed
+
+**Proposed 2026-01-02.**
+
+Body, so the status window does not reach the next heading.
+
+## D3 — ~~A decision that was refused~~ **REJECTED 2026-01-03.**
+
+**Proposed 2026-01-03. REJECTED 2026-01-03.**
+
+Body, so the status window does not reach the next heading.
+DELTAS
+
+  # `## Decisions (D)` IS A GENERATED REGION SINCE C34 (D37). The overlay heading
+  # deliberately does not end in `(D)`, so SECTION_SYMBOL skips it and D2 is not
+  # counted as a second D register.
   cat > "${dir}/docs/plans/00-register.md" <<'REG'
 # Register
 
@@ -493,11 +535,23 @@ PLAN
 | O2 | An item that is closed | P1 | closed | because |
 | O3 | An item nobody gave a status | P2 |  | because |
 
+## Decisions — owner fields
+
+| ID | P | TD |
+|---|---|---|
+| D2 | P1 | td:6hFixtureFixture |
+
 ## Decisions (D)
+
+<!-- BEGIN GENERATED: decisions — written from docs/plans/00-deltas.md (D37). -->
+<!-- END GENERATED: decisions -->
+
+## Hooks (H)
 
 | ID | Title | P | Status |
 |---|---|---|---|
-| D1 | A decision | P0 | proposed |
+| H1 | A hook whose title holds an escaped pipe in `a \| b` | P0 | closed |
+| H2 | A hook with no pipe in it at all | P1 | open |
 REG
 }
 
@@ -667,6 +721,665 @@ REG
 }
 
 
+# --- The generated decisions region (D37) ------------------------------------
+
+test_decisions_region_is_generated_from_the_deltas_file() {
+  local name="decisionsRegionIsGeneratedFromTheDeltasFile"
+  local dir="${work_dir}/decisions-region"
+  make_status_repo "$dir"
+  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  local reg="${dir}/docs/plans/00-register.md"
+
+  # One row per delta, in ID order, carrying the status the DEFINITION declares -
+  # not the index's, whose titles are paraphrases and whose Status column no test
+  # checks. D3's `rejected` is the half that proves the precedence: its own body
+  # says "Proposed 2026-01-03. REJECTED 2026-01-03."
+  local want='| D1 | A decision that was ratified | — | ratified |  |
+| D2 | A decision that is only proposed | P1 | proposed | td:6hFixtureFixture |
+| D3 | ~~A decision that was refused~~ **REJECTED 2026-01-03.** | — | rejected |  |'
+  local got
+  got=$(sed -n '/BEGIN GENERATED: decisions/,/END GENERATED: decisions/p' "$reg" \
+    | grep -E '^\| D[0-9]')
+  if [[ "$got" != "$want" ]]; then
+    fail "$name" "the generated region is not the three fixture deltas, sorted, with their own statuses" \
+      "want: ${want}" "got:  ${got}"
+    return
+  fi
+
+  # And the generator touched nothing outside the markers.
+  if ! grep -q '^| O3 | An item nobody gave a status | P2 |  | because |$' "$reg"; then
+    fail "$name" "the splice altered a hand-maintained row outside the region" \
+      "the contract is text[:end of BEGIN] + rendered + text[start of END:]"
+    return
+  fi
+  pass "$name"
+}
+
+test_decisions_region_carries_the_owner_overlay() {
+  local name="decisionsRegionCarriesTheOwnerOverlay"
+  local dir="${work_dir}/decisions-overlay"
+  make_status_repo "$dir"
+  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+
+  # D30's real P0 and Todoist id exist in no column of 00-deltas.md, so a
+  # regeneration that did not merge them would DELETE a link the owner's own sync
+  # uses. The assertion is on the rendered row, not on the overlay dict.
+  if ! grep -q '^| D2 | A decision that is only proposed | P1 | proposed | td:6hFixtureFixture |$' \
+    "${dir}/docs/plans/00-register.md"; then
+    fail "$name" "the overlay's P and TD did not reach the generated row" \
+      "got: $(grep -E '^\| D2 \|' "${dir}/docs/plans/00-register.md")"
+    return
+  fi
+  # The rows with no overlay entry must render `—` for P and an empty TD, not the
+  # previous row's values - which is what a merge that leaks looks like.
+  if ! grep -q '^| D1 | A decision that was ratified | — | ratified |  |$' \
+    "${dir}/docs/plans/00-register.md"; then
+    fail "$name" "a row with no overlay entry did not render — for P and an empty TD" \
+      "got: $(grep -E '^\| D1 \|' "${dir}/docs/plans/00-register.md")"
+    return
+  fi
+  pass "$name"
+}
+
+test_overlay_naming_an_undefined_delta_is_refused() {
+  local name="overlayNamingAnUndefinedDeltaIsRefused"
+  local dir="${work_dir}/decisions-overlay-bad"
+  make_status_repo "$dir"
+  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  local reg="${dir}/docs/plans/00-register.md"
+  local before
+  before=$(cat "$reg")
+
+  # THE MUTATION. An overlay row keyed to a decision 00-deltas.md does not
+  # define. A Todoist id keyed to nothing is C33's dropped-TD cell one file over,
+  # so it must be REFUSED rather than dropped.
+  perl -pi -e 's/^\| D2 \| P1 \|/| D44 | P1 |/' "$reg"
+  if ! grep -q '^| D44 | P1 |' "$reg"; then
+    fail "$name" "the test's own mutation did not change the overlay" \
+      "an assertion whose setup failed proves nothing"
+    return
+  fi
+  before=$(cat "$reg")
+
+  local err
+  err=$(python3 "${dir}/scripts/gen_status.py" 2>&1) && {
+    fail "$name" "an overlay naming an undefined delta was accepted"
+    return
+  }
+  if [[ "$err" != *"D44"* ]]; then
+    fail "$name" "the refusal did not name D44" "got: ${err}"
+    return
+  fi
+  if [[ "$(cat "$reg")" != "$before" ]]; then
+    fail "$name" "the generator wrote to the register after refusing" \
+      "a refusal that half-writes is worse than no refusal"
+    return
+  fi
+  pass "$name"
+}
+
+test_markerless_register_is_refused() {
+  local name="markerlessRegisterIsRefused"
+  local dir="${work_dir}/decisions-markerless"
+  make_status_repo "$dir"
+  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  local reg="${dir}/docs/plans/00-register.md"
+
+  # THE MUTATION. Delete the BEGIN marker, leaving the table and the END marker.
+  perl -ni -e 'print unless /BEGIN GENERATED: decisions/' "$reg"
+  if grep -q 'BEGIN GENERATED: decisions' "$reg"; then
+    fail "$name" "the test's own mutation did not remove the marker" \
+      "an assertion whose setup failed proves nothing"
+    return
+  fi
+  local before
+  before=$(cat "$reg")
+
+  # WRITE MODE IS THE HALF THAT MATTERS. A generator that silently appends when it
+  # cannot find its region, or writes nothing and prints success, is O42's defect
+  # rebuilt one layer in.
+  local err
+  err=$(python3 "${dir}/scripts/gen_status.py" 2>&1) && {
+    fail "$name" "write mode accepted a register with no BEGIN marker"
+    return
+  }
+  if [[ "$err" != *"BEGIN GENERATED: decisions"* ]]; then
+    fail "$name" "the refusal did not name the marker" "got: ${err}"
+    return
+  fi
+  if [[ "$(cat "$reg")" != "$before" ]]; then
+    fail "$name" "write mode altered the register after refusing"
+    return
+  fi
+  if python3 "${dir}/scripts/gen_status.py" --check >/dev/null 2>&1; then
+    fail "$name" "--check accepted a register with no BEGIN marker"
+    return
+  fi
+  pass "$name"
+}
+
+test_hand_edit_inside_the_region_fails_check() {
+  local name="handEditInsideTheRegionFailsCheck"
+  local dir="${work_dir}/decisions-hand-edit"
+  make_status_repo "$dir"
+  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  local reg="${dir}/docs/plans/00-register.md"
+
+  # THE MUTATION. Change a status by hand INSIDE the generated region - the same
+  # shape as editing D35 from `ratified` to `proposed` in the real file.
+  perl -pi -e 's/\| D1 \| A decision that was ratified \| — \| ratified \|/| D1 | A decision that was ratified | — | proposed |/' "$reg"
+  if ! grep -q 'A decision that was ratified | — | proposed' "$reg"; then
+    fail "$name" "the test's own mutation did not change the region" \
+      "an assertion whose setup failed proves nothing"
+    return
+  fi
+
+  local err
+  err=$(python3 "${dir}/scripts/gen_status.py" --check 2>&1) && {
+    fail "$name" "a hand edit inside the generated region passed --check"
+    return
+  }
+  # The FAIL line must NAME THE FILE. Before C34 the message named none, because
+  # there was only one artefact; with two, a diff with no filename sends the
+  # reader to the wrong document.
+  if [[ "$err" != *"FAIL — docs/plans/00-register.md"* ]]; then
+    fail "$name" "the FAIL line did not name docs/plans/00-register.md" "got: ${err}"
+    return
+  fi
+  pass "$name"
+}
+
+test_an_escaped_pipe_does_not_shift_a_row() {
+  local name="anEscapedPipeDoesNotShiftARow"
+  local dir="${work_dir}/escaped-pipe"
+  make_status_repo "$dir"
+  local reg="${dir}/docs/plans/00-register.md"
+
+  # ASSERT THE FIXTURE FIRST. statusCheckCatchesAHandEdit failed the first time it
+  # ran because it asserted the result of a mutation it had not landed.
+  if ! grep -q 'escaped pipe in `a \\| b`' "$reg"; then
+    fail "$name" "the fixture does not carry a row with an escaped pipe"
+    return
+  fi
+
+  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  local page="${dir}/docs/plans/00-status.md"
+
+  # THE DEFECT THIS PINS, found by C34's own gates. gen_status split a row on a
+  # bare "|" while check_register_rows split on `(?<!\\)\|`, so a cell containing
+  # an escaped pipe ENDED EARLY for one reader and not the other: every field
+  # after it shifted one column left, H1's Status cell read `P0`, and because
+  # `P0` is not in CLOSED the page printed a closed hook as OPEN. The validator
+  # saw nothing, because by its own tokenizer the row was well formed.
+  #
+  # This is the confident-wrong-answer class C34 exists to stop, reached from
+  # inside C34. The fix is one tokenizer imported by both readers, so the
+  # assertion that matters is that the page agrees with the file.
+  if ! grep -q '^| Hooks (`H`) | 2 | 1 | 0 | 1 |$' "$page"; then
+    fail "$name" "the H register did not count 2 rows, 1 open, 0 unknown, 1 closed" \
+      "an escaped pipe shifted the row and the page read Status from the wrong cell" \
+      "got: $(grep -F 'Hooks (`H`)' "$page")"
+    return
+  fi
+
+  # The same row must not surface in the open table, which is where a misread
+  # status actually reaches the owner.
+  if grep -q '^| owner | H1 |' "$page"; then
+    fail "$name" "a closed hook appeared in the open table"
+    return
+  fi
+  pass "$name"
+}
+
+test_ratified_decisions_are_not_counted_open() {
+  local name="ratifiedDecisionsAreNotCountedOpen"
+  local dir="${work_dir}/decisions-closed"
+  make_status_repo "$dir"
+  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  local page="${dir}/docs/plans/00-status.md"
+
+  # `ratified` was not in gen_status.CLOSED, so all 40 ratified deltas would have
+  # been counted OPEN and printed in the owner-owned open table - a wrong number of
+  # exactly the class D37 was opened to fix. The fixture's three statuses differ,
+  # so a vocabulary that bucketed them all one way fails this count.
+  if ! grep -q '^| Decisions (`D`) | 3 | 1 | 0 | 2 |$' "$page"; then
+    fail "$name" "the D register did not count 3 rows, 1 open, 0 unknown, 2 closed" \
+      "got: $(grep -F 'Decisions (`D`)' "$page")"
+    return
+  fi
+  if grep -q '^| owner | D1 |' "$page"; then
+    fail "$name" "a ratified decision appeared in the open table" \
+      "ratified is finished work; printing it as open is the number D37 was opened to fix"
+    return
+  fi
+  if ! grep -q '^| owner | D2 |' "$page"; then
+    fail "$name" "the genuinely proposed decision was missing from the open table" \
+      "the check above would pass vacuously if nothing were listed"
+    return
+  fi
+  pass "$name"
+}
+
+test_the_command_the_failure_message_prints_actually_fixes_it() {
+  local name="theCommandTheFailureMessagePrintsActuallyFixesIt"
+  local dir="${work_dir}/decisions-remedy"
+  make_status_repo "$dir"
+  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+
+  # D46: a feature that tells a human to run something has emitted a SECOND
+  # artefact, and it needs the same treatment as the first. So the command is
+  # EXTRACTED from the failure message and run verbatim, rather than a command the
+  # test re-derives and believes is the same one.
+  perl -pi -e 's/\| ratified \|  \|/| proposed |  |/ if /A decision that was ratified/' \
+    "${dir}/docs/plans/00-register.md"
+  if ! grep -q 'A decision that was ratified | — | proposed' "${dir}/docs/plans/00-register.md"; then
+    fail "$name" "the test's own mutation did not change the region" \
+      "an assertion whose setup failed proves nothing"
+    return
+  fi
+
+  local remedy
+  # `|| true` because --check exits 1 by design here and `set -o pipefail` would
+  # otherwise kill the run on the very failure this test is reading.
+  remedy=$(python3 "${dir}/scripts/gen_status.py" --check 2>&1 \
+    | sed -n 's/^ *Regenerate with: //p' | head -1 || true)
+  if [[ -z "$remedy" ]]; then
+    fail "$name" "the failure message printed no remedy to extract" \
+      "a message that names no command is a message that cannot be tested"
+    return
+  fi
+  if ! ( cd "$dir" && eval "$remedy" ) >/dev/null 2>&1; then
+    fail "$name" "the command the failure message prints did not run: ${remedy}"
+    return
+  fi
+  if ! python3 "${dir}/scripts/gen_status.py" --check >/dev/null 2>&1; then
+    fail "$name" "the remedy ran but --check still fails: ${remedy}" \
+      "the instruction the tool gives a human must actually fix what it reports"
+    return
+  fi
+  pass "$name"
+}
+
+# --- check_register_rows.py --------------------------------------------------
+#
+# THE FIXTURE PASSES UNMUTATED, AND THAT IS WHAT MAKES EVERY TEST BELOW ABLE TO
+# FAIL. A fixture that already failed the floor would exit 1 under every mutation
+# for a reason no mutation caused - a tautology with a green tick. So it carries
+# all seven register sections, an escaped pipe inside a code span, and
+# C32-M9/C32-M10, the pair a lexical sort key mis-orders.
+
+make_validator_repo() {
+  local dir="$1"
+  mkdir -p "${dir}/scripts" "${dir}/docs/plans"
+  cp "${SCRIPTS_DIR}/gen_status.py" "${dir}/scripts/gen_status.py"
+  cp "${SCRIPTS_DIR}/check_register_rows.py" "${dir}/scripts/check_register_rows.py"
+
+  cat > "${dir}/docs/plans/00-register.md" <<'REG'
+# Register — fixture
+
+The generated region lies between the `BEGIN GENERATED: decisions` and
+`END GENERATED: decisions` markers. THESE TWO MENTIONS ARE PROSE, NOT MARKERS,
+and R9 must not count them — a file that cannot document its own region is worse
+than a narrower match.
+
+## Owner items (O)
+
+| ID | Title | P | Status | TD |
+|---|---|---|---|---|
+| O1 | An open item | P0 | open |  |
+| O2 | A closed item | P1 | closed |  |
+
+## Decisions — owner fields
+
+| ID | P | TD |
+|---|---|---|
+| D1 | P0 | td:6hFixtureFixture |
+
+## Decisions (D)
+
+<!-- BEGIN GENERATED: decisions — fixture -->
+| ID | Title | P | Status | TD |
+|---|---|---|---|---|
+| D1 | A ratified decision | P0 | ratified | td:6hFixtureFixture |
+| D2 | A proposed decision | — | proposed |  |
+<!-- END GENERATED: decisions -->
+
+## Chores (C)
+
+| ID | Title | P | Status | Why | TD |
+|---|---|---|---|---|---|
+| C9 | A legacy chore the owner has not ruled on | P1 | unknown | because |  |
+| C26 | A chore that is closed | P1 | closed | because |  |
+
+## Agent items (A)
+
+| ID | Title | P | Status |
+|---|---|---|---|
+| A7 | An agent finding | P1 | open |
+| A8 | Another agent finding | P2 | closed |
+
+## Mutations (M)
+
+| ID | Title | P | Status | Run |
+|---|---|---|---|---|
+| C32-M9 | A scoped mutation id |  | closed | run |
+| C32-M10 | The pair a lexical sort key mis-orders |  | closed | run |
+| M1 | A bare, global mutation id |  | closed | run |
+
+## Hooks (H)
+
+| ID | Title | P | Status |
+|---|---|---|---|
+| H1 | A hook whose cell holds an escaped pipe in `a \| b` | P0 | closed |
+| H2 | A hook that is not built yet | P1 | open |
+
+## Risks (RR)
+
+| ID | Title | P | Status |
+|---|---|---|---|
+| RR1 | A risk nobody has mitigated | P1 | open |
+REG
+}
+
+# Run the validator against a fixture, printing stdout and stderr together.
+validator_on() {
+  python3 "$1/scripts/check_register_rows.py" 2>&1
+}
+
+# Every negative test has the same three steps: mutate, PROVE THE MUTATION
+# LANDED, then assert. statusCheckCatchesAHandEdit failed the first time it ran
+# for want of the middle step.
+expect_validator_catches() {
+  local name="$1" dir="$2" wanted="$3"
+  local out
+  if out=$(validator_on "$dir"); then
+    fail "$name" "the validator passed a register it should have refused" "got: ${out}"
+    return 1
+  fi
+  if [[ "$out" != *"$wanted"* ]]; then
+    fail "$name" "the finding did not say what it was supposed to say" \
+      "wanted a message containing: ${wanted}" "got: ${out}"
+    return 1
+  fi
+  pass "$name"
+}
+
+test_the_shipped_register_passes_the_validator() {
+  local name="theShippedRegisterPassesTheValidator"
+
+  # THIS IS THE TEST THAT WOULD HAVE CAUGHT A LEXICAL SORT KEY. gen_status's old
+  # key reported FOUR correctly-ordered mutation pairs as out of order, so R6 on
+  # that key would have failed a correct file on its first run — and "a validator
+  # that fails on something harmless gets disabled". It is the reason R6 can be an
+  # error rather than a warning.
+  local out
+  if ! out=$(python3 "${SCRIPTS_DIR}/check_register_rows.py" 2>&1); then
+    fail "$name" "the repository's own register does not pass the validator" "${out}"
+    return
+  fi
+  if [[ "$out" != *"0 malformed"* ]]; then
+    fail "$name" "the validator passed without reporting a count" \
+      "an exit code cannot show a check that stopped reading" "got: ${out}"
+    return
+  fi
+  pass "$name"
+}
+
+test_validator_passes_the_unmutated_fixture() {
+  local name="registerValidatorPassesTheUnmutatedFixture"
+  local dir="${work_dir}/validator-clean"
+  make_validator_repo "$dir"
+  local out
+  if ! out=$(validator_on "$dir"); then
+    fail "$name" "the fixture every negative test mutates does not pass unmutated" \
+      "without this, every test below exits 1 for a reason no mutation caused" "${out}"
+    return
+  fi
+  if [[ "$out" != *"14 rows across 7 register sections"* ]]; then
+    fail "$name" "the fixture did not report 14 rows across 7 sections" "got: ${out}"
+    return
+  fi
+  pass "$name"
+}
+
+test_validator_catches_a_surplus_cell() {
+  local name="registerValidatorCatchesASurplusCell"
+  local dir="${work_dir}/validator-surplus"
+  make_validator_repo "$dir"
+  # C33's EXACT DEFECT: a stray 7th cell copied from another table's column.
+  # gen_status drops it in silence and `make check-status` stays green.
+  perl -pi -e 's/^\| C26 \| A chore that is closed \| P1 \| closed \| because \|  \|$/| C26 | A chore that is closed | P1 | closed | because |  | \@chores |/' \
+    "${dir}/docs/plans/00-register.md"
+  if ! grep -q '@chores' "${dir}/docs/plans/00-register.md"; then
+    fail "$name" "the test's own mutation did not add a cell"
+    return
+  fi
+  expect_validator_catches "$name" "$dir" "7 cells where the section header has 6"
+}
+
+test_validator_catches_an_unescaped_pipe() {
+  local name="registerValidatorCatchesAnUnescapedPipe"
+  local dir="${work_dir}/validator-pipe"
+  make_validator_repo "$dir"
+  perl -pi -e 's/`a \\\| b`/`a | b`/' "${dir}/docs/plans/00-register.md"
+  if grep -q 'a \\| b' "${dir}/docs/plans/00-register.md"; then
+    fail "$name" "the test's own mutation did not unescape the pipe"
+    return
+  fi
+  # THE MESSAGE MUST NAME THE QUOTING ERROR, not only the column count. A reader
+  # sent to count columns for a defect that is an unescaped pipe looks in the
+  # wrong place.
+  expect_validator_catches "$name" "$dir" "unescaped pipe inside a \`code\` span"
+}
+
+test_validator_catches_a_duplicate_id() {
+  local name="registerValidatorCatchesADuplicateId"
+  local dir="${work_dir}/validator-dup"
+  make_validator_repo "$dir"
+  perl -pi -e 'print "| A7 | An agent finding | P1 | open |\n" if /^\| A8 \|/' \
+    "${dir}/docs/plans/00-register.md"
+  if [[ $(grep -c '^| A7 |' "${dir}/docs/plans/00-register.md") -ne 2 ]]; then
+    fail "$name" "the test's own mutation did not duplicate A7"
+    return
+  fi
+  expect_validator_catches "$name" "$dir" "A7 appears twice"
+}
+
+test_validator_catches_an_empty_status() {
+  local name="registerValidatorCatchesAnEmptyStatus"
+  local dir="${work_dir}/validator-empty-status"
+  make_validator_repo "$dir"
+  # R4 FIRES ON ZERO ROWS OF THE SHIPPED FILE. This mutation is its only evidence.
+  perl -pi -e 's/^\| RR1 \| (.*) \| P1 \| open \|$/| RR1 | $1 | P1 |  |/' \
+    "${dir}/docs/plans/00-register.md"
+  if ! grep -qE '^\| RR1 \|.*\| P1 \|  \|$' "${dir}/docs/plans/00-register.md"; then
+    fail "$name" "the test's own mutation did not blank the status"
+    return
+  fi
+  expect_validator_catches "$name" "$dir" "RR1 has an empty \`Status\` cell"
+}
+
+test_validator_catches_an_unknown_status_outside_the_exception_set() {
+  local name="registerValidatorCatchesAnUnknownStatusOutsideTheExceptionSet"
+  local dir="${work_dir}/validator-vocab"
+  make_validator_repo "$dir"
+
+  # (a) A value in no vocabulary at all.
+  perl -pi -e 's/^\| C26 \| (.*) \| P1 \| closed \|/| C26 | $1 | P1 | wontfix |/' \
+    "${dir}/docs/plans/00-register.md"
+  if ! grep -q 'wontfix' "${dir}/docs/plans/00-register.md"; then
+    fail "$name" "the test's own mutation (a) did not change the status"
+    return
+  fi
+  local out
+  if out=$(validator_on "$dir"); then
+    fail "$name" "a status of wontfix was accepted" "got: ${out}"
+    return
+  fi
+  if [[ "$out" != *"C26 carries \`wontfix\`"* ]]; then
+    fail "$name" "the finding did not name C26 and wontfix" "got: ${out}"
+    return
+  fi
+
+  # (b) `unknown` — a value NINE OTHER ROWS LEGITIMATELY CARRY. This is the half
+  # that proves the exception is by ID and not a blanket allowance; without it the
+  # rule is a tautology on the shipped file.
+  perl -pi -e 's/\| wontfix \|/| unknown |/' "${dir}/docs/plans/00-register.md"
+  if ! grep -q '| unknown |' "${dir}/docs/plans/00-register.md"; then
+    fail "$name" "the test's own mutation (b) did not change the status"
+    return
+  fi
+  if out=$(validator_on "$dir"); then
+    fail "$name" "C26 carrying \`unknown\` was accepted, so the exception is a blanket one" \
+      "got: ${out}"
+    return
+  fi
+  if [[ "$out" != *"C26 carries \`unknown\`"* ]]; then
+    fail "$name" "the finding did not name C26 as outside the legacy exception set" "got: ${out}"
+    return
+  fi
+  # And C9, which IS in the set, is still accepted — or the rule is just a ban.
+  perl -pi -e 's/^\| C26 \| (.*) \| P1 \| unknown \|/| C26 | $1 | P1 | closed |/' \
+    "${dir}/docs/plans/00-register.md"
+  if ! validator_on "$dir" >/dev/null; then
+    fail "$name" "C9's legitimate \`unknown\` was refused once C26's was fixed" \
+      "the exception set must permit the nine rows it names"
+    return
+  fi
+  pass "$name"
+}
+
+test_validator_catches_an_unsorted_section() {
+  local name="registerValidatorCatchesAnUnsortedSection"
+  local dir="${work_dir}/validator-unsorted"
+  make_validator_repo "$dir"
+  # Swap two adjacent H rows.
+  perl -0pi -e 's/(\| H1 \|[^\n]*\n)(\| H2 \|[^\n]*\n)/$2$1/' "${dir}/docs/plans/00-register.md"
+  if [[ $(grep -n '^| H2 |' "${dir}/docs/plans/00-register.md" | cut -d: -f1) -gt \
+        $(grep -n '^| H1 |' "${dir}/docs/plans/00-register.md" | cut -d: -f1) ]]; then
+    fail "$name" "the test's own mutation did not swap the rows"
+    return
+  fi
+  expect_validator_catches "$name" "$dir" "H2 then H1 is out of ID order"
+}
+
+test_validator_catches_a_renamed_status_header() {
+  local name="registerValidatorCatchesARenamedStatusHeader"
+  local dir="${work_dir}/validator-header"
+  make_validator_repo "$dir"
+  # D38 proposed the column name `Mutation` for what gen_status reads as `title`;
+  # a renamed column makes EVERY lookup miss and the page renders the whole
+  # section `unknown` under a confident label.
+  perl -pi -e 's/^\| ID \| Title \| P \| Status \|$/| ID | Title | P | State |/' \
+    "${dir}/docs/plans/00-register.md"
+  if ! grep -q '^| ID | Title | P | State |$' "${dir}/docs/plans/00-register.md"; then
+    fail "$name" "the test's own mutation did not rename the header"
+    return
+  fi
+  expect_validator_catches "$name" "$dir" "has no \`Status\` column"
+}
+
+test_validator_catches_an_unrecognised_row_id() {
+  local name="registerValidatorCatchesAnUnrecognisedRowId"
+  local dir="${work_dir}/validator-rowid"
+  make_validator_repo "$dir"
+  # The bare-only filter rejected all 81 scoped mutation ids WITHOUT A WORD. This
+  # rule turns the generator's silent drop into a named refusal.
+  perl -pi -e 's/^\| C32-M9 \|/| MUTATION-X |/' "${dir}/docs/plans/00-register.md"
+  if ! grep -q '^| MUTATION-X |' "${dir}/docs/plans/00-register.md"; then
+    fail "$name" "the test's own mutation did not change the id"
+    return
+  fi
+  expect_validator_catches "$name" "$dir" "is not a register row id"
+}
+
+test_validator_catches_a_renamed_overlay_header() {
+  local name="registerValidatorCatchesARenamedOverlayHeader"
+  local dir="${work_dir}/validator-overlay-header"
+  make_validator_repo "$dir"
+  # THE HOLE C34's OWN REVIEW FOUND. R8 was gated on the section symbol, and
+  # `## Decisions — owner fields` carries no `(D)` on purpose - so the one
+  # hand-maintained table in the repository, the one holding the owner's priority
+  # and a live Todoist link, was the one table whose column names nothing checked.
+  # gen_status.owner_overlay refuses the same rename and writes nothing, so no
+  # data was ever at risk; what was missing is R9's stated property, that the
+  # validator ALONE names the cause instead of handing the reader a diff.
+  perl -pi -e 's/^\| ID \| P \| TD \|$/| ID | Priority | Todoist |/' \
+    "${dir}/docs/plans/00-register.md"
+  if ! grep -q '^| ID | Priority | Todoist |$' "${dir}/docs/plans/00-register.md"; then
+    fail "$name" "the test's own mutation did not rename the overlay header"
+    return
+  fi
+  expect_validator_catches "$name" "$dir" "has no \`P\`, \`TD\` column"
+}
+
+test_validator_names_the_generated_region_in_its_remedy() {
+  local name="registerValidatorNamesTheGeneratedRegionInItsRemedy"
+  local dir="${work_dir}/validator-remedy"
+  make_validator_repo "$dir"
+  # THE REMEDY LINE IS AN ARTEFACT AND IT GETS ASSERTED AS ONE (D46). The footer
+  # tells the reader to run the generator, which is false advice for a row BETWEEN
+  # THE MARKERS: that region is rewritten from 00-deltas.md, so a hand fix there
+  # is reverted by the very command the footer prints. Reproduced for real by a
+  # delta title carrying an odd backtick; reproduced here inside the fixture.
+  perl -pi -e 's/^\| D2 \| A proposed decision \|/| D2 | A `proposed decision |/' \
+    "${dir}/docs/plans/00-register.md"
+  if ! grep -q '^| D2 | A `proposed decision |' "${dir}/docs/plans/00-register.md"; then
+    fail "$name" "the test's own mutation did not put an odd backtick in the region"
+    return
+  fi
+  # `|| true` IS LOAD-BEARING: the file runs under `set -euo pipefail` and the
+  # validator exits 1 by design here, so an unguarded command substitution
+  # ABORTS THE WHOLE SUITE after the current test has printed `ok` - which is how
+  # this test first "passed" while the nine tests after it never ran and no count
+  # line was printed. The count line is the only thing that shows that.
+  local out
+  out=$(validator_on "$dir" || true)
+  if [[ "$out" != *"INSIDE THE GENERATED REGION"* ]]; then
+    fail "$name" "the footer did not say the finding was inside the generated region" \
+      "got: ${out}"
+    return
+  fi
+  if [[ "$out" != *"docs/plans/00-deltas.md"* ]]; then
+    fail "$name" "the region-aware remedy did not name the source file" \
+      "a reader sent to edit the generated region loses the edit on the next run" \
+      "got: ${out}"
+    return
+  fi
+  # AND THE ORDINARY CASE MUST NOT CARRY IT. A remedy printed unconditionally is
+  # not a remedy, it is decoration - the same argument as "no warnings".
+  local plain="${work_dir}/validator-remedy-plain"
+  make_validator_repo "$plain"
+  perl -pi -e 's/^\| RR1 \| A risk nobody has mitigated \| P1 \| open \|$/| RR1 | A risk nobody has mitigated | P1 |  |/' \
+    "${plain}/docs/plans/00-register.md"
+  out=$(validator_on "$plain" || true)
+  if [[ "$out" != *"RR1"* ]]; then
+    fail "$name" "the control mutation did not produce a finding of its own" "got: ${out}"
+    return
+  fi
+  if [[ "$out" == *"INSIDE THE GENERATED REGION"* ]]; then
+    fail "$name" "a finding outside the region was told to go and edit a ratified delta" \
+      "got: ${out}"
+    return
+  fi
+  pass "$name"
+}
+
+test_validator_refuses_an_empty_read() {
+  local name="registerValidatorRefusesAnEmptyRead"
+  local dir="${work_dir}/validator-empty"
+  make_validator_repo "$dir"
+  # THE FLOOR conventions.md's harness contract requires: "a shrinking suite is
+  # blind, not clean". A check that prints OK on zero rows is the vacuous read
+  # test_licence_check_refuses_an_empty_read already exists for.
+  perl -ni -e 'print unless /^\|/' "${dir}/docs/plans/00-register.md"
+  if grep -q '^|' "${dir}/docs/plans/00-register.md"; then
+    fail "$name" "the test's own mutation did not remove the tables"
+    return
+  fi
+  expect_validator_catches "$name" "$dir" "the parser read nothing"
+}
+
 test_status_page_names_the_agent_register
 test_status_page_counts_a_scoped_mutation_id
 test_no_writes_hook_catches_new_endpoint
@@ -688,6 +1401,27 @@ test_status_check_passes_when_generated
 test_status_check_catches_a_hand_edit
 test_status_check_catches_a_stale_page
 test_status_page_does_not_guess_an_absent_status
+test_decisions_region_is_generated_from_the_deltas_file
+test_decisions_region_carries_the_owner_overlay
+test_overlay_naming_an_undefined_delta_is_refused
+test_markerless_register_is_refused
+test_hand_edit_inside_the_region_fails_check
+test_ratified_decisions_are_not_counted_open
+test_an_escaped_pipe_does_not_shift_a_row
+test_the_command_the_failure_message_prints_actually_fixes_it
+test_the_shipped_register_passes_the_validator
+test_validator_passes_the_unmutated_fixture
+test_validator_catches_a_surplus_cell
+test_validator_catches_an_unescaped_pipe
+test_validator_catches_a_duplicate_id
+test_validator_catches_an_empty_status
+test_validator_catches_an_unknown_status_outside_the_exception_set
+test_validator_catches_an_unsorted_section
+test_validator_catches_a_renamed_status_header
+test_validator_catches_an_unrecognised_row_id
+test_validator_catches_a_renamed_overlay_header
+test_validator_names_the_generated_region_in_its_remedy
+test_validator_refuses_an_empty_read
 
 echo
 echo "run-script-tests.sh: ${passed} passed, ${failed} failed"
