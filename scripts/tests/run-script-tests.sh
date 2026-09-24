@@ -596,6 +596,79 @@ test_status_page_does_not_guess_an_absent_status() {
 }
 
 
+test_status_page_counts_a_scoped_mutation_id() {
+  local name="statusPageCountsAScopedMutationId"
+  local dir="${work_dir}/status-scoped"
+  make_status_repo "$dir"
+
+  # C33 backfilled `## Mutations (M)`, and 81 of this project's 103 mutation ids
+  # are scoped to the unit that owns them — `F8-M1`, `C32-M7`. The generator's
+  # row filter was `[A-Z]{1,2}\d+`, which rejects every one of them WITHOUT A
+  # WORD, so the section would have reported 22 rows against 103 real ids on a
+  # page CI keeps current.
+  #
+  # THE FIXTURE CARRIES THREE ROWS ON PURPOSE. One bare, one scoped, and one
+  # junk. A fixture holding only the scoped row would pass under a filter that
+  # accepted every string — the tautology with a green tick conventions.md
+  # names — so the junk row is what makes this test able to fail in the other
+  # direction.
+  cat >> "${dir}/docs/plans/00-register.md" <<'REG'
+
+## Mutations (M)
+
+| ID | Title | P | Status |
+|---|---|---|---|
+| M1 | A bare, global mutation id |  | closed |
+| F8-M1 | A mutation scoped to the unit that owns it |  | closed |
+| MUTATION-X | Not an id at all |  | closed |
+REG
+
+  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  local page="${dir}/docs/plans/00-status.md"
+
+  if ! grep -q '^| Mutations (`M`) | 2 | 0 | 0 | 2 |$' "$page"; then
+    fail "$name" "the M register did not count exactly 2 rows" \
+      "a scoped id must be counted (or the junk id must not be): $(grep -F 'Mutations (`M`)' "$page")"
+    return
+  fi
+  pass "$name"
+}
+
+test_status_page_names_the_agent_register() {
+  local name="statusPageNamesTheAgentRegister"
+  local dir="${work_dir}/status-agent"
+  make_status_repo "$dir"
+
+  # D36 opened `## Agent items (A)`. A register symbol gen_status.py does not
+  # know falls into `extra`, which prints THE SYMBOL AS ITS OWN NAME, so the
+  # page shipped `A (`A`)` - the register unnamed, on a page CI keeps current.
+  # The assertion is on the rendered line, not on KNOWN_REGISTERS, because a
+  # test that re-derives its expected value cannot see the path that produces
+  # the real one.
+  cat >> "${dir}/docs/plans/00-register.md" <<'REG'
+
+## Agent items (A)
+
+| ID | Title | P | Status |
+|---|---|---|---|
+| A1 | A finding only the agent can close | P1 | open |
+| A2 | One that is closed |  | closed |
+REG
+
+  python3 "${dir}/scripts/gen_status.py" >/dev/null 2>&1
+  local page="${dir}/docs/plans/00-status.md"
+
+  if ! grep -q '^| Agent items (`A`) | 2 | 1 | 0 | 1 |$' "$page"; then
+    fail "$name" "the A register was not named, or was miscounted" \
+      "got: $(grep -E '^\| (Agent items|A) \(`A`\)' "$page")"
+    return
+  fi
+  pass "$name"
+}
+
+
+test_status_page_names_the_agent_register
+test_status_page_counts_a_scoped_mutation_id
 test_no_writes_hook_catches_new_endpoint
 test_no_writes_hook_catches_bare_path
 test_no_writes_hook_catches_builder_path
