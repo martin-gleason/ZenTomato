@@ -261,7 +261,7 @@ struct ShapeSheet: View {
   /// The settings row. One row by design; see `AppSettings`.
   @Query private var settings: [AppSettings]
 
-  @State private var budgetMinutes = 60
+  @State private var budgetMinutes = ShapeScreenModel.defaultBudgetMinutes
   @State private var preset: AbsorptionPreset = .balanced
   @State private var endsWithLongBreak = true
   @State private var savedNote: String?
