@@ -83,7 +83,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
 | Mutations (`M`) | 151 | 41 | 0 | 110 |
 | Chores (`C`) | 30 | 5 | 9 | 16 |
-| Agent items (`A`) | 22 | 9 | 0 | 13 |
+| Agent items (`A`) | 23 | 9 | 0 | 14 |
 
 `Unknown` is not a third kind of open. It means the source document said nothing about status, so this page will not guess — the row is a question for the owner.
 
@@ -105,7 +105,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `C` | closed | 16 |
 | `C` | open | 5 |
 | `C` | unknown | 9 |
-| `A` | closed | 13 |
+| `A` | closed | 14 |
 | `A` | open | 9 |
 
 ## Hooks
