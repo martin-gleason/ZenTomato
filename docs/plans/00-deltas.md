@@ -67,7 +67,7 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D44** | ratified | **yes — v1.5** | 1 | v1.5's amendment ledger moves inside the baseline |
 | **D45** | **proposed** | no | — | A silent alarm and a haptic on the watch when the phone's sound is off |
 | **D46** | **proposed** | no | — | The watch fires the same controls as the phone — contradicts D2 |
-| **D47** | **proposed** | **yes** | 1 | The shape store is one Codable value in UserDefaults |
+| **D47** | ~~rejected~~ | no | — | ~~The shape store in UserDefaults~~ — duplicate of D32 |
 
 *49 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
@@ -2372,9 +2372,28 @@ September 24, 2026
 
 #AI/Claude
 
-## D47 — The shape store is a single `Codable` value in `UserDefaults`
+## D47 — ~~The shape store is a single `Codable` value in `UserDefaults`~~
 
-**Proposed 2026-09-24. NOT YET RATIFIED — and the reason is a convention, not a hesitation.** The
+**REJECTED 2026-09-24, SAME DAY, AS A DUPLICATE OF `D32`.** It is kept here struck through rather
+than deleted, because `docs/conventions.md` says a rejected decision stays in the register so it is
+not re-proposed — and this one would be, by anybody reading `F8`.
+
+**`D32`, ratified 2026-09-09, already decided exactly this**: *"a shape is persisted as one small
+`Codable` value in `UserDefaults`, in exactly one shipped file, and `noNewPersistentSurface` is
+amended to admit that file by name and nothing else."* The fence already names
+`ShapeStore.swift`, and `ShapeStore.swift` already ships.
+
+**Why it was written anyway, recorded because the cause is reusable.** `F8.md`'s `Ruling E` says *"the
+shape-store delta, by name and not by number, **because it is not ratified**"*, and its first open
+question asks the owner to choose `UserDefaults` or a `TimerState` migration. Both sentences were true
+when written on 2026-09-09 and stopped being true later that same day. **The plan was never updated,
+and the agent asked the owner to decide something already decided, then wrote a delta for it.**
+Nothing checks that a plan's prose still matches the register — `F8.md` is corrected, and `A22`
+records the class.
+
+**The original text follows, struck, for the record.**
+
+~~**Proposed 2026-09-24. NOT YET RATIFIED — and the reason is a convention, not a hesitation.**~~ The
 owner chose it: *"let's do user default."* `F8`'s `Ruling E` had already recommended it and the owner
 had already asked for *"the most lightweight storage method Swift allows … I would prefer to not have
 a db on this unless we reach the point where we have to."*
