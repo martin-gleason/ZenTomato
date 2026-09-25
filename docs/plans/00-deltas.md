@@ -67,8 +67,9 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D44** | ratified | **yes — v1.5** | 1 | v1.5's amendment ledger moves inside the baseline |
 | **D45** | **proposed** | no | — | A silent alarm and a haptic on the watch when the phone's sound is off |
 | **D46** | **proposed** | no | — | The watch fires the same controls as the phone — contradicts D2 |
+| **D47** | **proposed** | **yes** | 1 | The shape store is one Codable value in UserDefaults |
 
-*48 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*49 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
@@ -2365,6 +2366,59 @@ it — which is a much better position to widen `D2` from than this one.
 
 **Nothing is built, and `F17` is unblocked either way**: `D30` is ratified and `F17` can be gated on
 its own terms.
+
+-----
+September 24, 2026
+
+#AI/Claude
+
+## D47 — The shape store is a single `Codable` value in `UserDefaults`
+
+**Proposed 2026-09-24. NOT YET RATIFIED — and the reason is a convention, not a hesitation.** The
+owner chose it: *"let's do user default."* `F8`'s `Ruling E` had already recommended it and the owner
+had already asked for *"the most lightweight storage method Swift allows … I would prefer to not have
+a db on this unless we reach the point where we have to."*
+
+**What holds ratification is one unrun command.** This delta rests on *"`UserDefaults` survives an app
+update"*, which is a claim about a system outside this repository. `docs/conventions.md`: where a
+decision asserts that, the confirming command and its output go on the row **before** ratification,
+and the evidence is the observable end state rather than the documented behaviour. `F8`'s fourth
+`BLOCKING` note has said so since 2026-09-22.
+
+**It matters more under the lifetime ruled on 2026-09-24**, not less: a shape now lasts until a new
+shape replaces it, so a shape genuinely is expected to cross an update.
+
+**The check, and it fits in one sitting.** Set a shape; install the next build over the top; open the
+app and read the shape back. Paste what came out.
+
+**Currently:** *Data | Local only (SwiftData)*
+
+Replace with:
+
+> Data | Local only. SwiftData for everything durable; one `Codable` value in `UserDefaults` for the
+> running shape, written by one type.
+
+### What it costs, stated rather than implied
+
+**It trips a fence, and that is the fence working.** `ZenTomatoTests/PolishFenceTests.swift:120`
+asserts `countAcrossApp("UserDefaults") == 0` across every line of shipped Swift. That test's own doc
+comment says what to do here: *"If a measurement genuinely demands a cache, this test failing is the
+correct outcome: it stops the pass and moves the argument to a delta, where it belongs."* This is that
+delta. The fence is amended to allow exactly one file, not deleted.
+
+### Why not `TimerState`, the runner-up
+
+`Ruling E` argues it at length and one reason outweighs the rest for the owner's own data: **columns
+on `TimerState` mean a SwiftData migration over the store holding the distraction log.** That is the
+same store `C26` refuses to risk for a rename, and `O1` — *one real day's export, read beside the
+Rhodia* — has never been run against it. A migration there is not free and it is not reversible.
+
+Two further reasons, from the plan: a shape is a **variable-length list of blocks**, which a
+flat-column row cannot hold without becoming an encoded blob inside a row whose own doc argues for
+*"six plain numbers"*; and `TimerState` pins its own fence number, `timerStateColumnCount = 17`, so it
+is not cheaper on that axis either.
+
+**So the trade is: amend a fence, or migrate the crown jewels.** The owner chose the fence.
 
 -----
 September 24, 2026

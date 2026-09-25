@@ -142,6 +142,7 @@ makes the generator refuse to run at all and write nothing.
 | D44 | v1.5's amendment ledger moves inside the baseline | — | ratified |  |
 | D45 | A silent alarm and a haptic on the watch when the phone's sound is off | — | proposed |  |
 | D46 | The watch fires the same controls as the phone | — | proposed |  |
+| D47 | The shape store is a single `Codable` value in `UserDefaults` | — | proposed |  |
 <!-- END GENERATED: decisions -->
 
 ### Decisions — owner fields
