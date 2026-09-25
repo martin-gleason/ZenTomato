@@ -88,8 +88,9 @@ struct ShapeSettingsFenceTests {
 
     #expect(try columns() == before)
     // And the shape really did run, so the assertion above is about a sprint that happened rather
-    // than about one that never started.
-    #expect(harness.store.runningShape() == nil)
+    // than about one that never started. **A spent shape is rewound and not deleted** — the owner's
+    // ruling of 2026-09-24 — so what says the sprint ended is the cursor, not an empty store.
+    #expect(try #require(harness.store.runningShape()).cursor == 0)
     #expect(try context.fetch(FetchDescriptor<PomodoroSession>()).count == shape.blocks.count)
   }
 

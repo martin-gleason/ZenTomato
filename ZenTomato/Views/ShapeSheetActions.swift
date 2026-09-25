@@ -13,9 +13,13 @@ import SwiftData
 /// is the only thing in this feature that writes `AppSettings`. `F8-M9` is the mutation that proves
 /// the separation is real rather than tidy.
 ///
-/// **It never calls `ShapeStore.start(_:)`.** Nothing on this screen runs a sprint — `F8-T4` owns
-/// that — so the single stored run slot is not written here at all, and a shape cannot be
-/// overwritten under a sprint that is already going.
+/// **IT NOW WRITES THE SHAPE ITSELF, AND IT DID NOT BEFORE.** This comment used to read *"it never
+/// calls `ShapeStore.start(_:)` — nothing on this screen runs a sprint, `F8-T4` owns that."* `T4` is
+/// what is being built, and note 1 from use put the write here: *"idle should update when the sprint
+/// is fitted."* The half of that sentence the old comment got right is still true and still enforced
+/// one layer up — **nothing on this screen starts a timer**, and `TimerView.openShape()` refuses to
+/// present the sheet at all while a block runs, so a shape can still not be written under a sprint
+/// that is already going.
 @MainActor
 struct ShapeSheetActions {
   /// Where the two remembered controls live. Shipped in `T2`; `D32`.
@@ -50,6 +54,27 @@ struct ShapeSheetActions {
   func remember(preset: AbsorptionPreset, endsWithLongBreak: Bool) {
     store.save(
       StoredShape(preset: preset, endsWithLongBreak: endsWithLongBreak, run: store.load()?.run))
+  }
+
+  /// **A shape was fitted: write it, and tell the caller so the idle timer can say the new number.**
+  ///
+  /// Note 1 from use, ruled 2026-09-25. The trigger is *fitting* — a control moved and the shaper
+  /// produced an answer for the new budget — and not starting, not saving, and not the next block
+  /// boundary.
+  ///
+  /// **Called on a control moving and never on the screen opening**, which is the difference between
+  /// remembering a decision and overwriting one. The sheet opens on a sixty-minute budget by design
+  /// (the owner confirmed that on the device, 2026-09-25), so a fit on open would replace a
+  /// fifteen-minute shape somebody set yesterday with an hour they never asked for, just for looking.
+  ///
+  /// - Returns: `false` when there is no shape to write — *nothing fits* at this budget. **The stored
+  ///   shape is then left exactly as it was**, because a budget that produced no answer has not
+  ///   replaced anything; the screen already says so in its own words.
+  @discardableResult
+  func fit(_ shape: SprintShape?) -> Bool {
+    guard let shape else { return false }
+    store.start(shape)
+    return true
   }
 
   /// The one deliberate press. Copies this shape's block lengths into the settings row.
