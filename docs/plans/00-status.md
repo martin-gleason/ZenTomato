@@ -77,13 +77,13 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 
 | Register | Rows | Open | Unknown | Closed |
 |---|---|---|---|---|
-| Decisions (`D`) | 49 | 3 | 0 | 46 |
+| Decisions (`D`) | 49 | 2 | 0 | 47 |
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
 | Owner items (`O`) | 51 | 23 | 0 | 28 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
 | Mutations (`M`) | 151 | 41 | 0 | 110 |
 | Chores (`C`) | 30 | 5 | 9 | 16 |
-| Agent items (`A`) | 21 | 8 | 0 | 13 |
+| Agent items (`A`) | 22 | 9 | 0 | 13 |
 
 `Unknown` is not a third kind of open. It means the source document said nothing about status, so this page will not guess — the row is a question for the owner.
 
@@ -91,9 +91,9 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 
 | Register | Status | Count |
 |---|---|---|
-| `D` | proposed | 3 |
+| `D` | proposed | 2 |
 | `D` | ratified | 44 |
-| `D` | rejected | 1 |
+| `D` | rejected | 2 |
 | `D` | resolved | 1 |
 | `RR` | open | 4 |
 | `O` | closed | 28 |
@@ -106,7 +106,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `C` | open | 5 |
 | `C` | unknown | 9 |
 | `A` | closed | 13 |
-| `A` | open | 8 |
+| `A` | open | 9 |
 
 ## Hooks
 
@@ -155,7 +155,6 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 |---|---|---|---|---|
 | owner | D45 | — | proposed | A silent alarm and a haptic on the watch when the phone's sound is off |
 | owner | D46 | — | proposed | The watch fires the same controls as the phone |
-| owner | D47 | — | proposed | The shape store is a single `Codable` value in `UserDefaults` |
 | unassigned | RR1 | P0 | open | iCloud/CloudKit sync would put the log where a conflict can lose it |
 | unassigned | RR2 | P0 | open | Changing the bundle identifier orphans the SwiftData store holding… |
 | unassigned | RR3 | P1 | open | The shape cursor and `TimerState` advance non-atomically, and control… |
@@ -256,6 +255,7 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | unassigned | A18 | P1 | open | Watchdog kill: `playbackState` is a blocking XPC call on the main… |
 | unassigned | A19 | P2 | open | Five `F8` mutation IDs are defined only in commit messages and cannot… |
 | unassigned | A20 | P2 | open | Seven open owner items carry no mode, so they sit in the owner's… |
+| unassigned | A22 | P2 | open | A plan's prose can contradict the register and nothing notices |
 
 ---
 
