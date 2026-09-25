@@ -66,7 +66,7 @@ Status is what the unit's own plan file declares. What has landed in git is deli
 | F13 | feature | `F13-T1`–`T4` built. `T5` steps 1 and 2 are **run and recorded** — step 2 on the device 2026-09-24… | `docs/plans/F13.md` | 5 planned |
 | F14 | feature | plan written, awaiting the gate. No code has been written. | `docs/plans/F14.md` | 6 planned |
 | F15 | feature | plan written, **awaiting the gate.** No code has been written. | `docs/plans/F15.md` | 6 planned |
-| F16 | feature | plan written, awaiting the gate. No code has been written. **`Q6` is answered and it found a… | `docs/plans/F16.md` | 6 planned |
+| F16 | feature | **GATED 2026-09-24.** `D48` — the garden delta — is ratified and applied to `SPEC.md`; `Q1`–`Q4`… | `docs/plans/F16.md` | 6 planned |
 | F17 | feature | plan written, awaiting the gate. No code has been written. **Revised 2026-09-09** after the first… | `docs/plans/F17.md` | 6 planned |
 | F18 | feature | plan written, awaiting the gate. No code has been written. | `docs/plans/F18.md` | 5 planned |
 | F19 | feature | **`F19-T2` is built** — search inside a project, shipped 2026-09-24 at the owner's *"keep moving on… | `docs/plans/F19.md` | 6 planned |
@@ -77,7 +77,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 
 | Register | Rows | Open | Unknown | Closed |
 |---|---|---|---|---|
-| Decisions (`D`) | 49 | 2 | 0 | 47 |
+| Decisions (`D`) | 50 | 2 | 0 | 48 |
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
 | Owner items (`O`) | 51 | 23 | 0 | 28 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
@@ -92,7 +92,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Register | Status | Count |
 |---|---|---|
 | `D` | proposed | 2 |
-| `D` | ratified | 44 |
+| `D` | ratified | 45 |
 | `D` | rejected | 2 |
 | `D` | resolved | 1 |
 | `RR` | open | 4 |
