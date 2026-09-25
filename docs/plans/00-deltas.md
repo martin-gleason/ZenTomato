@@ -2388,8 +2388,16 @@ and the evidence is the observable end state rather than the documented behaviou
 **It matters more under the lifetime ruled on 2026-09-24**, not less: a shape now lasts until a new
 shape replaces it, so a shape genuinely is expected to cross an update.
 
-**The check, and it fits in one sitting.** Set a shape; install the next build over the top; open the
-app and read the shape back. Paste what came out.
+**The check, and it fits in one sitting — but it has to be designed or it proves nothing.** The shape
+screen opens on sixty minutes, so **a stored shape of sixty is indistinguishable from a wiped store**:
+both put sixty on the screen after the update. The check must store a shape that is *not* the default.
+
+1. Set the budget to **90 or 120**, and change the preset as well.
+2. **Install the next build over the top** — the update path, not a fresh install.
+3. Open *Fit a sprint* and report the number it opens on.
+
+**90 means the store survived and this delta can be ratified. 60 means it did not**, and the answer is
+`TimerState` and the migration below.
 
 **Currently:** *Data | Local only (SwiftData)*
 
