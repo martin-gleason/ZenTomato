@@ -217,6 +217,14 @@ struct ShapeSheet: View {
   /// Where the two remembered controls live. Handed down, never reached for.
   let shapes: ShapeStore
 
+  /// **What to tell once a shape has been written.** `TimerView` wires it to the engine, so the idle
+  /// countdown behind this sheet is already showing the shape's first pomodoro by the time the sheet
+  /// goes away — note 1 from use, ruled 2026-09-25.
+  ///
+  /// A closure rather than the engine itself, because this screen has no business being able to
+  /// start, stop or read a timer. The whole of what it may do to one is *"a shape exists now"*.
+  let onFit: () -> Void
+
   var body: some View {
     NavigationStack {
       ShapeView(
@@ -226,7 +234,7 @@ struct ShapeSheet: View {
         // `assumeIsolated` rather than a `Task` hop, for the reason `TimerView` gives at the music
         // switch: SwiftUI calls a `Binding` setter on the main actor, so this asserts something
         // already true instead of deferring the control by a run-loop turn.
-        onBudgetChange: { minutes in MainActor.assumeIsolated { budgetMinutes = minutes; savedNote = nil } },
+        onBudgetChange: { minutes in MainActor.assumeIsolated { budgetMinutes = minutes; fitted() } },
         onPresetChange: { chosen in MainActor.assumeIsolated { preset = chosen; changed() } },
         onToggleLongBreak: { isOn in MainActor.assumeIsolated { endsWithLongBreak = isOn; changed() } },
         onSaveToSettings: { saveToSettings() })
@@ -289,15 +297,30 @@ struct ShapeSheet: View {
       startingAt: Date())
   }
 
-  /// A control moved. The controls are remembered; nothing else is written.
+  /// One of the two remembered controls moved. It is remembered, **and it re-fits the shape** —
+  /// moving the absorption preset or the long-break toggle produces a different shape for the same
+  /// budget, so it is a fitting in exactly the sense note 1 means.
   private func changed() {
-    savedNote = nil
     remember()
+    fitted()
   }
 
-  /// Remembers the two controls. **Writes to the shape store and to nothing else.**
+  /// Remembers the two controls. **Writes to the shape store and to nothing else** — `F8-M9`.
   private func remember() {
     actions.remember(preset: preset, endsWithLongBreak: endsWithLongBreak)
+  }
+
+  /// A shape was fitted: write it, and tell the timer behind this sheet.
+  ///
+  /// **`remember()` runs first where both run**, because `ShapeStore.start(_:)` carries the two
+  /// controls across from what is already stored — so fitting before remembering would write the
+  /// shape beside the controls as they were a moment ago.
+  ///
+  /// Nothing is announced when the budget produced no shape: `fit` says so, and the screen is already
+  /// saying it in words.
+  private func fitted() {
+    savedNote = nil
+    if actions.fit(model.shape) { onFit() }
   }
 
   /// The one deliberate press in this feature that writes `AppSettings`.

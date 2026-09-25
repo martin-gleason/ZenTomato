@@ -165,12 +165,14 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       // from. Reached from the music row's line, which is a control only while
       // the timer is idle — D19 says music is set before a sprint, and a screen
       // offering a choice it will not honour is worse than one offering none.
-      // F8's shape sheet: how long have you got, and the shape that answers it. It shows; it
-      // starts nothing. `onDismiss` is `presentReflectionIfPossible` for the reason every other
-      // sheet here carries it — D14: a block can end behind a modal, and the offer has to be taken
-      // again when the screen is free.
+      // F8's shape sheet: how long have you got, and the shape that answers it. It writes a shape
+      // and it starts nothing. `onFit` is note 1 from use, ruled 2026-09-25 — the idle countdown
+      // behind this sheet has to be showing the shape's first pomodoro by the time the sheet goes
+      // away, not at the next block boundary. `onDismiss` is `presentReflectionIfPossible` for the
+      // reason every other sheet here carries it — D14: a block can end behind a modal, and the
+      // offer has to be taken again when the screen is free.
       .sheet(isPresented: $showingShape, onDismiss: presentReflectionIfPossible) {
-        ShapeSheet(shapes: shapes)
+        ShapeSheet(shapes: shapes, onFit: { engine.shapeWasFitted() })
       }
       .sheet(isPresented: $showingMusic) {
         MusicPickerSheet(

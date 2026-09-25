@@ -22,16 +22,10 @@ struct ShapeSeamTests {
 
   private var context: ModelContext { container.mainContext }
 
-  /// Today's shipped defaults: 25 / 5 / 15, four poms to a sprint. The settings a shaped block has
-  /// to visibly differ from.
-  private static let settings = TimerSettingsSnapshot(
-    workMinutes: 25, shortBreakMinutes: 5, longBreakMinutes: 15,
-    pomodorosPerSprint: 4, soundEnabled: true, alertSound: .systemDefault, autoStartNextBlock: false)
-
+  /// The settings and the shapes fitted to them, in `ShapeFixture` so that the suite next door
+  /// reads the same numbers instead of agreeing with these by coincidence.
   private static func shape(_ budget: Int, endsWithLongBreak: Bool = true) throws -> SprintShape {
-    try #require(
-      SprintShaper.shape(
-        budgetMinutes: budget, settings: settings, endsWithLongBreak: endsWithLongBreak))
+    try ShapeFixture.shape(budget, endsWithLongBreak: endsWithLongBreak)
   }
 
   private func engine(_ harness: TestShapeStore, clock: TestClock, alarms: SpyAlarmScheduler) -> TimerEngine {
@@ -186,7 +180,15 @@ struct ShapeSeamTests {
     #expect(engine.pomodorosPerSprint == 4)
   }
 
-  // MARK: The shape does not outlive its sprint
+  // MARK: The shape outlives its sprint — and its position does not
+  //
+  // **TWO TESTS IN THIS SECTION USED TO ASSERT THE OPPOSITE, AND THEY WERE RIGHT WHEN WRITTEN.**
+  // `aShapeDoesNotOutliveItsSprint` and `stoppingTheSprintForgetsTheShape` encoded Ruling E as it
+  // stood on 2026-09-22: the shape was deleted when its sprint ended. The owner superseded that on
+  // 2026-09-24 — *"the rule to discard a stored shape should last until a new shape is added"*, and
+  // a shape survives being stopped early — with a 36-hour grace on the **position** only. So the
+  // assertions are inverted here rather than deleted, and what each of them still protects is the
+  // half of the old test that was never about the lifetime: the sprint must still *end*.
 
   /// Runs every block of `shape` to its end, the way a boundary does.
   private func run(_ engine: TimerEngine, blocks: Int, clock: TestClock) async throws {
@@ -197,11 +199,15 @@ struct ShapeSeamTests {
     }
   }
 
-  /// `aShapeDoesNotOutliveItsSprint` — run it to the end and the store is empty.
+  /// `aShapeSurvivesItsOwnSprint` — run it to the end and the shape is still there, back at its
+  /// first block.
   ///
-  /// This is `F8-M3`'s named test.
-  @Test("aShapeDoesNotOutliveItsSprint")
-  func aShapeDoesNotOutliveItsSprint() async throws {
+  /// This is `F8-M3`'s named test, and **the assertion it carries is now the pair rather than the
+  /// absence**: the blocks are still stored (the owner's ruling) *and* the cursor is zero (the sprint
+  /// ended). Asserting only the first would pass while the shape ran for ever; asserting only the
+  /// second is what the old version did, and it passed while the shape was deleted.
+  @Test("aShapeSurvivesItsOwnSprint")
+  func aShapeSurvivesItsOwnSprint() async throws {
     let harness = try TestShapeStore.make()
     defer { harness.remove() }
     let clock = TestClock()
@@ -215,7 +221,9 @@ struct ShapeSeamTests {
 
     try await run(engine, blocks: shape.blocks.count, clock: clock)
 
-    #expect(harness.store.runningShape() == nil)
+    let after = try #require(harness.store.runningShape(), "the shape outlives its sprint")
+    #expect(after.blocks.count == shape.blocks.count)
+    #expect(after.cursor == 0, "and its position does not")
     #expect(engine.isRunning == false)
   }
 
@@ -241,7 +249,7 @@ struct ShapeSeamTests {
 
     try await run(engine, blocks: shape.blocks.count, clock: clock)
 
-    #expect(harness.store.runningShape() == nil)
+    #expect(try #require(harness.store.runningShape()).cursor == 0)
     // **The assertion this test was written for, and did not carry.** Its sibling twenty lines up
     // has it; this one did not, which is the "per-theme rule checked once against one theme"
     // failure `conventions.md` names. Without it the suite is green while the sprint runs 135
@@ -285,7 +293,7 @@ struct ShapeSeamTests {
       await engine.boundaryReached()
     }
 
-    #expect(harness.store.runningShape() == nil)
+    #expect(try #require(harness.store.runningShape()).cursor == 0)
     #expect(engine.isRunning == false)
 
     // ASSERT WHAT THE SCREEN OFFERS, NOT THAT A FLAG IS FALSE. `isRunning == false` is true of the
@@ -295,23 +303,34 @@ struct ShapeSeamTests {
     #expect(state.completedInSprint == 0)
   }
 
-  /// Stopping the sprint forgets the shape. See `TimerEngine.shapeSurvivesBeingStoppedEarly`, which
-  /// is where `F8`'s third open question is parked.
-  @Test("stoppingTheSprintForgetsTheShape")
-  func stoppingTheSprintForgetsTheShape() async throws {
+  /// **Stopping the sprint keeps the shape and drops the position.** `F8`'s third open question,
+  /// ruled by the owner 2026-09-24: a shape survives being stopped early.
+  ///
+  /// **The last assertion is the one that inverted, and it is the whole ruling in one number.** It
+  /// used to read `25 * 60` — after a stop the shape was gone and the idle screen quoted the settings.
+  /// It now reads `22 * 60`, the shape's own first pomodoro, and the two differ by three minutes
+  /// precisely because this fixture's shape disagrees with the settings. A shape that happened to
+  /// agree would have made the inversion invisible.
+  @Test("theShapeSurvivesBeingStoppedEarly")
+  func theShapeSurvivesBeingStoppedEarly() async throws {
     let harness = try TestShapeStore.make()
     defer { harness.remove() }
     let clock = TestClock()
-    harness.store.start(try Self.shape(120))
+    let shape = try Self.shape(120)
+    harness.store.start(shape)
     let engine = engine(harness, clock: clock, alarms: SpyAlarmScheduler())
     await engine.start()
 
     await engine.stop(reason: "The meeting moved.")
 
-    #expect(harness.store.runningShape() == nil)
+    let after = try #require(harness.store.runningShape(), "a stop does not forget the shape")
+    #expect(after.blocks.count == shape.blocks.count)
+    // The position goes, because `stop` puts the cycle's own tally back to zero and a shape held at
+    // block four beside a tally of zero is two accounts of one sprint.
+    #expect(after.cursor == 0)
     // The controls are remembered between shapes, so stopping one does not reset them.
     #expect(harness.store.load()?.preset == .balanced)
-    #expect(engine.remaining(at: clock.now) == .seconds(25 * 60))
+    #expect(engine.remaining(at: clock.now) == .seconds(22 * 60))
   }
 
   // MARK: The restore path

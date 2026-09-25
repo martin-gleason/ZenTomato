@@ -19,8 +19,18 @@ struct TestShapeStore {
   let suiteName: String
   let defaults: UserDefaults
 
-  /// The store under test, over the private suite.
+  /// The store under test, over the private suite, reading the real clock.
   var store: ShapeStore { ShapeStore(medium: defaults) }
+
+  /// The same store with the 36-hour grace measured against a fixed instant.
+  ///
+  /// **A constant rather than a movable clock, deliberately.** Nothing in the store's own behaviour
+  /// depends on time passing *during* a call; what the grace needs is a known "now" to subtract a
+  /// stored date from. A test that wanted the clock to move would be asserting something this rule
+  /// does not have.
+  func store(at instant: Date) -> ShapeStore {
+    ShapeStore(medium: defaults, now: { instant })
+  }
 
   /// A private, empty defaults suite for one test's exclusive use.
   static func make() throws -> TestShapeStore {
@@ -46,5 +56,25 @@ struct TestShapeStore {
   /// told about it.
   var storedBytes: Data? {
     defaults.data(forKey: ShapeStore.key)
+  }
+}
+
+/// The settings a shaped block has to visibly differ from, and the shapes fitted to them.
+///
+/// **Shared by the two suites that read the seam, rather than typed into each.** The whole force of
+/// these fixtures is that 120 minutes produces a 22-minute pomodoro against a 25-minute setting, so
+/// the right answer and the wrong one differ by three minutes. A second copy of the numbers is a
+/// second chance for one of them to drift into agreeing with the settings, at which point the suite
+/// that holds it asserts nothing while still reading as though it did.
+enum ShapeFixture {
+  /// Today's shipped defaults: 25 / 5 / 15, four pomodoros to a sprint.
+  static let settings = TimerSettingsSnapshot(
+    workMinutes: 25, shortBreakMinutes: 5, longBreakMinutes: 15,
+    pomodorosPerSprint: 4, soundEnabled: true, alertSound: .systemDefault, autoStartNextBlock: false)
+
+  static func shape(_ budget: Int, endsWithLongBreak: Bool = true) throws -> SprintShape {
+    try #require(
+      SprintShaper.shape(
+        budgetMinutes: budget, settings: settings, endsWithLongBreak: endsWithLongBreak))
   }
 }

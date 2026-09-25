@@ -64,14 +64,11 @@ final class TimerEngine {
   /// drift, less than any real clock change, which is at minimum a minute.
   static let clockSkewTolerance: TimeInterval = 5
 
-  /// Whether a shape outlives its sprint being stopped early.
-  ///
-  /// **`docs/plans/F8.md`'s third open question, and it is unruled.** Ruling C's doctrine — a long
-  /// break is earned — points at clearing the shape with the timer; the person who hit Stop by
-  /// accident points the other way. `T2` must not settle that silently in either direction, so it
-  /// ships as one named constant with the question attached: the owner's answer is a one-line
-  /// change here, not a hunt through `stop(reason:)`.
-  static let shapeSurvivesBeingStoppedEarly = false
+  // `shapeSurvivesBeingStoppedEarly` stood here, `false`, with `F8`'s third open question attached
+  // to it: does a shape outlive its sprint being stopped early? **The owner ruled yes, 2026-09-24.**
+  // So the constant is gone rather than flipped — a named `true` would read as a switch somebody
+  // might turn back, and there is nothing left to switch. What a stop costs the shape is its
+  // position, and `ShapeStore.rewindRun()` is where that is now written down.
 
   // MARK: What the screens read
 
@@ -830,11 +827,16 @@ final class TimerEngine {
     // The shape is authoritative about its own length, so being spent ends the sprint the same way
     // a finished long break does: idle, at `.work`, with the tally reset — which is exactly what
     // `TimerCycle.next` returns for `case .longBreak`.
-    let shapeWasRunning = shapes?.runningShape() != nil
+    //
+    // **THE SHAPE IS ASKED, NOT INFERRED.** This used to read the store on either side of the
+    // advance and take the value going `nil` as "the sprint ended". The owner's ruling of 2026-09-24
+    // made a shape survive its own sprint, so the store never goes `nil` and that inference would
+    // have been false for every shaped sprint — silently re-queuing a long break out of `AppSettings`
+    // after a breakless shape, which is this very defect arriving by a second door.
+    //
     // Before either way out of this method, because both of them read a length for what comes
     // next: the auto-start path through `begin`, and `goIdle`'s re-read for the idle screen.
-    advanceShape()
-    let shapeJustSpent = shapeWasRunning && shapes?.runningShape() == nil
+    let shapeJustSpent = advanceShape()
 
     let endsSprint = transition.endsSprint || shapeJustSpent
     let nextKind: BlockKind = shapeJustSpent ? .work : transition.kind
@@ -1386,14 +1388,43 @@ extension TimerEngine {
   /// next slot too. The consequence — a skipped pom costs its slot rather than repeating it, and
   /// the sprint therefore ends one pom light rather than overrunning the budget — is `T4`'s named
   /// edge and is written down here because it is decided here.
-  fileprivate func advanceShape() {
-    shapes?.advance()
+  /// - Returns: `true` when that advance spent the shape's last block, which is the shape saying its
+  ///   sprint has ended. `false` when there is no shape, so an engine with no store behaves exactly
+  ///   as it did.
+  fileprivate func advanceShape() -> Bool {
+    shapes?.advance() ?? false
   }
 
-  /// Forgets the shape when the sprint is abandoned. See `shapeSurvivesBeingStoppedEarly`.
+  /// **A shape was fitted. Say the new numbers now, not at the next boundary.**
+  ///
+  /// `F8`'s note 1 from use, ruled by the owner 2026-09-25: *"idle should update when the sprint is
+  /// fitted."* The plumbing was already here — `readSettings()` overlays the shape's current block
+  /// onto the saved settings, and `idleSettings` is what the idle screen draws — so what was missing
+  /// was nothing but a caller. This is it.
+  ///
+  /// **It goes through `goIdle(kind: .work, completedInSprint: 0)`, and taking the sprint back to its
+  /// start is the point rather than a side effect.** Fitting is reachable only while nothing runs,
+  /// but *idle* includes the gap between two blocks with auto-start off — pomodoro two of four,
+  /// waiting for a tap. A new shape written there would leave the shape at block zero, a pomodoro,
+  /// while the cycle held a short break and a tally of two: the two accounts of one sprint that
+  /// `SessionPlan` refuses by name. A person who has just decided how to cut up the next hour is
+  /// starting that hour, so the tally goes with the shape.
+  ///
+  /// **It refuses while a block runs**, and that is `readSettings()`'s own standing rule rather than
+  /// a new one: a running block is never re-lengthed underneath the person. Note 1 names that as the
+  /// worse of the two readings of *"update immediately"* and it stays refused. The control is
+  /// structurally absent while a block runs, so this guard is for callers rather than for eyes.
+  func shapeWasFitted() {
+    guard isRunning == false else { return }
+    goIdle(kind: .work, completedInSprint: 0)
+    persist()
+  }
+
+  /// Takes the shape back to its first block when the sprint is abandoned. **It does not forget it**
+  /// — the owner ruled on 2026-09-24 that a shape survives being stopped early. `ShapeStore`'s
+  /// `rewindRun()` carries why a stop costs the position even so.
   fileprivate func abandonShape() {
-    guard !Self.shapeSurvivesBeingStoppedEarly else { return }
-    shapes?.clearRun()
+    shapes?.rewindRun()
   }
 }
 

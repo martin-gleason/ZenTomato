@@ -11,10 +11,12 @@ import Foundation
 /// *"fills the budget exactly"* promise can be re-checked on the way back in.
 ///
 /// **THE CONTROLS SIT OUTSIDE THE RUN ON PURPOSE.** `T3` says the trailing-break toggle and the
-/// absorption preset are *"remembered between shapes"*, and the run is deleted the moment its
-/// sprint ends. Nesting the controls inside the run would make forgetting them the default
-/// behaviour of clearing it — a durability bug that would only show up as a preference quietly
-/// resetting itself, which is the hardest kind to notice and the easiest kind to dismiss.
+/// absorption preset are *"remembered between shapes"*. Nesting the controls inside the run would
+/// make forgetting them the default behaviour of clearing it — a durability bug that would only show
+/// up as a preference quietly resetting itself, which is the hardest kind to notice and the easiest
+/// kind to dismiss. (When this was written the run *was* deleted at the end of its sprint. The
+/// owner's ruling of 2026-09-24 replaced that with a rewind, so the two now live equally long; the
+/// separation is kept because the argument for it never depended on the lifetimes differing.)
 ///
 /// **THE ASYMMETRY IN `init(from:)` IS THE DESIGN.** The two controls decode *leniently*, falling
 /// back to their own defaults, because a wrong preset costs a person nothing and the controls are
@@ -40,7 +42,14 @@ struct StoredShape: Codable, Equatable {
   /// Whether a shape ends with the long break the sprint earned. Remembered between shapes.
   var endsWithLongBreak: Bool
 
-  /// The shape that is running, or `nil` when none is. **`nil` is the only spelling of "no shape".**
+  /// **The shape you last fitted, wherever it has got to.** `nil` is the only spelling of "no shape".
+  ///
+  /// It is not *"the shape that is running"* any more, and the rename of the idea matters more than
+  /// the name of the field. Under the owner's ruling of 2026-09-24 the shape survives its sprint
+  /// finishing, being stopped early, and thirty-six hours of silence — what those three events cost
+  /// it is its **position**, not its existence. A cursor of zero is what "not running" looks like
+  /// now; the field going `nil` means only that nothing has ever been fitted, or that what was there
+  /// could not be read.
   var run: StoredRun?
 
   private enum CodingKeys: String, CodingKey {
@@ -118,6 +127,28 @@ struct StoredRun: Codable, Equatable {
   /// `SessionPlan.currentIndex` already follows for the neighbouring case.
   var cursor: Int
 
+  /// When the cursor last moved — which is when the shape was fitted, if it has not moved since.
+  ///
+  /// **The grace is measured from the POSITION, not from the fitting, and the difference is a
+  /// defect.** Measured from the fitting, a sprint begun from a shape fitted forty hours ago would
+  /// be rewound by its own second read: `advance()` would write cursor 1, the next `load()` would
+  /// find the fitting stale and rewind it to 0, and the sprint would run its first block for ever.
+  /// Stamping this as the cursor moves means "stale" says what the rule means — *nobody has been
+  /// here for a day and a half* — rather than *this shape is old*, and an old shape is exactly what
+  /// the owner ruled should survive.
+  ///
+  /// **Optional, and a missing value means STALE rather than fresh.** A run written by a build
+  /// before this field existed has an age nobody can know, and the whole purpose of the grace is to
+  /// avoid resuming something ancient. Guessing *fresh* would resume exactly the run the rule is
+  /// there to drop; guessing *stale* costs a position and keeps the shape, which is the cheap
+  /// direction.
+  ///
+  /// **It is not a version bump**, deliberately. `StoredShape.version` is compared with `==`, so
+  /// raising it would make every shape written by the shipping build unreadable — including the one
+  /// the owner set on 2026-09-25 to prove the store survives an update. A leniently-decoded optional
+  /// adds the field without discarding what is already there.
+  var positionedAt: Date?
+
   /// Whether this is a shape this app could have produced.
   ///
   /// Checked on the way in rather than assumed, because the value crossed a process boundary and
@@ -142,11 +173,45 @@ struct StoredRun: Codable, Equatable {
   var pomCount: Int { blocks.filter { $0.kind == .work }.count }
 
   /// Writes a freshly calculated shape down, at its first block.
-  init(shape: SprintShape, cursor: Int = 0) {
+  init(shape: SprintShape, cursor: Int = 0, positionedAt: Date? = nil) {
     blocks = shape.blocks.map { StoredBlock(kind: $0.kind, minutes: $0.minutes) }
     budgetMinutes = shape.budgetMinutes
     isUnderSuggestedMinimum = shape.isUnderSuggestedMinimum
     self.cursor = cursor
+    self.positionedAt = positionedAt
+  }
+
+  /// How long a position stays resumable after the cursor last moved. **Ruled by the owner,
+  /// 2026-09-24.**
+  ///
+  /// *"Only the definition. A grace period of 36 hours."* The shape itself — its blocks, its preset
+  /// and its long-break toggle — lasts until a new shape replaces it. The **position in it** does
+  /// not: resuming last night's sprint is right, resuming one from three weeks ago is not.
+  ///
+  /// **Thirty-six and not twenty-four**, and the difference is the ordinary case: stopping at six in
+  /// the evening and coming back after nine the next morning is under a day of clock time and over a
+  /// day of calendar. Thirty-six covers a night and the working day after it without reaching a
+  /// second night.
+  static let grace: TimeInterval = 36 * 60 * 60
+
+  /// Whether this position is still inside its grace period.
+  ///
+  /// A run with no `positionedAt` is **not** fresh — see that property for why.
+  func isFresh(at now: Date) -> Bool {
+    guard let positionedAt else { return false }
+    return now.timeIntervalSince(positionedAt) < Self.grace
+  }
+
+  /// The same shape, back at its first block. **What a spent, stopped or stale run becomes.**
+  ///
+  /// The timestamp goes with the position, because a rewound run has no position to have a date
+  /// for — and leaving yesterday's date on a cursor of zero would make a rewind look, to the next
+  /// read, like something that still needed rewinding.
+  var rewound: StoredRun {
+    var copy = self
+    copy.cursor = 0
+    copy.positionedAt = nil
+    return copy
   }
 
   /// Reads it back as the domain type the rest of the app works in.
