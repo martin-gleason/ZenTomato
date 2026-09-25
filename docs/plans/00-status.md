@@ -97,8 +97,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `D` | resolved | 1 |
 | `RR` | open | 4 |
 | `O` | closed | 28 |
-| `O` | held | 1 |
-| `O` | open | 22 |
+| `O` | open | 23 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
 | `M` | closed | 109 |
@@ -174,7 +173,7 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | owner | O32 | P1 | open | A watch-face complication does not exist |
 | owner | O34 | P1 | open | From the lock screen, slide-to-stop worked |
 | owner | O36 | P1 | open | The zenpom Focus runbook, followed once on the phone |
-| owner | O37 | P1 | held | The shape screen, on a phone — F8-T3's device check |
+| owner | O37 | P1 | open | The shape screen, on a phone — F8-T3's device check |
 | owner | O39 | P2 | open | Does the absorption preset control earn its place? |
 | owner | O40 | P2 | open | The App Group capability, in the developer portal |
 | owner | O43 | P2 | open | F8-M7 and F8-M8 each name two different mutations |
