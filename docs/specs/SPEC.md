@@ -55,7 +55,7 @@ Suggested build order: F1 → F2 → F5 → F3 → F4 → F6. The timer and the 
 
 ## Out of scope for v0.1 (Phase 2, post-exam)
 
-standalone watchOS · macOS · CloudKit sync · creating a default "focus playlist" · creating, editing, or commenting on Todoist tasks · any capture surface of any kind · widgets beyond the Lock Screen Live Activity and a watch-face complication showing the running block · themes · streaks, badges, or any gamification layered on top of Todoist's own.
+standalone watchOS · macOS · CloudKit sync · creating a default "focus playlist" · creating, editing, or commenting on Todoist tasks · any capture surface of any kind · widgets beyond the Lock Screen Live Activity and a watch-face complication showing the running block · themes · streaks, badges, goals, records, targets, comparisons, or any gamification layered on top of Todoist's own — with one exception, ratified as D48: a display of finished work that only ever accumulates. It may grow when a pom is finished. It may not shrink, decay, reset, break, or read differently because of when the poms happened, and it may not be shown per day. The exception is enforced by a test, not by this sentence.
 
 A feature request that isn't on the list above gets one question — *is this v0.1 or Phase 2?* — and the answer is written here before anything is built.
 
@@ -75,7 +75,7 @@ August 21, 2026
 
 ## Amendments applied
 
-D1 D2 D3 D4 D17 D18 D20 D24 D25 D26 D27 D28 D29 D30 D35
+D1 D2 D3 D4 D17 D18 D20 D24 D25 D26 D27 D28 D29 D30 D35 D48
 
 Ratified deltas whose text has been written into this file. `DeltaIntegrityTests` reads this list;
 `docs/specs/AMENDMENT-BASELINE.txt` counts what is still outstanding, and the exact replacement text
