@@ -69,7 +69,7 @@ Status is what the unit's own plan file declares. What has landed in git is deli
 | F16 | feature | plan written, awaiting the gate. No code has been written. | `docs/plans/F16.md` | 6 planned |
 | F17 | feature | plan written, awaiting the gate. No code has been written. **Revised 2026-09-09** after the first… | `docs/plans/F17.md` | 6 planned |
 | F18 | feature | plan written, awaiting the gate. No code has been written. | `docs/plans/F18.md` | 5 planned |
-| F19 | feature | plan written, **awaiting the gate.** No code has been written. | `docs/plans/F19.md` | 6 planned |
+| F19 | feature | **`F19-T2` is built** — search inside a project, shipped 2026-09-24 at the owner's *"keep moving on… | `docs/plans/F19.md` | 6 planned |
 
 ## Registers
 
@@ -81,7 +81,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
 | Owner items (`O`) | 51 | 23 | 0 | 28 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
-| Mutations (`M`) | 150 | 42 | 0 | 108 |
+| Mutations (`M`) | 150 | 41 | 0 | 109 |
 | Chores (`C`) | 30 | 5 | 9 | 16 |
 | Agent items (`A`) | 21 | 8 | 0 | 13 |
 
@@ -101,8 +101,8 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `O` | open | 22 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
-| `M` | closed | 108 |
-| `M` | open | 42 |
+| `M` | closed | 109 |
+| `M` | open | 41 |
 | `C` | closed | 16 |
 | `C` | open | 5 |
 | `C` | unknown | 9 |
@@ -241,7 +241,6 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | unassigned | F18-M3 | — | open | Add a second `sendMessage` call site in the watch target |
 | unassigned | F18-M4 | — | open | Build the intent's request with no `requestedAt`, or a zeroed one |
 | unassigned | F19-M1 | — | open | Widen the window predicate to always return `true` |
-| unassigned | F19-M2 | — | open | Make the project filter return every task in the mirror rather than… |
 | unassigned | F19-M3 | — | open | Delete the allowlist line and leave the constant — then the reverse |
 | unassigned | F19-M4 | — | open | Make the reopen path write its record but leave the completion counted |
 | unassigned | C21 | P1 | open | zenpom Focus runbook |
@@ -260,4 +259,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-103 open register rows.
+102 open register rows.

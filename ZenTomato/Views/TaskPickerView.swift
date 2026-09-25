@@ -56,6 +56,12 @@ struct TaskPickerView: View {
   let onOpenPlan: () -> Void
   let onRefresh: () async -> Void
 
+  /// What has been typed into the search field (`F19-T2`).
+  ///
+  /// Local to this screen and not carried anywhere: leaving a project and coming
+  /// back gives an empty field, which is what a person means by opening a project.
+  @State private var query = ""
+
   var body: some View {
     List {
       if case .stale(let note) = freshness {
@@ -67,11 +73,35 @@ struct TaskPickerView: View {
       // facts about Todoist that this screen reports.
       if hasNothingToWorkOn {
         emptyProject
+      } else if nothingMatches {
+        // NOT `emptyProject`. "No tasks in this project" would be a lie on a
+        // project holding forty tasks none of which match "zzz", and the screen
+        // would be reporting a fact about Todoist that is not true. The two
+        // states are different sentences because they are different situations.
+        NoMatchView(query: query)
+          .listRowBackground(Color.clear)
+          .listRowSeparator(.hidden)
       }
       content
     }
     .scrollContentBackground(.hidden)
     .background(Color(.surfacePrimary).ignoresSafeArea())
+    // F19-T2. Spelled exactly as `ProjectPickerView` spells it, including all
+    // three modifiers and the reason each is there, because two search fields in
+    // one app that behave differently are worse than one.
+    .searchable(
+      text: $query,
+      placement: .navigationBarDrawer(displayMode: .always),
+      prompt: Text(PickerScreenModel.searchPrompt))
+    // Never auto-focused. Arriving with a keyboard up and a blinking caret is the
+    // single most create-shaped thing this screen could do.
+    .textInputAutocapitalization(.never)
+    // Off, so a task title is never quietly rewritten into something that then
+    // fails to match.
+    .autocorrectionDisabled()
+    // Never `.go`, `.send`, `.done` or `.return`. A return key that says "Go" on
+    // an empty result is half of a create button.
+    .submitLabel(.search)
     .refreshable { await onRefresh() }
     .navigationTitle(projectName)
     .navigationBarTitleDisplayMode(.inline)
@@ -119,15 +149,30 @@ struct TaskPickerView: View {
   /// the tested implementation was not the shipped one and the two could drift
   /// apart with the suite still green.
   private var groups: [PickerScreenModel.TaskGroup] {
-    picker.groups(inProject: projectID)
+    picker.groups(inProject: projectID, matching: query)
   }
 
   /// Whether this project holds no open task at all.
   ///
   /// Counted from the groups rather than from whether there are any rows,
   /// because a project can now draw headings and still have nothing in it.
+  ///
+  /// **UNFILTERED, DELIBERATELY, AND THIS IS THE ONE PLACE `F19-T2` COULD HAVE MADE
+  /// THE SCREEN LIE.** This asks a question about Todoist — *does this project have
+  /// anything in it* — and the answer must not depend on what somebody has typed.
+  /// Reading it off the filtered groups would put "No tasks in this project" on a
+  /// project holding forty tasks the moment a query matched none of them.
   private var hasNothingToWorkOn: Bool {
-    groups.allSatisfy { $0.tasks.isEmpty }
+    picker.groups(inProject: projectID).allSatisfy { $0.tasks.isEmpty }
+  }
+
+  /// A query is being searched and nothing in this project matches it.
+  ///
+  /// Distinct from `hasNothingToWorkOn` in both directions: a project with tasks
+  /// and no match is this, and an empty project is never this however much is
+  /// typed — the empty-project sentence is the truer thing to say there.
+  private var nothingMatches: Bool {
+    query.trimmedQuery.isEmpty == false && groups.allSatisfy { $0.tasks.isEmpty }
   }
 
   /// Sections become headed groups; tasks not in a section sit under a heading
