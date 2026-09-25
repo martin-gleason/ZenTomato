@@ -19,6 +19,22 @@ import Foundation
 extension ShapeScreenModel {
   // MARK: The screen, and its controls
 
+  /// The budget the screen opens on, and the one number here that is not copy.
+  ///
+  /// **One hour, which is four cycles.** A cycle is a pomodoro plus the break that follows it
+  /// (`docs/specs/definitions.md`), and at sixty minutes the shaper produces exactly four of them —
+  /// `10·5·10·5·10·5·10` with a five-minute long break, forty minutes of focus. The owner confirmed
+  /// this as the default on 2026-09-24: *"set the default as a traditional 1 hour, 4 cycle sprint."*
+  ///
+  /// **It is NOT a traditional 25-minute pomodoro, and the difference is worth knowing.** Four
+  /// traditional poms need 130 minutes; at sixty the shaper squeezes each to its ten-minute floor.
+  /// What the default is traditional about is the *rhythm* — four cycles, ending on a long break —
+  /// not the block length. `ShapeDefaultTests` pins both halves so neither drifts.
+  ///
+  /// Named here rather than left as a literal in `ShapeSheet`'s `@State`, so that the screen and the
+  /// test that guards it read the same number instead of agreeing by coincidence.
+  static let defaultBudgetMinutes = 60
+
   static let title = "Fit a sprint"
 
   /// The one question this screen asks. **It asks for a duration and never for a task**: the
