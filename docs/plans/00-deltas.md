@@ -68,8 +68,9 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D45** | **proposed** | no | — | A silent alarm and a haptic on the watch when the phone's sound is off |
 | **D46** | **proposed** | no | — | The watch fires the same controls as the phone — contradicts D2 |
 | **D47** | ~~rejected~~ | no | — | ~~The shape store in UserDefaults~~ — duplicate of D32 |
+| **D48** | ratified | **yes** | 1 | The garden accumulates, and nothing gamified may be lost |
 
-*49 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*50 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
@@ -2446,6 +2447,76 @@ flat-column row cannot hold without becoming an encoded blob inside a row whose 
 is not cheaper on that axis either.
 
 **So the trade is: amend a fence, or migrate the crown jewels.** The owner chose the fence.
+
+-----
+September 24, 2026
+
+#AI/Claude
+
+## D48 — The garden accumulates, and nothing gamified may be lost
+
+**Proposed 2026-09-09 as *the garden delta*. Ratified by the owner 2026-09-24**, together with the
+ruling that settles which of two garden specifications is being built: *"go with F16's form."*
+
+**Currently:** *…themes · streaks, badges, or any gamification layered on top of Todoist's own.*
+
+Replace with:
+
+> …themes · streaks, badges, goals, records, targets, comparisons, or any gamification layered on
+> top of Todoist's own — **with one exception, ratified as `D48`: a display of finished work that
+> only ever accumulates.** It may grow when a pom is finished. It may not shrink, decay, reset,
+> break, or read differently because of *when* the poms happened, and it may not be shown per day.
+> The exception is enforced by a test, not by this sentence.
+
+**Note that the list gets longer, not shorter.** *Goals, records, targets, comparisons* are added in
+the same breath as the exception, because the exception is narrow and the clause around it should
+name the devices it is narrow against.
+
+### The argument: the clause was written against a quantity a person can lose
+
+Every device on that list — a streak, an unearned badge, a goal, a personal best — shares one
+property: **its value depends on what you do next.** That is the whole of its motivating force and
+the whole of its harm. A quantity that can fall is a quantity worth protecting, and the two cheapest
+ways to protect it are both attacks on the log: *don't tap the distraction button*, and *don't open
+the app on a bad day*. The distraction log is the point of this application, so a mechanism that
+makes under-reporting rational is not a decoration — it is a hole in the product.
+
+**An accumulate-only garden has no such quantity.** Nothing a bad day can take off it. Three weeks
+away leaves it exactly as it was, and opening it after three weeks says nothing about the gap,
+because the garden does not know there was one. Tapping Internal eleven times in one pom changes it
+by nothing, because it is a function of finished poms and of nothing else. **There is no behaviour a
+person could adopt to protect it except doing more work.**
+
+**So the honest form of the clause is not *"no gamification"* — it is *no quantity that can be
+lost*.** That is mechanical, it can be written down, and unlike the word *gamification* — which
+somebody will argue about in six months — it can be enforced by a program. `F16-T2` is that fence.
+
+### The specification this refuses, which is the owner's own
+
+`docs/ZenTomato redesign scope.zip` specifies a garden in detail and **this delta forbids four of its
+parts**: a *"Last 14 days bed"* of per-day cells, a *"wilted stem"* on a zero day, a *"Milestone
+banner"* announcing a crossing, and a per-day *"tomatoes today"* header. The handoff carries its own
+guardrails under a heading reading *"spec, not suggestion"*, and the second of them states the
+disagreement outright — *"no chain number; **continuity is visible in the bed itself**."*
+
+**It treats the visible bed as the safeguard; this delta treats it as the mechanism.** A grid of days
+*is* an unbroken chain, and its gaps are what a reader counts. Likewise *"wilt, never reset"* tests
+whether a **number** goes down, where this delta tests whether **anything can be taken away** — and a
+drooping leaf where yesterday had a tomato takes something away without moving a number.
+
+**Ruled 2026-09-24: this delta's form wins, and the handoff's garden is not built.** Recorded rather
+than smoothed over, because the owner commissioned that design and a future reader will find it in
+the tree and wonder why the app does not match it.
+
+### What this deliberately does not license
+
+- **A per-day grid, calendar or heat map.** Refused explicitly; it is the likeliest reappearance.
+- **Decay, wilting, or anything reading as neglect** — a streak with the sign flipped.
+- **Thresholds phrased as achievements.** Bands may exist, because 1,044 tomatoes cannot be drawn
+  individually; ratified 2026-09-24 as **unnamed, unannounced, with no visible next threshold** —
+  growth you notice rather than growth that tells you.
+- **Anything grown by a distraction tap.** Ratified 2026-09-24: a tally that can be inflated is as
+  broken as one that can be suppressed.
 
 -----
 September 24, 2026
