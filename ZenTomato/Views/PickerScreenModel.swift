@@ -295,6 +295,40 @@ struct PickerScreenModel: Sendable {
     projects.first { $0.id == projectID }?.tint
   }
 
+  /// The groups of one project, with every task filtered to a query (`F19-T2`).
+  ///
+  /// **THE SCOPE IS THE DECISION, NOT THE MECHANICS.** This searches the project you are standing
+  /// in, because that is what a person inside a project means by searching. `rows(matching:)` already
+  /// searches every task in the mirror *and* every project, and it is reached from the screen above —
+  /// a second global search one level down would put two fields in the app with the same prompt and
+  /// different corpora, and a reader would have no way to tell which one they were typing into.
+  ///
+  /// **A third caller of `contains(_:caseAndAccentInsensitively:)`, not a third copy of it.**
+  /// `SearchMatching.swift`'s own header says why: two copies of a matching rule pass every test on
+  /// the day they are written and drift on the third edit, and the drift is invisible in a diff.
+  ///
+  /// **Sections are not hidden; their contents are filtered.** `groups(inProject:)` draws a section
+  /// with no tasks in it because `SPEC.md` locks that all sections are visible, and this keeps that
+  /// shape: a section whose tasks all matched away is still a section of that project, and it is
+  /// still drawn. Hiding it would be the picker making an editorial judgement about somebody else's
+  /// Todoist — the same class of thing the empty-project sentence exists to avoid. **Filtering
+  /// results is not the same as hiding a section**, and the difference is the reason this function
+  /// maps over the groups rather than rebuilding them.
+  ///
+  /// An empty or whitespace-only query returns the groups unfiltered, so the field being present
+  /// changes nothing until somebody types.
+  func groups(inProject projectID: String, matching query: String) -> [TaskGroup] {
+    let trimmed = query.trimmedQuery
+    guard trimmed.isEmpty == false else { return groups(inProject: projectID) }
+    return groups(inProject: projectID).map { group in
+      TaskGroup(
+        section: group.section,
+        tasks: group.tasks.filter {
+          $0.title.contains(trimmed, caseAndAccentInsensitively: true)
+        })
+    }
+  }
+
   func groups(inProject projectID: String) -> [TaskGroup] {
     let mine = tasks.filter { $0.projectID == projectID }
     let mySections = sections.filter { $0.projectID == projectID }

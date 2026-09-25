@@ -198,6 +198,70 @@ struct PickerScreenModelTests {
 
   // MARK: Private
 
+  // MARK: F19-T2 — search inside a project
+
+  /// **The search is scoped to the project you are standing in.**
+  ///
+  /// `F19-M2` is the mutation: make the filter return every task in the mirror rather than the
+  /// project's. THE FIXTURE IS BUILT SO THAT MUTATION CANNOT PASS — `p2` holds *"Plan deep work for
+  /// Thursday"*, which matches the word "deep" just as `p1`'s *"Draft the Q3 summary"* does not, and
+  /// `p1` holds a project named *Deep work* whose own tasks are the ones that must come back. A
+  /// fixture where the query matched only inside the open project would satisfy both the right
+  /// implementation and the wrong one, which is the tautology `docs/conventions.md` names.
+  @Test("searchIsScopedToTheOpenProject")
+  func searchIsScopedToTheOpenProject() {
+    let matchesElsewhere = Self.corpus.groups(inProject: "p2", matching: "deep")
+      .flatMap(\.tasks)
+    #expect(matchesElsewhere.map(\.title) == ["Plan deep work for Thursday"])
+
+    // The same query from inside p1 must NOT reach p2's task, and p1's own tasks
+    // do not contain the word — so the right answer here is nothing at all.
+    let fromP1 = Self.corpus.groups(inProject: "p1", matching: "deep").flatMap(\.tasks)
+    #expect(fromP1.isEmpty)
+
+    // And the task that does match in p1 is found from p1.
+    let draft = Self.corpus.groups(inProject: "p1", matching: "draft").flatMap(\.tasks)
+    #expect(draft.map(\.title) == ["Draft the Q3 summary"])
+    #expect(draft.allSatisfy { $0.projectID == "p1" })
+  }
+
+  /// **An empty query changes nothing**, so the field being present is invisible until it is used.
+  @Test("anEmptyQueryLeavesTheProjectUntouched")
+  func anEmptyQueryLeavesTheProjectUntouched() {
+    for query in ["", "   ", "\n"] {
+      let filtered = Self.corpus.groups(inProject: "p1", matching: query)
+      let unfiltered = Self.corpus.groups(inProject: "p1")
+      #expect(filtered.count == unfiltered.count)
+      #expect(filtered.flatMap(\.tasks).map(\.id) == unfiltered.flatMap(\.tasks).map(\.id))
+    }
+  }
+
+  /// **Sections are not hidden; their contents are filtered.**
+  ///
+  /// `SPEC.md` locks that all sections are visible, and `TaskPickerView` already draws a section with
+  /// nothing in it for that reason. A search that dropped a section whose tasks all matched away
+  /// would be hiding a section rather than filtering results, and those are different things.
+  @Test("searchFiltersTasksAndNeverDropsASection")
+  func searchFiltersTasksAndNeverDropsASection() {
+    let unfiltered = Self.corpus.groups(inProject: "p1")
+    let filtered = Self.corpus.groups(inProject: "p1", matching: "draft")
+
+    #expect(filtered.count == unfiltered.count)
+    #expect(filtered.map { $0.section?.id } == unfiltered.map { $0.section?.id })
+    // And at least one of those groups is now empty, or this test proves nothing.
+    #expect(filtered.contains { $0.tasks.isEmpty })
+  }
+
+  /// The matching rule is `SearchMatching`'s, not a fourth copy of it — so accents and capitals
+  /// behave here exactly as they do in the project list and the music picker.
+  @Test("searchIgnoresCapitalsAndAccentsLikeEveryOtherField")
+  func searchIgnoresCapitalsAndAccentsLikeEveryOtherField() {
+    #expect(Self.corpus.groups(inProject: "p2", matching: "CAFÉ").flatMap(\.tasks).isEmpty == false)
+    #expect(Self.corpus.groups(inProject: "p2", matching: "cafe").flatMap(\.tasks).isEmpty == false)
+    #expect(Self.corpus.groups(inProject: "p2", matching: "beans").flatMap(\.tasks)
+      .map(\.title) == ["Order more beans for the café"])
+  }
+
   // MARK: F13 — a project's own colour
 
   /// The heading of a task list finds its project's tint from the model.
