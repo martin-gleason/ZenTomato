@@ -1745,7 +1745,32 @@ correction to a shipped chore's record and belongs with `O35`'s documentation li
 
 ## D32 — A shape is stored, in one file, outside SwiftData
 
-**Proposed 2026-09-09. Ratified by the owner 2026-09-09.** Owed by `F8-T2`, which cannot land until this is ratified or refused.
+**Proposed 2026-09-09. Ratified by the owner 2026-09-09.**
+
+**THE OUTSIDE-SYSTEM CLAIM IS NOW CONFIRMED BY SOMETHING THAT RAN — 2026-09-25.** This row rests on
+*"`UserDefaults` survives an app update"*, and `docs/conventions.md` requires the confirming command
+and its output on the row, with the evidence being the observable end state rather than the
+documented behaviour. It was ratified without that, and `F8`'s fourth `BLOCKING` note has said so
+since 2026-09-22. The check has now been run on the owner's own hardware:
+
+```
+Before:  Spare minutes = More rest        (default is Balanced)
+         End with a long break = OFF      (default is ON)
+         budget = 15                      (view state, never stored)
+
+Installed build 202609251013 OVER the existing app — not a fresh install.
+
+After:   Spare minutes = More rest        ← survived
+         End with a long break = OFF      ← survived
+         budget = 60                      ← reset, and correctly so
+```
+
+**Both stored fields survived and neither could have appeared by accident**: each was set to the
+opposite of its default, so a wiped store would have shown Balanced and ON. The budget returning to
+60 is not a partial wipe — `budgetMinutes` is `@State` on the sheet and was never written.
+
+**So the store survives an update, and the alternative this row refused stays refused.** `TimerState`
+columns would have meant a SwiftData migration over the store holding the distraction log. Owed by `F8-T2`, which cannot land until this is ratified or refused.
 
 **Currently**, `SPEC.md`'s locked decisions say *"Data: Local only (SwiftData). Todoist token in
 Keychain. No analytics, no accounts, no server."* Two stores are named and no third is.
