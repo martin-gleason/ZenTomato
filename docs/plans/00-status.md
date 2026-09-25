@@ -79,7 +79,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 |---|---|---|---|---|
 | Decisions (`D`) | 50 | 2 | 0 | 48 |
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
-| Owner items (`O`) | 51 | 23 | 0 | 28 |
+| Owner items (`O`) | 52 | 24 | 0 | 28 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
 | Mutations (`M`) | 160 | 41 | 0 | 119 |
 | Chores (`C`) | 30 | 5 | 9 | 16 |
@@ -97,7 +97,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `D` | resolved | 1 |
 | `RR` | open | 4 |
 | `O` | closed | 28 |
-| `O` | open | 23 |
+| `O` | open | 24 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
 | `M` | closed | 119 |
@@ -182,6 +182,7 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | owner | O49 | P2 | open | A wrong JSON type on a mirrored field still fails the whole page |
 | owner | O50 | P2 | open | The owner's real account data is committed to the tree |
 | owner | O51 | P2 | open | Music did not resume after the break, with a playlist selected |
+| owner | O52 | P1 | open | F8's Done when — a real two-hour gap, on the phone |
 | unassigned | H5 | — | open | the lint gate |
 | unassigned | H6 | — | open | the MusicKit App ID check |
 | unassigned | H7 | — | open | the register renders as tables |
@@ -259,4 +260,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-103 open register rows.
+104 open register rows.
