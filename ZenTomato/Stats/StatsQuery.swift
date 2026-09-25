@@ -38,6 +38,62 @@ struct StatsQuery {
     self.calendar = calendar
   }
 
+  // MARK: The lifetime span
+
+  /// The day of the earliest block this device has recorded, or `nil` when there are none.
+  ///
+  /// **Built from the data rather than from a date somebody typed** (`F16-T1`). A hardcoded start is
+  /// a claim about a person's history, and it stops being true the moment they restore a backup from
+  /// before it — the garden would then silently omit the months that came back.
+  ///
+  /// **One bounded read, and it is bounded by `fetchLimit` rather than by date**, which is the one
+  /// place in this file that is right: every other read here narrows by a span, and this read's whole
+  /// job is to find out what the span should be. Sorted ascending and cut to one row, so SwiftData
+  /// returns a single object no matter how long the history is.
+  /// **Both ends, so the span is the one the data occupies and not one reaching to today.**
+  /// `StatsPeriod.recordedSpan` already defines that span, but only once a period exists — and a
+  /// period cannot be built without the range. This answers the same question first, from two reads
+  /// of one row each.
+  ///
+  /// Bounding the far end by the data rather than by the clock also keeps this function free of a
+  /// clock: a range ending today would append empty days whenever the last block was a while ago, and
+  /// would make the count's own test depend on when it ran.
+  func recordedDayBounds() -> (first: StatsDay, last: StatsDay)? {
+    guard let first = edgeBlock(newest: false), let last = edgeBlock(newest: true) else { return nil }
+    return (StatsDay.containing(first.startedAt, in: calendar),
+            StatsDay.containing(last.startedAt, in: calendar))
+  }
+
+  /// One end of the recorded history: a single row, ordered by date.
+  ///
+  /// **Bounded by `fetchLimit` rather than by date, which is right here and nowhere else in this
+  /// file.** Every other read narrows by a span; this one's whole job is to discover what the span
+  /// should be, so SwiftData is asked to sort and return one object however long the history is.
+  private func edgeBlock(newest: Bool) -> PomodoroSession? {
+    var descriptor = FetchDescriptor<PomodoroSession>(
+      sortBy: [SortDescriptor(\.startedAt, order: newest ? .reverse : .forward)])
+    descriptor.fetchLimit = 1
+    return (try? context.fetch(descriptor))?.first
+  }
+
+  /// **Finished poms, ever** — the one number the garden grows from (`F16-T1`).
+  ///
+  /// **There is deliberately no second counter.** This is `StatsPeriod.pomodoroCount` over a span
+  /// that happens to reach back to the first recorded block: the same function today's number and the
+  /// Rhodia export already come from, asked a wider question. A separate lifetime tally — a stored
+  /// total, an incrementing column — is the thing `StatsFenceTests` exists to refuse, and it would be
+  /// a second account of a number the log already answers.
+  ///
+  /// `0` when nothing has been recorded, which is a real answer: a new install has grown no tomatoes.
+  ///
+  /// **The cost is measured and not assumed.** `ExportCostTests` times this path over a seeded year
+  /// beside the fortnight and all-time figures, and `F16`'s `Q5` is where the owner rules on the
+  /// number. No cache, no actor and no stored total is introduced on the strength of a suspicion.
+  func lifetimePomodoroCount() -> Int {
+    guard let bounds = recordedDayBounds() else { return 0 }
+    return period(StatsRange(first: bounds.first, last: bounds.last)).pomodoroCount
+  }
+
   // MARK: The only question
 
   /// Everything recorded in a span of days, counted once.
