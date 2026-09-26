@@ -394,6 +394,32 @@ final class TimerEngine {
     }
     guard let state else { return }
 
+    // **A POSITION NOBODY HAS TOUCHED FOR THIRTY-SIX HOURS GOES, AND THE CYCLE'S TALLY GOES WITH IT.**
+    //
+    // The owner's grace period, applied at the one place in the app where both records are in hand.
+    // It lived in `ShapeStore.load()` until a review ran it on 2026-09-26 and found that the shape
+    // came back at block zero while `TimerState.completedInSprint` still said one — a shape and a
+    // cycle giving two accounts of one sprint, which is the state `ShapeStore.rewindRun()` refuses by
+    // name and which that path reached by the very rule meant to prevent it. The guard below is what
+    // made it silent: the idle path deliberately PRESERVES the tally, and rightly so for every other
+    // reason it runs.
+    //
+    // Paired exactly as `stop(reason:)` pairs them, and for the same reason. `F8-M28`.
+    //
+    // **Only while idle**, because a running block's own frozen columns are authoritative and the
+    // reconciliation below is what settles one that ended unobserved — and that path advances the
+    // shape through `end()`, which re-stamps the position, so it needs no staleness check of its own.
+    //
+    // **Here and not in `init`**, which is this engine's stated division of labour: the initialiser
+    // *"adopts whatever the database already says, so the screen is right immediately"* and
+    // `synchronize()` *"works out whether it is still true"* — called at launch and on every return
+    // to the foreground, which is every moment a thirty-six-hour gap can have opened in.
+    if state.isRunning == false, shapes?.rewindRunIfStale() == true {
+      goIdle(kind: .work, completedInSprint: 0)
+      persist()
+      return
+    }
+
     // Idle: nothing to reconcile, but the settings may have changed since the
     // screen last read them.
     guard state.isRunning else { return goIdle(kind: state.kind, completedInSprint: state.completedInSprint) }

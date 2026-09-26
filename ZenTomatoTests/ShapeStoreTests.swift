@@ -243,7 +243,8 @@ struct ShapeStoreTests {
         preset: .balanced, endsWithLongBreak: true,
         run: StoredRun(shape: shape, cursor: 3, positionedAt: now.addingTimeInterval(-37 * 3600))))
 
-    let run = try #require(harness.store(at: now).runningShape())
+    #expect(harness.store(at: now).rewindRunIfStale() == true, "the grace is asked and answers yes")
+    let run = try #require(harness.store.runningShape())
 
     #expect(run.cursor == 0, "the position is dropped")
     #expect(run.blocks.map(\.minutes) == shape.blocks.map(\.minutes), "the shape is not")
@@ -262,7 +263,8 @@ struct ShapeStoreTests {
           shape: try Self.twoHourShape(), cursor: 3,
           positionedAt: now.addingTimeInterval(-35 * 3600))))
 
-    #expect(try #require(harness.store(at: now).runningShape()).cursor == 3)
+    #expect(harness.store(at: now).rewindRunIfStale() == false, "inside the grace, nothing is dropped")
+    #expect(try #require(harness.store.runningShape()).cursor == 3)
   }
 
   /// **A run written by a build that had no timestamp is stale**, and the bytes are a literal for
@@ -282,6 +284,7 @@ struct ShapeStoreTests {
         "budgetMinutes":30,"isUnderSuggestedMinimum":true,"cursor":1}}
         """)
 
+    #expect(harness.store.rewindRunIfStale() == true)
     let run = try #require(harness.store.runningShape())
 
     #expect(run.cursor == 0)
@@ -295,8 +298,18 @@ struct ShapeStoreTests {
   /// `advance()` would write cursor 1 and the very next read would find the *fitting* stale and put
   /// it back to 0 — a shaped sprint stuck on its first block for ever, on any shape older than a day
   /// and a half. Every assertion in the two tests above passes while that is true.
-  @Test("advancingARewoundStaleShapeMakesThePositionFreshAgain")
-  func advancingARewoundStaleShapeMakesThePositionFreshAgain() throws {
+  ///
+  /// **THIS TEST PINNED A DEFECT AS CORRECT UNTIL 2026-09-26, AND THAT IS WHY IT IS WORTH READING.**
+  /// It used to assert `cursor == 1` after advancing a stale run, commented *"and it stays where the
+  /// advance put it"*. Cursor 1 was the number the code produced, not the number the rule wants: with
+  /// the grace applied on every read, `advance()` read the *rewound* copy and incremented off it, so
+  /// an overdue block that had been the shape's block three was charged against block zero. The
+  /// assertion was written from the output rather than from the claim, and it locked the defect in.
+  /// **The claim is about the timestamp**, which is what these three assertions now say: advancing
+  /// moves the cursor by one from where it really was, stamps it, and leaves nothing for the grace to
+  /// drop. Found by the review that also found `F8-M28`.
+  @Test("advancingAStaleShapeMovesItOnAndMakesThePositionFreshAgain")
+  func advancingAStaleShapeMovesItOnAndMakesThePositionFreshAgain() throws {
     let harness = try TestShapeStore.make()
     defer { harness.remove() }
     let now = Date(timeIntervalSince1970: 1_800_000_000)
@@ -310,7 +323,8 @@ struct ShapeStoreTests {
 
     #expect(store.advance() == false)
 
-    #expect(try #require(store.runningShape()).cursor == 1, "and it stays where the advance put it")
+    #expect(try #require(store.runningShape()).cursor == 4, "one on from where it actually was")
+    #expect(store.rewindRunIfStale() == false, "and the move re-stamped it, so nothing is stale")
   }
 
   // MARK: The medium is a real seam

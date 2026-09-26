@@ -197,9 +197,14 @@ struct StoredRun: Codable, Equatable {
   /// Whether this position is still inside its grace period.
   ///
   /// A run with no `positionedAt` is **not** fresh — see that property for why.
+  /// **A stamp in the future is not fresh either.** `<` alone treated a negative age as inside the
+  /// grace, so a position written while the device clock was ahead and then corrected backwards would
+  /// have stayed resumable for ever. `TimerEngine` carries a `clockSkewTolerance` for its own state;
+  /// this store has no such guard, so the bound is stated here. Found by review, 2026-09-26.
   func isFresh(at now: Date) -> Bool {
     guard let positionedAt else { return false }
-    return now.timeIntervalSince(positionedAt) < Self.grace
+    let age = now.timeIntervalSince(positionedAt)
+    return age >= 0 && age < Self.grace
   }
 
   /// The same shape, back at its first block. **What a spent, stopped or stale run becomes.**

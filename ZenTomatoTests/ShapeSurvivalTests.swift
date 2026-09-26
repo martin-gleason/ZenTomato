@@ -133,6 +133,93 @@ struct ShapeSurvivalTests {
     #expect(try #require(harness.store.runningShape()).cursor == 2, "two blocks in, and it knows it")
   }
 
+  // MARK: The 36-hour grace, and the tally that goes with it
+
+  /// **A position dropped after thirty-six hours takes the cycle's tally with it.**
+  ///
+  /// > *"The position is only meaningful beside the cycle's own tally."* — `ShapeStore.rewindRun()`
+  ///
+  /// **THIS IS THE REGRESSION TEST FOR A CRITICAL DEFECT THE REVIEW FOUND BY RUNNING IT** on
+  /// 2026-09-26. The grace lived in `ShapeStore.load()`, which rewound the shape's cursor on every
+  /// read and wrote nothing — and nothing anywhere put the tally back. Two pomodoros into a shaped
+  /// sprint, left for a day and a half, the app came back with the shape at block **zero** and the
+  /// cycle still saying **one pomodoro banked**: two accounts of one sprint, the exact state
+  /// `rewindRun()`'s own doc comment refuses by name, reached by the rule written to prevent it.
+  ///
+  /// **And nothing on screen looked wrong**, which is what made it worth a critical. The readout said
+  /// twenty-two minutes and `.work`, both correct. The damage was three blocks later: with
+  /// `pomodorosPerSprint` overridden to the shape's four and the tally starting at one, `TimerCycle`
+  /// ends the sprint at cursor six, leaving a 22-minute pomodoro and the 17-minute long break unrun —
+  /// a 120-minute budget that does not fill its budget, which is the whole thing this feature exists
+  /// to prevent, arriving by a third door no mutation covered.
+  ///
+  /// **ONE CLOCK THROUGHOUT, AND THE FIRST PROBE OF THIS DEFECT GOT IT WRONG.** `positionedAt` is
+  /// stamped by the *store's* clock; a probe that let the store default to the real one and compared
+  /// against a `TestClock` instant reported no defect at all. Both stores here are pinned to `t0`.
+  @Test("aStalePositionTakesTheTallyWithIt")
+  func aStalePositionTakesTheTallyWithIt() async throws {
+    let harness = try TestShapeStore.make()
+    defer { harness.remove() }
+    let start = StatsStoreFixture.at(2026, 8, 10, 9, 0)
+    let clock = TestClock(now: start)
+    let writing = harness.store(at: start)
+    writing.start(try ShapeFixture.shape(120))
+    let first = TimerEngine(
+      context: context, clock: clock, alarms: SpyAlarmScheduler(), shapes: writing)
+
+    // Two blocks by hand — auto-start off, the shipped default — leaving the shape at cursor 2 and
+    // the cycle with one pomodoro banked.
+    for _ in 0..<2 {
+      await first.start()
+      try await run(first, blocks: 1, clock: clock)
+    }
+    #expect(try #require(writing.runningShape()).cursor == 2)
+    #expect(try TimerState.current(in: context).completedInSprint == 1)
+
+    // Thirty-seven hours later the app is opened again, and the app does what it does at launch.
+    let stale = harness.store(at: start.addingTimeInterval(37 * 3600))
+    let relaunched = TimerEngine(
+      context: context, clock: clock, alarms: SpyAlarmScheduler(), shapes: stale)
+    await relaunched.synchronize()
+
+    // BOTH, OR NEITHER. Asserting the cursor alone is what the shipped code already satisfied.
+    #expect(try #require(stale.runningShape()).cursor == 0, "the position is dropped")
+    #expect(try TimerState.current(in: context).completedInSprint == 0, "and so is the tally")
+    #expect(relaunched.completedInSprint == 0)
+    #expect(relaunched.kind == .work)
+    // The shape itself survives, which is the owner's ruling and the other half of the claim.
+    #expect(try #require(stale.runningShape()).blocks.map(\.minutes) == [22, 5, 22, 5, 22, 5, 22, 17])
+    // And the rewind was WRITTEN rather than filtered on read, so nothing is left to drop.
+    #expect(stale.rewindRunIfStale() == false)
+  }
+
+  /// **A position inside the grace survives, tally and all** — the other side of the fixture, so the
+  /// test above cannot pass by rewinding unconditionally.
+  @Test("aPositionInsideTheGraceKeepsItsTally")
+  func aPositionInsideTheGraceKeepsItsTally() async throws {
+    let harness = try TestShapeStore.make()
+    defer { harness.remove() }
+    let start = StatsStoreFixture.at(2026, 8, 10, 9, 0)
+    let clock = TestClock(now: start)
+    let writing = harness.store(at: start)
+    writing.start(try ShapeFixture.shape(120))
+    let first = TimerEngine(
+      context: context, clock: clock, alarms: SpyAlarmScheduler(), shapes: writing)
+    for _ in 0..<2 {
+      await first.start()
+      try await run(first, blocks: 1, clock: clock)
+    }
+
+    // Thirty-five hours — an evening stop and a late-morning return, the case the owner sized 36 for.
+    let fresh = harness.store(at: start.addingTimeInterval(35 * 3600))
+    let relaunched = TimerEngine(
+      context: context, clock: clock, alarms: SpyAlarmScheduler(), shapes: fresh)
+    await relaunched.synchronize()
+
+    #expect(try #require(fresh.runningShape()).cursor == 2)
+    #expect(try TimerState.current(in: context).completedInSprint == 1)
+  }
+
   // MARK: Settings edited in the idle gap
 
   /// **The shape keeps the lengths and the settings keep everything else.**
