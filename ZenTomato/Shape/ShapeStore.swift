@@ -94,27 +94,28 @@ struct ShapeStore {
 
   // MARK: Reading
 
-  /// Everything the store holds, or `nil` when it holds nothing readable — **with a position older
-  /// than its grace already dropped.**
+  /// Everything the store holds, or `nil` when it holds nothing readable. **A pure read.**
   ///
-  /// **The staleness rule lives on the read rather than on a sweep, and that is what makes it
-  /// total.** A clean-up that ran at launch would leave every other entry point — the sheet reading
-  /// the controls, the engine resolving a block at a boundary — able to see a position the rule says
-  /// does not exist. Here there is one door, so there is one answer.
+  /// **IT USED TO APPLY THE 36-HOUR GRACE HERE, AND THAT WAS THE DEFECT.** The argument for it read
+  /// well — one door, one answer, no sweep for another entry point to miss — and it was wrong in two
+  /// ways that only showed up when somebody ran it (review, 2026-09-26):
   ///
-  /// **It rewinds and does not write.** Reading is idempotent, a read cannot fail half-way through a
-  /// write, and the value on disk is corrected by the next real write rather than by a side effect
-  /// of somebody looking at it. The cost is that the stale cursor stays in the file until then,
-  /// which nothing can observe, because nothing reads the file except this method.
+  /// - **A filter is not a decision.** The rewind was never written, so the stale cursor stayed in
+  ///   the file and `advance()` — which reads through here — incremented off the *filtered* copy.
+  ///   An overdue block that had been the shape's block two was charged against block zero.
+  /// - **Half a rewind is worse than none.** Dropping the shape's position without putting the
+  ///   cycle's tally back leaves a shape at block zero beside a tally of one: the two-accounts-of-one-
+  ///   sprint state `rewindRun()` below refuses by name, reached by the very rule meant to prevent it.
+  ///
+  /// The grace is now a decision made once, by `rewindRunIfStale()`, at the one place both records
+  /// are in hand. `F8-M28` and `F8-M29` are the mutations that keep it there.
   ///
   /// **There is no non-optional overload and no `?? .default`, and that absence is load-bearing.**
   /// A later edit that wants a default has to change a signature, which is visible in a diff,
   /// rather than change an operator, which is not. `F8-M4` is the mutation that proves it.
   func load() -> StoredShape? {
     guard let data = medium.data(forKey: Self.key) else { return nil }
-    guard var value = try? JSONDecoder().decode(StoredShape.self, from: data) else { return nil }
-    if let run = value.run, run.cursor != 0, !run.isFresh(at: now()) { value.run = run.rewound }
-    return value
+    return try? JSONDecoder().decode(StoredShape.self, from: data)
   }
 
   /// The shape the engine should follow, if one has been fitted and this build can read it.
@@ -202,5 +203,24 @@ struct ShapeStore {
     guard let run = value.run, run.cursor != 0 else { return }
     value.run = run.rewound
     save(value)
+  }
+
+  /// **Drops a position nobody has touched for thirty-six hours, and says whether it did.**
+  ///
+  /// The owner's grace period, as a decision rather than a filter — see `load()` for the two defects
+  /// the filter had. It **writes**, so the answer is settled once and no later reader can see a
+  /// position this rule says does not exist.
+  ///
+  /// - Returns: `true` when a position was dropped. **A caller that ignores the answer reintroduces
+  ///   the defect**: the position is only meaningful beside the cycle's own tally, so whoever drops
+  ///   one must put the other back to the start in the same breath. That is why this reports rather
+  ///   than simply acting, and `TimerEngine.synchronize()` is the one caller in a position to do it.
+  func rewindRunIfStale() -> Bool {
+    guard var value = load(), let run = value.run, run.cursor != 0, !run.isFresh(at: now()) else {
+      return false
+    }
+    value.run = run.rewound
+    save(value)
+    return true
   }
 }

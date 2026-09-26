@@ -58,7 +58,7 @@ Status is what the unit's own plan file declares. What has landed in git is deli
 | F6b | feature | — | `docs/plans/F6b.md` | 7 planned |
 | F7 | feature | — | `docs/plans/F7.md` | 5 planned |
 | F7b | feature | built, gates green, awaiting review. Defect fix on a shipped feature; no gate was required and none… | `docs/plans/F7b.md` | 6 planned |
-| F8 | feature | **`T5` LANDED 2026-09-26 and `T4` IS PART BUILT.** `T5`'s four claims are asserted and five more… | `docs/plans/F8.md` | 6 planned |
+| F8 | feature | **THE SECOND ADVERSARIAL REVIEW FOUND A `critical` IN WHAT `T4` SHIPPED, AND IT IS FIXED.** The… | `docs/plans/F8.md` | 6 planned |
 | F9 | feature | plan written, **awaiting the gate.** No code has been written. | `docs/plans/F9.md` | 6 planned |
 | F10 | feature | plan written, **awaiting the gate.** No code has been written. | `docs/plans/F10.md` | 5 planned |
 | F11 | feature | plan written, **awaiting the gate. No code has been written.** | `docs/plans/F11.md` | 5 planned |
@@ -81,7 +81,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
 | Owner items (`O`) | 52 | 24 | 0 | 28 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
-| Mutations (`M`) | 165 | 41 | 0 | 124 |
+| Mutations (`M`) | 168 | 41 | 0 | 127 |
 | Chores (`C`) | 30 | 5 | 9 | 16 |
 | Agent items (`A`) | 23 | 9 | 0 | 14 |
 
@@ -100,8 +100,9 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `O` | open | 24 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
-| `M` | closed | 124 |
+| `M` | closed | 126 |
 | `M` | open | 41 |
+| `M` | superseded | 1 |
 | `C` | closed | 16 |
 | `C` | open | 5 |
 | `C` | unknown | 9 |
