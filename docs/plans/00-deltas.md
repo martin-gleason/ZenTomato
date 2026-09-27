@@ -71,8 +71,9 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D48** | ratified | **yes** | 1 | The garden accumulates, and nothing gamified may be lost |
 | **D49** | ratified | no | — | The shape's position gets one hour, not thirty-six — supersedes part of D32 |
 | **D50** | ratified — **v2.0** | no | — | A push reminder about the work in progress — parked, **not built** |
+| **D51** | **proposed** | no | — | The export leaves as text *and* as a file, so a notes app takes it as a note |
 
-*52 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*53 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
@@ -2697,3 +2698,62 @@ is to be recorded.
 
 **Nothing above is written. No file was created, no column added, no stub left behind.** This entry is
 the whole of the work done on it.
+
+---
+
+## D51 — The export leaves as text *and* as a file, so a notes app can take it as a note
+
+**Proposed 2026-09-27. NOT RATIFIED, NOT BUILT.** Raised by the owner from the `O52` device run:
+
+> *"export to bear: it looks ok — but putting it in bear attaches as a file. i'd prefer it went to
+> bear or notes app straight as a note."*
+
+**Currently** — and this is a *documented decision*, not an oversight. `StatsExportFile.swift:14`:
+
+> *"`ShareLink` will happily share a `String`, and what arrives in Files when it does is
+> `Untitled.txt`. The document **is** this feature — `F6` exists to produce the page a fortnightly
+> review is read from — so it leaves the app as `ZenTomato-2026-08-08-to-2026-08-21.md`: sortable,
+> self-describing, and still meaningful sitting in a folder a month later."*
+
+Every word of that is true and it is the reason Bear receives an attachment: a file is what was
+offered, so a file is what Bear filed.
+
+### The proposal: offer both representations, not one instead of the other
+
+`ShareLink` takes a `Transferable`, and a `Transferable` may carry **more than one** representation.
+The proposal is one type offering a `FileRepresentation` **and** a plain-text representation, so the
+destination picks:
+
+| Destination | What it takes today | What it would take |
+|---|---|---|
+| Files, iCloud Drive | `ZenTomato-…-to-….md` | unchanged — the named file |
+| **Bear, Notes** | an attached `.md` file | **the Markdown as the note's body** |
+| Mail, Messages | an attachment | the text inline, or the file — the app's choice |
+
+**Nothing is taken away, which is why this shape rather than the obvious one.** Replacing the file
+with a string would trade one complaint for the one the existing comment already anticipated and
+rejected — `Untitled.txt` in Files, a fortnight of review notes with no name on it. Offering both is
+the only version that does not overturn a decision that was right.
+
+### What has to be decided
+
+1. **Is this v1.5 or v2.0?** It touches no platform and adds no provider — it changes what an existing
+   share sheet offers about an artefact the app already produces. That reads as polish and therefore
+   v1.5, and this delta proposes it as such. **The owner rules.**
+2. **Does the plain-text form carry the title line?** The file's name carries the date range today. A
+   note pasted into Bear has no filename, so either the first line of the document does that work — it
+   already opens `# ZenTomato — 2026-08-10` — or the range is lost on that path. Recommendation: the
+   document is unchanged and its own heading is the answer, which it already is.
+3. **Does the heading say `ZenTomato` or `ZenPom`?** Already open as an observation from `F8-T5`: the
+   page's heading says one and its footer says the other. A note filed in Bear makes that more visible
+   than a file did, because the heading becomes the note's title.
+
+### What is explicitly NOT proposed
+
+**Bear's own URL scheme.** `bear://x-callback-url/create` would put the note in Bear directly with a
+tag and no share sheet. That is a **provider**, and `CLAUDE.md`'s fence is architectural: *anything
+adding a platform or a provider is v2.0*. It would also tie a v1.5 surface to one third-party app when
+the same one-line change serves Bear, Notes, Drafts, Obsidian and Mail at once. If the owner wants Bear
+specifically, that is a different delta and a v2.0 one.
+
+**Nothing is built.** No file created, no representation added, no stub.

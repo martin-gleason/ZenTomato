@@ -147,6 +147,7 @@ makes the generator refuse to run at all and write nothing.
 | D48 | The garden accumulates, and nothing gamified may be lost | — | ratified |  |
 | D49 | The shape's position gets one hour, not thirty-six | — | ratified |  |
 | D50 | A push reminder about the work in progress · **v2.0, parked** | — | ratified |  |
+| D51 | The export leaves as text *and* as a file, so a notes app can take it as a note | — | proposed |  |
 <!-- END GENERATED: decisions -->
 
 ### Decisions — owner fields
