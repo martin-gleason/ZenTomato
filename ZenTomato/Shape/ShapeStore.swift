@@ -53,7 +53,8 @@ extension UserDefaults: KeyValueMedium {
 /// and it cited `SessionPlan`'s rule that a stored thing outliving its session becomes a second,
 /// competing account of the same day. The owner replaced it: *"the rule to discard a stored shape
 /// should last until a new shape is added"*, and *"only the definition — a grace period of 36
-/// hours"* for the position in it. The `SessionPlan` argument does not defeat that, and the
+/// hours"* for the position in it, which `D49` has since cut to one. The `SessionPlan` argument does
+/// not defeat that, and the
 /// difference is what the two records claim. Two accounts of **what you are doing now** is the defect;
 /// a shape you fitted beside the lengths you usually use is a hierarchy, and `Save to settings` is
 /// already the documented way to promote one to the other.
@@ -77,7 +78,7 @@ struct ShapeStore {
   /// What the grace period is measured against.
   ///
   /// **Injected rather than read, because the rule it serves is a claim about time** and a test
-  /// cannot wait thirty-six hours to make it. The engine's own `TimerClock` was the other candidate
+  /// cannot wait an hour to make it. The engine's own `TimerClock` was the other candidate
   /// and was not taken: this store is handed to the shape sheet as well, which has no clock, and
   /// widening the sheet's dependencies to give the store the engine's clock would put a timer
   /// abstraction into a screen that does not run a timer.
@@ -86,7 +87,7 @@ struct ShapeStore {
   /// - Parameters:
   ///   - medium: the medium. Defaults to the app's own, which is what the composition root wants and
   ///     what no test should ever be given.
-  ///   - now: the clock the 36-hour grace is measured against.
+  ///   - now: the clock the grace period is measured against — `D49`'s one hour.
   init(medium: KeyValueMedium = UserDefaults.standard, now: @escaping () -> Date = Date.init) {
     self.medium = medium
     self.now = now
@@ -185,7 +186,7 @@ struct ShapeStore {
   /// **Takes the shape back to its first block and keeps everything else.** Reached when a sprint is
   /// abandoned.
   ///
-  /// **Why a stop costs the position when thirty-six hours of silence is the stated rule.** The
+  /// **Why a stop costs the position when an hour of silence is the stated rule.** The
   /// position is only meaningful beside the cycle's own tally, and `stop(reason:)` resets that tally
   /// to zero — a shape held at block four against a cycle at pomodoro zero is two accounts of the
   /// same sprint, which is the thing `SessionPlan` refuses by name. The grace period is for the case
@@ -205,7 +206,7 @@ struct ShapeStore {
     save(value)
   }
 
-  /// **Drops a position nobody has touched for thirty-six hours, and says whether it did.**
+  /// **Drops a position nobody has touched for an hour, and says whether it did.**
   ///
   /// The owner's grace period, as a decision rather than a filter — see `load()` for the two defects
   /// the filter had. It **writes**, so the answer is settled once and no later reader can see a

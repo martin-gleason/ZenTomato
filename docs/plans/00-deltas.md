@@ -69,8 +69,10 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D46** | **proposed** | no | — | The watch fires the same controls as the phone — contradicts D2 |
 | **D47** | ~~rejected~~ | no | — | ~~The shape store in UserDefaults~~ — duplicate of D32 |
 | **D48** | ratified | **yes** | 1 | The garden accumulates, and nothing gamified may be lost |
+| **D49** | ratified | no | — | The shape's position gets one hour, not thirty-six — supersedes part of D32 |
+| **D50** | **proposed** | no | — | A push reminder about the work in progress — **not built** |
 
-*50 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*52 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
@@ -2547,3 +2549,109 @@ the tree and wonder why the app does not match it.
 September 24, 2026
 
 #AI/Claude
+
+---
+
+## D49 — The shape's position gets one hour, not thirty-six
+
+**Proposed 2026-09-26. Ratified by the owner the same day**, in the same breath — two days after the
+ruling it supersedes, and before any build carrying the thirty-six hours reached the phone.
+
+> *"I think the 36 hours is too long. I think we should change the time to 1 hour."*
+
+**Currently** (`D32`, ratified 2026-09-24): *"only the defitinon. a grace period of 36 hours."*
+
+Replace the number only:
+
+> The shape's **definition** lasts until a new shape replaces it. The **position in it** is dropped
+> after **one hour** in which the cursor has not moved, and the cycle's pomodoro tally is dropped with
+> it.
+
+Everything else `D32` decided stands: the shape itself survives finishing, stopping and silence, and
+only a replacement discards it.
+
+### What this withdraws, deliberately
+
+`D32`'s thirty-six was sized for one case and said so: *stopping at six in the evening and coming back
+after nine the next morning is under a day of clock time and over a day of calendar.* **One hour does
+not survive a night, and is not meant to.** That case is now withdrawn rather than overlooked.
+
+**And it withdraws more than the night.** Any gap longer than an hour restarts the sprint — a long
+meeting, a lunch, a school run. The owner comes back to the shape they fitted, at its first block,
+with the tally at zero. That is the same end state a deliberate Stop produces, and the argument for it
+is that after an hour away *"I was in the middle of a sprint"* has stopped being true of the person
+even though it is still true of the database.
+
+**The consequence was named before the change was made**, not discovered on the device, and the owner
+ruled with it in front of them.
+
+### Why the old argument is kept rather than deleted
+
+`StoredRun.grace`'s doc comment still carries `D32`'s reasoning in full. It was not wrong; it answered
+a different question — *how long is a sprint recoverable* rather than *how long is a sprint still
+yours*. A ratified decision is superseded and never edited (`conventions.md`), and the same courtesy
+is owed to the argument that justified it: a reader who finds only the new number cannot tell whether
+the old one was a mistake or a different judgement. It was a different judgement.
+
+### One thing this makes likelier rather than less
+
+**An ordinary sprint now outlives its own grace.** A two-hour shaped sprint is longer than an hour, so
+the grace expires *during* it. Nothing breaks — the grace is measured from the last cursor move, not
+from the fitting, and every block boundary re-stamps it — but that property has gone from a nicety to
+load-bearing. `F8-M15` is the mutation that holds it, and `advancingAStaleShapeMovesItOnAndMakesThePositionFreshAgain`
+is the test; both predate this delta and both now guard the common case instead of a rare one.
+
+**The clock-skew bound matters more too.** A position stamped while the device clock is a minute ahead
+is a likelier accident against an hour than against a day and a half; `isFresh(at:)` rejects a future
+stamp, which it did not until the 2026-09-26 review.
+
+---
+
+## D50 — Proposed spec delta: a push reminder about the work in progress
+
+**Proposed 2026-09-26. NOT RATIFIED, AND DELIBERATELY NOT BUILT.** The owner asked for it in the same
+message as `D49`:
+
+> *"a push reminder about the work if the user turns on pushes."*
+
+**`CLAUDE.md` is why this stops here rather than shipping beside the one-line change it arrived with:**
+*"Do not build, stub, or 'prepare for' what is not on the list. If it seems necessary, write `Proposed
+spec delta:` in the plan summary and stop."* A notification is not on v1.5's ratified list, and the
+one-hour grace it was asked for alongside is — which is exactly the situation that rule exists for: a
+small ruling and a new feature in one sentence, where doing both quietly is how a milestone grows.
+
+### What has to be decided before it can be built, because none of it is obvious
+
+1. **Is it v1.5 or v2.0?** The fence is architectural: *v1.5 is polish, v2.0 is platform; anything
+   adding a platform or a provider is v2.0.* A local notification is arguably neither — the app already
+   asks iOS for alarm authorisation through AlarmKit — but a **new notification surface with its own
+   permission prompt, its own settings row and its own copy** is closer to a platform than to polish.
+   This is the owner's call and it is the first one.
+2. **What does it say, and when?** *"A reminder about the work"* has at least four readings: the block
+   that is running; the sprint you abandoned mid-way; the shape you fitted and never started; and a
+   daily nudge to work at all. The fourth is a habit mechanism and would run straight into `D48`'s
+   gamification fence, which forbids *"streaks, badges, goals, records, targets, comparisons."* The
+   other three are not.
+3. **What does it do to the distraction log, which is the point of the app?** A notification that
+   pulls somebody back into the app mid-block is itself a distraction, and the app has no way to record
+   one it caused. `SPEC.md`'s vision sentence is the test here, and it is the kind of question only the
+   owner can answer.
+4. **It needs an authorisation path, and one already exists for something else.** The app asks for
+   alarm permission and *refuses to run without it* — deliberately, with a blocking explainer and
+   **no quieter fallback**. A second permission that is optional would be the first optional
+   permission in the app, so "if the user turns on pushes" needs a decision about what the app does
+   when they do not: nothing, or nag.
+5. **`D45` is already open and adjacent.** The watch haptic is proposed and unratified. Two
+   notification-shaped deltas in flight at once should be ruled on together or one will contradict the
+   other.
+
+### What it would touch
+
+A settings row and its copy · a permission request and its refused state · a scheduler, which is a
+second thing in the app that talks to iOS about future events · a decision about whether the reminder
+survives the app being killed · `SettingsBounds`, `AppSettings` (an eighth column — see `F8.md`'s note
+that the header still says *"EXACTLY SIX PROPERTIES"*) · and the `O1` export, if a caused distraction
+is to be recorded.
+
+**Nothing above is written. No file was created, no column added, no stub left behind.** This entry is
+the whole of the work done on it.

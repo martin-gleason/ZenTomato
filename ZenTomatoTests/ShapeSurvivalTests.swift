@@ -135,14 +135,14 @@ struct ShapeSurvivalTests {
 
   // MARK: The 36-hour grace, and the tally that goes with it
 
-  /// **A position dropped after thirty-six hours takes the cycle's tally with it.**
+  /// **A position dropped after the grace takes the cycle's tally with it.**
   ///
   /// > *"The position is only meaningful beside the cycle's own tally."* — `ShapeStore.rewindRun()`
   ///
   /// **THIS IS THE REGRESSION TEST FOR A CRITICAL DEFECT THE REVIEW FOUND BY RUNNING IT** on
   /// 2026-09-26. The grace lived in `ShapeStore.load()`, which rewound the shape's cursor on every
   /// read and wrote nothing — and nothing anywhere put the tally back. Two pomodoros into a shaped
-  /// sprint, left for a day and a half, the app came back with the shape at block **zero** and the
+  /// sprint, left past the grace, the app came back with the shape at block **zero** and the
   /// cycle still saying **one pomodoro banked**: two accounts of one sprint, the exact state
   /// `rewindRun()`'s own doc comment refuses by name, reached by the rule written to prevent it.
   ///
@@ -176,8 +176,9 @@ struct ShapeSurvivalTests {
     #expect(try #require(writing.runningShape()).cursor == 2)
     #expect(try TimerState.current(in: context).completedInSprint == 1)
 
-    // Thirty-seven hours later the app is opened again, and the app does what it does at launch.
-    let stale = harness.store(at: start.addingTimeInterval(37 * 3600))
+    // Seventy minutes later the app is opened again, and the app does what it does at launch.
+    // **`D49`'s hour, not `D32`'s thirty-six** — the fixture moved with the ruling.
+    let stale = harness.store(at: start.addingTimeInterval(70 * 60))
     let relaunched = TimerEngine(
       context: context, clock: clock, alarms: SpyAlarmScheduler(), shapes: stale)
     await relaunched.synchronize()
@@ -210,8 +211,9 @@ struct ShapeSurvivalTests {
       try await run(first, blocks: 1, clock: clock)
     }
 
-    // Thirty-five hours — an evening stop and a late-morning return, the case the owner sized 36 for.
-    let fresh = harness.store(at: start.addingTimeInterval(35 * 3600))
+    // Fifty minutes — a coffee and a phone call, which is the case `D49`'s hour is sized for. The
+    // evening-stop-and-morning-return case `D32` covered is deliberately gone.
+    let fresh = harness.store(at: start.addingTimeInterval(50 * 60))
     let relaunched = TimerEngine(
       context: context, clock: clock, alarms: SpyAlarmScheduler(), shapes: fresh)
     await relaunched.synchronize()
