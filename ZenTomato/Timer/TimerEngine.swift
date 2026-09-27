@@ -394,7 +394,7 @@ final class TimerEngine {
     }
     guard let state else { return }
 
-    // **A POSITION NOBODY HAS TOUCHED FOR THIRTY-SIX HOURS GOES, AND THE CYCLE'S TALLY GOES WITH IT.**
+    // **A POSITION NOBODY HAS TOUCHED FOR AN HOUR GOES, AND THE CYCLE'S TALLY GOES WITH IT.**
     //
     // The owner's grace period, applied at the one place in the app where both records are in hand.
     // It lived in `ShapeStore.load()` until a review ran it on 2026-09-26 and found that the shape
@@ -413,7 +413,8 @@ final class TimerEngine {
     // **Here and not in `init`**, which is this engine's stated division of labour: the initialiser
     // *"adopts whatever the database already says, so the screen is right immediately"* and
     // `synchronize()` *"works out whether it is still true"* — called at launch and on every return
-    // to the foreground, which is every moment a thirty-six-hour gap can have opened in.
+    // to the foreground, which is every moment a gap can have opened in. **`D49`'s hour makes this
+    // the ordinary path rather than a rare one:** an afternoon meeting is now long enough.
     if state.isRunning == false, shapes?.rewindRunIfStale() == true {
       goIdle(kind: .work, completedInSprint: 0)
       persist()

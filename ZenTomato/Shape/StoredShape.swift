@@ -46,7 +46,7 @@ struct StoredShape: Codable, Equatable {
   ///
   /// It is not *"the shape that is running"* any more, and the rename of the idea matters more than
   /// the name of the field. Under the owner's ruling of 2026-09-24 the shape survives its sprint
-  /// finishing, being stopped early, and thirty-six hours of silence — what those three events cost
+  /// finishing, being stopped early, and an hour of silence — what those three events cost
   /// it is its **position**, not its existence. A cursor of zero is what "not running" looks like
   /// now; the field going `nil` means only that nothing has ever been fitted, or that what was there
   /// could not be read.
@@ -130,7 +130,7 @@ struct StoredRun: Codable, Equatable {
   /// When the cursor last moved — which is when the shape was fitted, if it has not moved since.
   ///
   /// **The grace is measured from the POSITION, not from the fitting, and the difference is a
-  /// defect.** Measured from the fitting, a sprint begun from a shape fitted forty hours ago would
+  /// defect.** Measured from the fitting, a sprint begun from a shape fitted two hours ago would
   /// be rewound by its own second read: `advance()` would write cursor 1, the next `load()` would
   /// find the fitting stale and rewind it to 0, and the sprint would run its first block for ever.
   /// Stamping this as the cursor moves means "stale" says what the rule means — *nobody has been
@@ -181,25 +181,34 @@ struct StoredRun: Codable, Equatable {
     self.positionedAt = positionedAt
   }
 
-  /// How long a position stays resumable after the cursor last moved. **Ruled by the owner,
-  /// 2026-09-24.**
+  /// How long a position stays resumable after the cursor last moved. **`D49`, ruled by the owner
+  /// 2026-09-26: one hour.**
   ///
-  /// *"Only the definition. A grace period of 36 hours."* The shape itself — its blocks, its preset
-  /// and its long-break toggle — lasts until a new shape replaces it. The **position in it** does
-  /// not: resuming last night's sprint is right, resuming one from three weeks ago is not.
+  /// The shape itself — its blocks, its preset and its long-break toggle — lasts until a new shape
+  /// replaces it. The **position in it** does not.
   ///
-  /// **Thirty-six and not twenty-four**, and the difference is the ordinary case: stopping at six in
-  /// the evening and coming back after nine the next morning is under a day of clock time and over a
-  /// day of calendar. Thirty-six covers a night and the working day after it without reaching a
-  /// second night.
-  static let grace: TimeInterval = 36 * 60 * 60
+  /// **IT WAS THIRTY-SIX HOURS FOR TWO DAYS, AND THE ARGUMENT FOR THAT IS KEPT BECAUSE IT WAS NOT
+  /// WRONG — IT ANSWERED A DIFFERENT QUESTION.** `D32`'s ruling was *"only the definition. A grace
+  /// period of 36 hours"*, sized so that stopping at six in the evening and returning after nine the
+  /// next morning would still resume: under a day of clock time, over a day of calendar. `D49`
+  /// withdraws that case deliberately — *"I think the 36 hours is too long"* — in favour of a sprint
+  /// you can still remember being in. One hour does not survive a night, and is not meant to.
+  ///
+  /// **What an hour costs, named here rather than discovered on the device.** Any gap longer than an
+  /// hour restarts the sprint: a long meeting, a lunch, a school run. You come back to the shape you
+  /// fitted, at its first block, with the pomodoro tally at zero — which is the same end state a
+  /// deliberate Stop produces, and `D49`'s reasoning is that after an hour away that is the honest
+  /// one.
+  static let grace: TimeInterval = 60 * 60
 
   /// Whether this position is still inside its grace period.
   ///
   /// A run with no `positionedAt` is **not** fresh — see that property for why.
   /// **A stamp in the future is not fresh either.** `<` alone treated a negative age as inside the
   /// grace, so a position written while the device clock was ahead and then corrected backwards would
-  /// have stayed resumable for ever. `TimerEngine` carries a `clockSkewTolerance` for its own state;
+  /// have stayed resumable for ever — and at `D49`'s one hour, a clock nudged forward by a minute is a
+  /// likelier accident than it was at thirty-six.
+  /// `TimerEngine` carries a `clockSkewTolerance` for its own state;
   /// this store has no such guard, so the bound is stated here. Found by review, 2026-09-26.
   func isFresh(at now: Date) -> Bool {
     guard let positionedAt else { return false }

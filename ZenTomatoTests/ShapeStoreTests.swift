@@ -229,9 +229,11 @@ struct ShapeStoreTests {
 
   /// A shape whose cursor has not moved for longer than the grace is offered back **at its start**.
   ///
-  /// **The fixture is 37 hours and the pair 35/37 is chosen so the two answers differ.** A test
+  /// **The fixture is 70 minutes and the pair 50/70 is chosen so the two answers differ.** A test
   /// written at three weeks would pass against a grace of one hour, of one day, or of a fortnight —
   /// it would prove that *some* staleness rule exists and nothing about the number the owner ruled.
+  /// The pair was 35/37 **hours** until `D49` cut the grace to one; the principle is the reason it
+  /// had to move with it.
   @Test("aPositionOlderThanTheGraceIsDropped")
   func aPositionOlderThanTheGraceIsDropped() throws {
     let harness = try TestShapeStore.make()
@@ -241,7 +243,7 @@ struct ShapeStoreTests {
     harness.store.save(
       StoredShape(
         preset: .balanced, endsWithLongBreak: true,
-        run: StoredRun(shape: shape, cursor: 3, positionedAt: now.addingTimeInterval(-37 * 3600))))
+        run: StoredRun(shape: shape, cursor: 3, positionedAt: now.addingTimeInterval(-70 * 60))))
 
     #expect(harness.store(at: now).rewindRunIfStale() == true, "the grace is asked and answers yes")
     let run = try #require(harness.store.runningShape())
@@ -250,7 +252,7 @@ struct ShapeStoreTests {
     #expect(run.blocks.map(\.minutes) == shape.blocks.map(\.minutes), "the shape is not")
   }
 
-  /// The same shape one hour younger is offered back **where it was left**.
+  /// The same shape twenty minutes younger is offered back **where it was left**.
   @Test("aPositionInsideTheGraceIsKept")
   func aPositionInsideTheGraceIsKept() throws {
     let harness = try TestShapeStore.make()
@@ -261,7 +263,7 @@ struct ShapeStoreTests {
         preset: .balanced, endsWithLongBreak: true,
         run: StoredRun(
           shape: try Self.twoHourShape(), cursor: 3,
-          positionedAt: now.addingTimeInterval(-35 * 3600))))
+          positionedAt: now.addingTimeInterval(-50 * 60))))
 
     #expect(harness.store(at: now).rewindRunIfStale() == false, "inside the grace, nothing is dropped")
     #expect(try #require(harness.store.runningShape()).cursor == 3)
@@ -296,8 +298,10 @@ struct ShapeStoreTests {
   ///
   /// This is the defect the field name was changed for. Measured from the fitting, the first
   /// `advance()` would write cursor 1 and the very next read would find the *fitting* stale and put
-  /// it back to 0 — a shaped sprint stuck on its first block for ever, on any shape older than a day
-  /// and a half. Every assertion in the two tests above passes while that is true.
+  /// it back to 0 — a shaped sprint stuck on its first block for ever, on any shape older than the
+  /// grace. **`D49` makes that far likelier, not less:** at one hour, an ordinary sprint outlives its
+  /// own grace, so this is now the common case rather than the two-day-old one. Every assertion in
+  /// the two tests above passes while that is true.
   ///
   /// **THIS TEST PINNED A DEFECT AS CORRECT UNTIL 2026-09-26, AND THAT IS WHY IT IS WORTH READING.**
   /// It used to assert `cursor == 1` after advancing a stale run, commented *"and it stays where the
@@ -318,7 +322,7 @@ struct ShapeStoreTests {
         preset: .balanced, endsWithLongBreak: true,
         run: StoredRun(
           shape: try Self.twoHourShape(), cursor: 3,
-          positionedAt: now.addingTimeInterval(-37 * 3600))))
+          positionedAt: now.addingTimeInterval(-70 * 60))))
     let store = harness.store(at: now)
 
     #expect(store.advance() == false)

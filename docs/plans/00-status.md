@@ -77,11 +77,11 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 
 | Register | Rows | Open | Unknown | Closed |
 |---|---|---|---|---|
-| Decisions (`D`) | 50 | 2 | 0 | 48 |
+| Decisions (`D`) | 52 | 3 | 0 | 49 |
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
 | Owner items (`O`) | 52 | 24 | 0 | 28 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
-| Mutations (`M`) | 168 | 41 | 0 | 127 |
+| Mutations (`M`) | 169 | 41 | 0 | 128 |
 | Chores (`C`) | 30 | 5 | 9 | 16 |
 | Agent items (`A`) | 23 | 9 | 0 | 14 |
 
@@ -91,8 +91,8 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 
 | Register | Status | Count |
 |---|---|---|
-| `D` | proposed | 2 |
-| `D` | ratified | 45 |
+| `D` | proposed | 3 |
+| `D` | ratified | 46 |
 | `D` | rejected | 2 |
 | `D` | resolved | 1 |
 | `RR` | open | 4 |
@@ -100,7 +100,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `O` | open | 24 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
-| `M` | closed | 126 |
+| `M` | closed | 127 |
 | `M` | open | 41 |
 | `M` | superseded | 1 |
 | `C` | closed | 16 |
@@ -156,6 +156,7 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 |---|---|---|---|---|
 | owner | D45 | — | proposed | A silent alarm and a haptic on the watch when the phone's sound is off |
 | owner | D46 | — | proposed | The watch fires the same controls as the phone |
+| owner | D50 | — | proposed | Proposed spec delta: a push reminder about the work in progress |
 | unassigned | RR1 | P0 | open | iCloud/CloudKit sync would put the log where a conflict can lose it |
 | unassigned | RR2 | P0 | open | Changing the bundle identifier orphans the SwiftData store holding… |
 | unassigned | RR3 | P1 | open | The shape cursor and `TimerState` advance non-atomically, and control… |
@@ -261,4 +262,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-104 open register rows.
+105 open register rows.
