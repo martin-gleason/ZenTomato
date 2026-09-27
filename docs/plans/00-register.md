@@ -148,6 +148,8 @@ makes the generator refuse to run at all and write nothing.
 | D49 | The shape's position gets one hour, not thirty-six | — | ratified |  |
 | D50 | A push reminder about the work in progress · **v2.0, parked** | — | ratified |  |
 | D51 | The export leaves as text *and* as a file, so a notes app can take it as a note | — | proposed |  |
+| D52 | The tomato fills in as the sprint progresses, replacing the coffee cup | — | proposed |  |
+| D53 | Notes apps are tied in directly, at v2.0 | — | ratified |  |
 <!-- END GENERATED: decisions -->
 
 ### Decisions — owner fields
