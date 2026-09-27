@@ -146,7 +146,7 @@ makes the generator refuse to run at all and write nothing.
 | D47 | ~~The shape store is a single `Codable` value in `UserDefaults`~~ | — | rejected |  |
 | D48 | The garden accumulates, and nothing gamified may be lost | — | ratified |  |
 | D49 | The shape's position gets one hour, not thirty-six | — | ratified |  |
-| D50 | Proposed spec delta: a push reminder about the work in progress | — | proposed |  |
+| D50 | A push reminder about the work in progress · **v2.0, parked** | — | ratified |  |
 <!-- END GENERATED: decisions -->
 
 ### Decisions — owner fields

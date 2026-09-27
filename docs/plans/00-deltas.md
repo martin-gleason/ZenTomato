@@ -70,7 +70,7 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D47** | ~~rejected~~ | no | — | ~~The shape store in UserDefaults~~ — duplicate of D32 |
 | **D48** | ratified | **yes** | 1 | The garden accumulates, and nothing gamified may be lost |
 | **D49** | ratified | no | — | The shape's position gets one hour, not thirty-six — supersedes part of D32 |
-| **D50** | **proposed** | no | — | A push reminder about the work in progress — **not built** |
+| **D50** | ratified — **v2.0** | no | — | A push reminder about the work in progress — parked, **not built** |
 
 *52 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
@@ -2607,20 +2607,62 @@ stamp, which it did not until the 2026-09-26 review.
 
 ---
 
-## D50 — Proposed spec delta: a push reminder about the work in progress
+## D50 — A push reminder about the work in progress · **v2.0, parked**
 
-**Proposed 2026-09-26. NOT RATIFIED, AND DELIBERATELY NOT BUILT.** The owner asked for it in the same
-message as `D49`:
+**Proposed 2026-09-26. Ratified by the owner 2026-09-27 as v2.0 — SO IT IS PARKED, NOT NEXT.** A
+ratified decision carrying a future milestone *is* the parked backlog (`conventions.md`); there is no
+`parked.md` and nothing here is built.
 
-> *"a push reminder about the work if the user turns on pushes."*
+> *"a push reminder about the work if the user turns on pushes."* — 2026-09-26
+>
+> *"push is 2.0; reminder on returning to the sprint before the internal timer runs out. push
+> notification for a reminder log is auto logged as an external interruption, as 'paused sprint.' if
+> the permission is off, just auto log the distraction."* — 2026-09-27
 
-**`CLAUDE.md` is why this stops here rather than shipping beside the one-line change it arrived with:**
+### What the owner ruled, and it answers three of the five open questions
+
+| Question this delta asked | Ruled |
+|---|---|
+| Is a new permission surface polish or platform? | **Platform. v2.0.** |
+| Which of four readings of *"a reminder about the work"*? | **The abandoned sprint** — *"returning to the sprint before the internal timer runs out"*. Not the running block, not the fitted-but-unstarted shape, and **not** the daily nudge, which would have hit `D48`'s fence. |
+| What does it do to the distraction log? | **It writes to it.** The reminder is auto-logged as an **external** interruption with the reason *"paused sprint"*. |
+| What happens when the permission is refused? | **The distraction is logged anyway.** The notification is the part that needs permission; the record is not. |
+
+`D45`'s adjacency stands as the fifth: both are notification-shaped and should be ruled together
+before either is built.
+
+### TWO THINGS THAT NEED THE OWNER AGAIN BEFORE THIS IS BUILDABLE, AND BOTH ARE ABOUT THE LOG
+
+**1 · This would be the first row in the distraction log that nobody tapped.** Every row today is a
+deliberate press — that is what makes the log mean something, and `O1` is *one real day's export read
+beside the Rhodia*. A row the app wrote about itself is a different kind of fact from a row the person
+wrote about their attention, and an export that mixes them without saying which is which changes what
+`O1` can conclude. Options, not a recommendation: a distinct kind; a flag on the row; or the owner
+ruling that it reads identically and that is fine. **The no-capture rule is not in the way** — that
+rule forbids the app accepting a new *task*, not a new distraction — so this is a question about
+meaning, not permission.
+
+**2 · If the record does not need permission, the record is not v2.0 and the notification is.** The
+ruling splits the feature cleanly in half: *auto-log a paused sprint as an external interruption* needs
+no notification surface, no new permission and no platform — it is a thing the timer already knows at
+the moment it knows it. That half would be v1.5-shaped. **It is left parked with the rest deliberately
+rather than split on the agent's initiative**, because splitting a ratified v2.0 item and shipping half
+of it now is a scope decision, and scope is the owner's. If the owner wants the logging half in v1.5 it
+needs its own `D<n>` and its own place in the order.
+
+### Still to decide, carried forward
+
+What the copy says · whether the reminder repeats or fires once · how long *"before the internal timer
+runs out"* is measured from, and against which clock · whether one reminder can produce more than one
+logged interruption · `SettingsBounds` and `AppSettings`' eighth column.
+
+**`CLAUDE.md` is why this stopped at a proposal rather than shipping beside the one-line change it arrived with:**
 *"Do not build, stub, or 'prepare for' what is not on the list. If it seems necessary, write `Proposed
 spec delta:` in the plan summary and stop."* A notification is not on v1.5's ratified list, and the
 one-hour grace it was asked for alongside is — which is exactly the situation that rule exists for: a
 small ruling and a new feature in one sentence, where doing both quietly is how a milestone grows.
 
-### What has to be decided before it can be built, because none of it is obvious
+### What had to be decided before it could be built — kept, because three of these are now answered above
 
 1. **Is it v1.5 or v2.0?** The fence is architectural: *v1.5 is polish, v2.0 is platform; anything
    adding a platform or a provider is v2.0.* A local notification is arguably neither — the app already
