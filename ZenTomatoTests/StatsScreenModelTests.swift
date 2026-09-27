@@ -346,7 +346,7 @@ struct StatsScreenModelTests {
 
     let url = try StatsExportFile.write(document: model.document, filename: model.filename)
 
-    #expect(url.lastPathComponent == "ZenTomato-2026-08-08-to-2026-08-21.md")
+    #expect(url.lastPathComponent == "ZenPom-2026-08-08-to-2026-08-21.md")
     #expect(try String(contentsOf: url, encoding: .utf8) == model.document)
 
     // A second export sweeps the first away rather than leaving a fortnight
@@ -355,7 +355,7 @@ struct StatsScreenModelTests {
     model.use(range: StatsRange.day(StatsPeriodFixture.friday21))
     let second = try StatsExportFile.write(document: model.document, filename: model.filename)
 
-    #expect(second.lastPathComponent == "ZenTomato-2026-08-21.md")
+    #expect(second.lastPathComponent == "ZenPom-2026-08-21.md")
     #expect(FileManager.default.fileExists(atPath: previous.path) == false)
 
     try? FileManager.default.removeItem(at: second)

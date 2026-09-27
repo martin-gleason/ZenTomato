@@ -1,4 +1,4 @@
-# ZenTomato — 2026-08-08 to 2026-08-21
+# ZenPom — 2026-08-08 to 2026-08-21
 
 9 pomodoros · 3 hours 45 minutes · 6 distractions (3 internal / 3 external)
 

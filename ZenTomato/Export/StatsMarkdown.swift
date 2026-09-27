@@ -122,8 +122,30 @@ enum StatsMarkdown {
     isn't here. Your history is fine; try exporting again.
     """
 
+  /// **The app's name, in the one place the document and its filename both read it from.**
+  ///
+  /// `ZenPom`, ruled by the owner 2026-09-27: *"we have to fix zenpom as the title and footer."* The
+  /// page's footer has said `ZenPom` since the build line was added and its heading said `ZenTomato`,
+  /// so one document carried two names for one app — invisible while the export was a file, and about
+  /// to become the **note's title** if `D51` lands and Bear takes the Markdown as a body.
+  ///
+  /// `ZenTomato` remains the bundle identifier and the Xcode target, and that is correct and must not
+  /// change — see `docs/handoffs/xcode-and-the-store.md`. What a person reads is `ZenPom`.
+  ///
+  /// **IT IS ONE CONSTANT BECAUSE THE RENAME FOUND IT WAS TWO.** `StatsExportFile` held its own
+  /// `"ZenTomato-"` for sweeping old exports out of the temporary directory, kept in agreement with
+  /// the filename by a doc comment and nothing else. Renaming one and not the other would have left
+  /// every previously written export in place for the life of the install, silently — the sweep would
+  /// simply stop matching. Both now read this.
+  static let appName = "ZenPom"
+
+  /// The prefix and suffix `filename(for:)` produces, so the sweep can recognise its own output
+  /// without restating it.
+  static let filenamePrefix = "\(appName)-"
+  static let filenameSuffix = ".md"
+
   /// The document's own name for a span of days:
-  /// `ZenTomato — 2026-08-08 to 2026-08-21`.
+  /// `ZenPom — 2026-08-08 to 2026-08-21`.
   ///
   /// **This is the one place inside the document where a sortable date is used**,
   /// and it is a deliberate exception to everything `StatsWords` argues for. The
@@ -135,14 +157,14 @@ enum StatsMarkdown {
   /// A single-day range prints one date rather than a span of one.
   static func title(for range: StatsRange) -> String {
     guard range.isSingleDay == false else {
-      return "ZenTomato — \(StatsWords.isoDate(range.first))"
+      return "\(appName) — \(StatsWords.isoDate(range.first))"
     }
-    return "ZenTomato — \(StatsWords.isoDate(range.first)) to \(StatsWords.isoDate(range.last))"
+    return "\(appName) — \(StatsWords.isoDate(range.first)) to \(StatsWords.isoDate(range.last))"
   }
 
   // MARK: The file
 
-  /// `ZenTomato-2026-08-08-to-2026-08-21.md`, or `ZenTomato-2026-08-23.md` for
+  /// `ZenPom-2026-08-08-to-2026-08-21.md`, or `ZenPom-2026-08-23.md` for
   /// one day.
   ///
   /// No spaces, no colons, no slashes — nothing a filesystem, a mail attachment
@@ -151,9 +173,9 @@ enum StatsMarkdown {
   /// is in order by name.
   static func filename(for range: StatsRange) -> String {
     guard range.isSingleDay == false else {
-      return "ZenTomato-\(StatsWords.isoDate(range.first)).md"
+      return "\(filenamePrefix)\(StatsWords.isoDate(range.first))\(filenameSuffix)"
     }
-    return "ZenTomato-\(StatsWords.isoDate(range.first))-to-\(StatsWords.isoDate(range.last)).md"
+    return "\(filenamePrefix)\(StatsWords.isoDate(range.first))-to-\(StatsWords.isoDate(range.last))\(filenameSuffix)"
   }
 
   // MARK: Private
