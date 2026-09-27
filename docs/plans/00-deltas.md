@@ -72,8 +72,10 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D49** | ratified | no | — | The shape's position gets one hour, not thirty-six — supersedes part of D32 |
 | **D50** | ratified — **v2.0** | no | — | A push reminder about the work in progress — parked, **not built** |
 | **D51** | **proposed** | no | — | The export leaves as text *and* as a file, so a notes app takes it as a note |
+| **D52** | **proposed** — scope ruled v1.5, awaiting the baseline waiver | **yes — v1.5** | 1 | The tomato fills as the sprint progresses, replacing the coffee cup |
+| **D53** | ratified — **v2.0** | no | — | Notes apps tied in directly — parked, **not built** |
 
-*53 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*55 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
@@ -2757,3 +2759,101 @@ the same one-line change serves Bear, Notes, Drafts, Obsidian and Mail at once. 
 specifically, that is a different delta and a v2.0 one.
 
 **Nothing is built.** No file created, no representation added, no stub.
+
+---
+
+## D52 — The tomato fills in as the sprint progresses, replacing the coffee cup
+
+**Proposed 2026-09-27. THE OWNER HAS RULED THE SCOPE — *"I want that tomato in v1.5"* — AND THE DELTA
+IS HELD AT `proposed` ANYWAY.** Not a hedge, and not a disagreement: ratifying it opens an unapplied
+amendment to `docs/specs/zenpom-v1.5.md`, and `AmendmentRatchetTests` went red the moment it was marked
+ratified. That check's own words are *"the agent may not fix a red ratchet, and that is why it
+exists"* — the agent cannot edit a baseline and cannot raise the tolerated count without defeating the
+instrument. **What is missing is one sentence of authorisation from the owner, the way `D40` authorised
+`D33`'s edit.** With it, this is ratified and its position goes in the order; without it, the ratchet
+would be reporting a real gap that nobody had agreed to open.
+
+Previously pinned by the owner on 2026-09-25 (*"let's put a pin in that"*) and un-pinned now that the
+Dynamic Island has been seen working on the device — and now that *banana mode*, a Reddit-app Live
+Activity that had been taking the Island slot, is switched off:
+
+> *"Also, I see the coffee cup. I want that tomato in v1.5."* · *"the tomato fills in as the sprint
+> progresses, replacing the coffee cup."*
+
+**What it changes, and what it does not.** The Live Activity's compact and minimal presentations draw
+a coffee cup; they would draw a **tomato that fills as the sprint progresses** instead — a picture of
+the sprint's completion, not of the block's countdown, and not a second timer.
+
+**No `SPEC.md` wording is replaced.** That file forbids *"widgets beyond the Lock Screen Live
+Activity"*, and this is **inside** that Live Activity rather than beyond it: the presentation shipped
+in v1.0, was verified on device 2026-08-23, and already draws something. What this owes is a position
+in v1.5's order, which is a different baseline and a different authorisation.
+
+### Why this is v1.5 and not v2.0
+
+The fence is architectural: *anything adding a platform or a provider is v2.0.* This adds neither. The
+Live Activity shipped in v1.0, its Dynamic Island presentation was verified on device on 2026-08-23,
+and all four presentations — expanded, compact leading, compact trailing, minimal — already exist and
+already render. **This is a drawing change inside a shipped surface**, which is what v1.5 is for.
+
+### `D48`'s fence is the thing to be careful about, and this passes it
+
+`D48` forbids *"streaks, badges, goals, records, targets, comparisons, or any gamification"*, with one
+ratified exception: a display of finished work that **only ever accumulates**. A filling tomato is not
+that exception — it is bounded by the sprint and resets when the sprint ends — so it must be justified
+separately, and it can be: **`D48`'s harm is a quantity a person can lose.** A tomato that fills
+across a sprint and empties at the next one records nothing, remembers nothing, and cannot be
+protected by under-reporting a distraction. There is no quantity to defend, so the mechanism `D48`
+exists to prevent is absent. It is a progress indicator, which the countdown already is.
+
+### ADDING THIS TO v1.5's ORDER EDITS A RATIFIED BASELINE, AND THAT IS THE OWNER'S TO AUTHORISE
+
+`docs/specs/zenpom-v1.5.md` states *fourteen positions over thirteen units*. A new unit means the unit
+count and the order table both move, in a file `CLAUDE.md` calls a baseline that is never edited. The
+precedent is `D40`, which authorised `D33`'s edit explicitly and whose commit recorded the waiver
+rather than doing it quietly. **The same waiver is needed here and is not assumed.** Until it is given
+this delta is ratified as *scope* and has no position in the order.
+
+### Open at the gate — this is not buildable from the sentence alone
+
+1. **What fills — the count of finished pomodoros, or elapsed time?** *"Fills as the sprint
+   progresses"* reads either way, and they differ: four poms of 22 minutes fill in four steps, elapsed
+   time fills smoothly. The first is a picture of work done; the second is a second countdown, which
+   the expanded presentation already provides.
+2. **What happens during a break?** The coffee cup is presumably *how a break is currently shown*. If
+   the tomato replaces it outright, a break and a focus block look the same in the Island — which the
+   compact presentation is the one place a person glances at without unlocking.
+3. **What happens to a shaped sprint of three poms?** The tomato must fill in thirds, not quarters, or
+   it disagrees with the sprint dots the phone already draws correctly (`F8`, confirmed on device).
+4. **Minimal presentation.** It is a single tiny glyph with no room for detail. Does the tomato appear
+   there at all, and if so what does "filling" mean at that size?
+5. **Does it ever appear on the Lock Screen presentation too**, which is the one the owner actually saw
+   working, or is this Island-only?
+
+**Nothing is built.** This delta is scope; the gate and `docs/plans/F<N>.md` come next, and the owner's
+yes comes before code.
+
+---
+
+## D53 — Notes apps are tied in directly, at v2.0
+
+**Proposed 2026-09-27. Ratified by the owner the same day as v2.0 — so it is parked.**
+
+> *"Tie bear and other notes apps for 2.0."*
+
+The v2.0 form of the export's destination: the app puts the page **into** a notes app rather than
+handing it to a share sheet — Bear's `bear://x-callback-url/create`, Apple Notes, and whatever else
+earns a place — with the tag, title and folder decided rather than left to the receiving app.
+
+**This is a provider, and that is precisely why it is v2.0.** `CLAUDE.md`'s fence: *anything adding a
+platform or a provider is v2.0.* It also adds a second outbound integration to an app whose standing
+rule is *"no network calls except Todoist and MusicKit"* — a URL scheme is not a network call, but a
+list of one-app integrations is the kind of surface that rule exists to keep closed.
+
+**It does not resolve `D51`, which is still proposed and unruled.** `D51` offers the Markdown as
+**text as well as a file** so that Bear, Notes, Drafts, Obsidian and Mail can each take it as a note
+body today, with no integration, no provider and no per-app code. That is a different change with a
+different milestone, and shipping it would not make this one unnecessary — it would make it optional.
+The owner has ruled on the v2.0 half and not on the v1.5 half.
+
+**Nothing is built.**
