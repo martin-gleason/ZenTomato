@@ -58,7 +58,7 @@ Status is what the unit's own plan file declares. What has landed in git is deli
 | F6b | feature | — | `docs/plans/F6b.md` | 7 planned |
 | F7 | feature | — | `docs/plans/F7.md` | 5 planned |
 | F7b | feature | built, gates green, awaiting review. Defect fix on a shipped feature; no gate was required and none… | `docs/plans/F7b.md` | 6 planned |
-| F8 | feature | **THE SECOND ADVERSARIAL REVIEW FOUND A `critical` IN WHAT `T4` SHIPPED, AND IT IS FIXED.** The… | `docs/plans/F8.md` | 6 planned |
+| F8 | feature | **`T4` AND `T5` ARE COMPLETE; `T6` IS THE OWNER'S AND IS `O52`.** `T4`'s last outstanding item —… | `docs/plans/F8.md` | 6 planned |
 | F9 | feature | plan written, **awaiting the gate.** No code has been written. | `docs/plans/F9.md` | 6 planned |
 | F10 | feature | plan written, **awaiting the gate.** No code has been written. | `docs/plans/F10.md` | 5 planned |
 | F11 | feature | plan written, **awaiting the gate. No code has been written.** | `docs/plans/F11.md` | 5 planned |
