@@ -14,7 +14,7 @@ import Foundation
 /// `ShareLink` will happily share a `String`, and what arrives in Files when it
 /// does is `Untitled.txt`. The document *is* this feature — F6 exists to produce
 /// the page a fortnightly review is read from — so it leaves the app as
-/// `ZenTomato-2026-08-08-to-2026-08-21.md`: sortable, self-describing, and still
+/// `ZenPom-2026-08-08-to-2026-08-21.md`: sortable, self-describing, and still
 /// meaningful sitting in a folder a month later.
 ///
 /// WHY THE DIRECTORY IS SWEPT FIRST
@@ -44,8 +44,12 @@ enum StatsExportFile {
   // MARK: Private
 
   /// The name shape this app writes, and the only files it will ever delete.
-  private static let prefix = "ZenTomato-"
-  private static let suffix = ".md"
+  /// **Read from `StatsMarkdown`, not restated here.** These were two literals kept in agreement by
+  /// the doc comment above, and the 2026-09-27 rename to `ZenPom` is what showed the cost: changing
+  /// the filename and not the sweep would leave every export this app had ever written in the
+  /// temporary directory for the life of the install, with nothing to notice it.
+  private static let prefix = StatsMarkdown.filenamePrefix
+  private static let suffix = StatsMarkdown.filenameSuffix
 
   /// Removes the pages left behind by earlier shares.
   ///
@@ -57,7 +61,7 @@ enum StatsExportFile {
   /// A directory of this app's own, made once per launch.
   ///
   /// **The sweep below used to run over the whole temporary directory**, deleting every
-  /// `ZenTomato-*.md` it found — including one a share extension might still be reading, since
+  /// `ZenPom-*.md` it found — including one a share extension might still be reading, since
   /// the share sheet hands over a URL and reads it on its own schedule. Exporting twice while
   /// the first sheet was open could pull the file out from under it.
   ///

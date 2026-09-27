@@ -72,7 +72,9 @@ struct ExportCostTests {
     let build = clock.measure { _ = StatsMarkdown.document(for: period, producedBy: .forGoldens) }
     let document = StatsMarkdown.document(for: period, producedBy: .forGoldens)
     let write = clock.measure {
-      _ = try? StatsExportFile.write(document: document, filename: "ZenTomato-cost.md")
+      _ = try? StatsExportFile.write(
+        document: document,
+        filename: StatsMarkdown.filenamePrefix + "cost" + StatsMarkdown.filenameSuffix)
     }
 
     print("""
@@ -125,7 +127,9 @@ struct ExportCostTests {
     let build = clock.measure { _ = StatsMarkdown.document(for: period, producedBy: .forGoldens) }
     let document = StatsMarkdown.document(for: period, producedBy: .forGoldens)
     let write = clock.measure {
-      _ = try? StatsExportFile.write(document: document, filename: "ZenTomato-year.md")
+      _ = try? StatsExportFile.write(
+        document: document,
+        filename: StatsMarkdown.filenamePrefix + "year" + StatsMarkdown.filenameSuffix)
     }
 
     print("ALL-TIME export, \(written) blocks over a year")

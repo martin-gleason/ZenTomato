@@ -6,6 +6,15 @@ import Testing
 /// The three sharp edges on the export, and the one that was ruled rather than fixed.
 @Suite("ExportEdges")
 struct ExportEdgeTests {
+  /// A filename shaped exactly like the app's own output, built from the app's own constants.
+  ///
+  /// Typed `ZenTomato-…` literals here stopped matching the sweep the moment the export was renamed
+  /// to `ZenPom`, and a fixture that no longer looks like the app's output cannot exercise a sweep
+  /// that matches the app's output. The filename itself is pinned as a literal where it belongs, in
+  /// `StatsMarkdownSectionTests.theFilenameSortsAndSaysWhatItIs`.
+  private static func exportName(_ stem: String) -> String {
+    "\(StatsMarkdown.filenamePrefix)\(stem)\(StatsMarkdown.filenameSuffix)"
+  }
   // MARK: A7 — a title is prose, not markup
 
   /// `aTitleWithMarkupIsPrintedAsItself` — asterisks survive, and the table does not break.
@@ -56,8 +65,13 @@ struct ExportEdgeTests {
   /// the file that sheet was reading. Now it is bounded to a per-launch subdirectory.
   @Test("writingTwiceKeepsOnlyTheCurrentPage")
   func writingTwiceKeepsOnlyTheCurrentPage() throws {
-    let first = try StatsExportFile.write(document: "# one\n", filename: "ZenTomato-one.md")
-    let second = try StatsExportFile.write(document: "# two\n", filename: "ZenTomato-two.md")
+    // **The names are built from the prefix rather than typed**, because the subject of this test is
+    // the sweep and not the name. Typed literals are what made it fail when `ZenTomato` became
+    // `ZenPom`: a fixture that no longer looks like the app's output cannot exercise a sweep that
+    // matches the app's output. The filename itself is pinned as a literal where it belongs, in
+    // `theFilenameSortsAndSaysWhatItIs`.
+    let first = try StatsExportFile.write(document: "# one\n", filename: Self.exportName("one"))
+    let second = try StatsExportFile.write(document: "# two\n", filename: Self.exportName("two"))
 
     #expect(FileManager.default.fileExists(atPath: second.path))
     #expect(try String(contentsOf: second, encoding: .utf8) == "# two\n")
@@ -67,11 +81,11 @@ struct ExportEdgeTests {
     // AND IT NEVER LEFT ITS OWN DIRECTORY. A file with the same shape of name, sitting in the
     // temporary directory itself, is untouched — that is the share extension's copy, and the
     // whole point of the change.
-    let bystander = FileManager.default.temporaryDirectory.appending(path: "ZenTomato-elsewhere.md")
+    let bystander = FileManager.default.temporaryDirectory.appending(path: Self.exportName("elsewhere"))
     try Data("# not mine\n".utf8).write(to: bystander)
     defer { try? FileManager.default.removeItem(at: bystander) }
 
-    _ = try StatsExportFile.write(document: "# three\n", filename: "ZenTomato-three.md")
+    _ = try StatsExportFile.write(document: "# three\n", filename: Self.exportName("three"))
     #expect(
       FileManager.default.fileExists(atPath: bystander.path),
       "The sweep reached outside its own directory.")

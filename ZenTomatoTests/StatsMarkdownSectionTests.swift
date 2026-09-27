@@ -219,9 +219,9 @@ struct StatsMarkdownSectionTests {
   /// is.
   @Test("theFilenameSortsAndSaysWhatItIs")
   func theFilenameSortsAndSaysWhatItIs() {
-    #expect(StatsMarkdown.filename(for: StatsPeriodFixture.range) == "ZenTomato-2026-08-08-to-2026-08-21.md")
+    #expect(StatsMarkdown.filename(for: StatsPeriodFixture.range) == "ZenPom-2026-08-08-to-2026-08-21.md")
     #expect(
-      StatsMarkdown.filename(for: StatsRange.day(StatsPeriodFixture.friday21)) == "ZenTomato-2026-08-21.md")
+      StatsMarkdown.filename(for: StatsRange.day(StatsPeriodFixture.friday21)) == "ZenPom-2026-08-21.md")
 
     for filename in [
       StatsMarkdown.filename(for: StatsPeriodFixture.range),
@@ -238,7 +238,7 @@ struct StatsMarkdownSectionTests {
   func aSingleDayReadsAsADay() {
     let title = StatsMarkdown.title(for: StatsRange.day(StatsPeriodFixture.friday21))
 
-    #expect(title == "ZenTomato — 2026-08-21")
+    #expect(title == "ZenPom — 2026-08-21")
     #expect(title.contains(" to ") == false)
   }
 
@@ -274,5 +274,36 @@ struct StatsMarkdownSectionTests {
     #expect(completed.contains(StatsPeriodFixture.habit) == false)
     #expect(repeating.contains("Reading list for week 3") == false)
     #expect(completed.contains("Reading list for week 3"))
+  }
+
+  // MARK: The app's name, in one place
+
+  /// **The document and its filename read the same name, and the sweep recognises the filename.**
+  ///
+  /// Three things had to agree and only two of them were in one file. `StatsExportFile` held its own
+  /// `"ZenTomato-"` literal for sweeping old exports out of the temporary directory, kept in step with
+  /// `filename(for:)` by a doc comment. The 2026-09-27 rename to `ZenPom` is what showed the cost:
+  /// renaming the filename and not the sweep leaves every export the app has ever written in place for
+  /// the life of the install, and **nothing fails** — the sweep simply stops matching, which is the
+  /// quietest possible defect.
+  ///
+  /// So the assertion is on the real filename against the real prefix, not on two literals typed here.
+  /// `F6-M1` is the mutation.
+  @Test("theExportsNameIsOneNameEverywhere")
+  func theExportsNameIsOneNameEverywhere() throws {
+    let range = StatsRange(
+      first: StatsDay(year: 2026, month: 8, day: 8, weekday: 7),
+      last: StatsDay(year: 2026, month: 8, day: 21, weekday: 6))
+    let filename = StatsMarkdown.filename(for: range)
+    let title = StatsMarkdown.title(for: range)
+
+    #expect(filename.hasPrefix(StatsMarkdown.filenamePrefix), "the sweep's prefix must match its own output")
+    #expect(filename.hasSuffix(StatsMarkdown.filenameSuffix))
+    #expect(title.hasPrefix("\(StatsMarkdown.appName) — "))
+    // And the name is the one a reader sees on the phone, not the Xcode target. The bundle identifier
+    // stays `com.martingleason.ZenTomato` and must never move — see docs/handoffs/xcode-and-the-store.md.
+    #expect(StatsMarkdown.appName == "ZenPom")
+    #expect(filename.contains("ZenTomato") == false)
+    #expect(title.contains("ZenTomato") == false)
   }
 }
