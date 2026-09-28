@@ -64,7 +64,7 @@ struct BlockLiveActivity: Widget {
             // `TomatoSpike`'s own header says it cannot survive `F2f-T3`. Removing this call and that
             // file is the first commit of `T3`.
             if readout.kind == .work {
-              TomatoSpike(interval: readout.spikeInterval, staticFraction: readout.spikeFraction)
+              TomatoSpike(interval: readout.spikeInterval)
             }
           }
           .islandInk()
@@ -78,13 +78,8 @@ struct BlockLiveActivity: Widget {
         // was when iOS last drew it.
         //
         // Focus blocks only. A break keeps its cup, which is `D52` and `D55` both.
-        if readout.kind == .work {
-          TomatoSpike.candidateA(interval: readout.spikeInterval)
-            .islandInk()
-        } else {
-          BlockSymbol(kind: readout.kind)
-            .islandInk()
-        }
+        BlockSymbol(kind: readout.kind)
+          .islandInk()
       } compactTrailing: {
         CountdownNumeral(readout: readout, font: Typography.data)
           // The island's trailing region is narrow, and a two-hour block prints
@@ -242,21 +237,6 @@ private struct BlockReadout {
   var spikeInterval: ClosedRange<Date>? {
     guard case .running(let from, let to) = mode, to > from else { return nil }
     return from...to
-  }
-
-  /// What candidate **C** believes the fraction to be at the instant this view is rendered.
-  ///
-  /// This is the number the handoff's literal construction would use, and the spike exists to show that
-  /// a number computed here stops being true a second later.
-  var spikeFraction: Double {
-    switch mode {
-    case .running(let from, let to):
-      guard to > from else { return 1 }
-      let elapsed = Date.now.timeIntervalSince(from)
-      return min(max(elapsed / to.timeIntervalSince(from), 0), 1)
-    case .frozen, .ended:
-      return 1
-    }
   }
 
   /// What the app sent with the alarm. Absent only if iOS hands back an activity

@@ -1,136 +1,90 @@
 import SwiftUI
 import WidgetKit
 
-/// `F2f-T1` — **THE SPIKE. THIS FILE IS NOT THE FEATURE AND MUST NOT SURVIVE `T3`.**
+/// `F2f-T1` — **THE SPIKE, SECOND ATTEMPT. THIS FILE MUST NOT SURVIVE `T3`.**
 ///
-/// It exists to answer one question that cannot be answered by reading documentation or by arguing:
+/// **THE FIRST ATTEMPT ASKED THREE QUESTIONS AT ONCE AND ANSWERED NONE OF THEM.** It drew three
+/// candidate tomatoes side by side — a rotated system bar clipped to a circle, a circular progress
+/// ring, and a fraction computed here — each built from several composed effects, inside WidgetKit,
+/// which is the most restrictive rendering environment on this platform. The owner's report was
+/// *"it didn't render completely. all that was done was the green tops for the first selection."*
 ///
-/// > **Can a tomato-shaped fill rise as a block elapses, in a Live Activity, without the app pushing a
-/// > single update?**
+/// **A crown drew and a circle did not, and that result is uninterpretable** — which is the lesson.
+/// When the drawing and the mechanism are both unknown, a failure tells you nothing about either. The
+/// question *"does a self-driving fill work?"* cannot be answered by a picture that also depends on
+/// whether an outline happens to be visible against black.
 ///
-/// `D55` ratified the *appearance* the owner wants — the handoff's *"red fill rising from the base as the
-/// block elapses"* — and left the mechanism explicitly unsettled, because `conventions.md` says a
-/// decision about what another system can do is not ratifiable until something has run. **The agent's
-/// reasoning about this has already been wrong once inside a day**: first that no self-driving mechanism
-/// exists at all (false — `ProgressView(timerInterval:)` is one), then that none exists for a custom
-/// shape, which is better argued and was still unrun until this file.
+/// So this version asks **one question per probe, with nothing composed**:
 ///
-/// **THREE CANDIDATES, SIDE BY SIDE, WHICH IS THE HANDOFF'S OWN INSTRUCTION** —
-/// `recreation-notes.md:41`: *"Island tomato: build ALL THREE metaphors side by side (ripen fill-up, ensō
-/// ring draw, drain down)."* They are drawn together so the owner compares them in one glance on real
-/// hardware rather than reading three descriptions.
+/// | Probe | What it is | What it answers |
+/// |---|---|---|
+/// | **1** | a bare `ProgressView(timerInterval:)`, linear | does a self-driving bar render here **at all**? |
+/// | **2** | the same, circular | does the ring form render — which is the fallback design? |
+/// | **3** | the tomato shape, static, in a proven-visible colour | does the **shape** draw, independent of any fill? |
 ///
-/// | | Candidate | Mechanism | Expected |
-/// |---|---|---|---|
-/// | **A** | Ripen fill-up | system linear bar, turned a quarter, clipped to the body | **unknown — the question** |
-/// | **B** | Ensō ring | the system's circular progress view, ringing a solid tomato | to move; the system draws it |
-/// | **C** | The handoff, literally | a fraction computed here and a rect clipped to `scaleY` | **to sit still** |
+/// **Probe 3 exists because of what the first attempt got wrong.** The crown appeared and the circle
+/// did not, and the likeliest reason is not WidgetKit at all: `islandInk()` forces the dark half of
+/// every role because the Island is always black, and `borderStrong` in dark is a dark grey — on a
+/// black capsule, invisible. The crown used `action`, the app's sage, and showed. So probe 3 draws the
+/// whole shape in `action`: if it appears, the geometry was always fine and the first attempt's circle
+/// was painted black on black.
 ///
-/// **C IS `F2f-M4`, SHOWN RATHER THAN ARGUED.** It is the obvious implementation and the plan predicts it
-/// fails — not with a red assertion but by not moving, which no test in this project can see. Drawing it
-/// beside two that might move is the only way to make that visible, and it is why this spike's output is
-/// an observation with a build number rather than a green tick.
-///
-/// **The colours here are placeholders and are wrong on purpose.** The handoff's `#E06A50`, `#948F84` and
-/// `#8AA163` cannot appear in this target — `palette_outside_token_layer` forbids naming a palette step
-/// in `ZenTomatoActivity` — and the roles they need belong to `F12`'s theme tables, which do not exist
-/// yet. `F2f-T2` adds the roles properly. **`danger` is used for the flesh because it is the only red
-/// role in the table, and shipping a "danger" red on a running timer would be a defect**; that is one of
-/// the reasons this file cannot survive.
+/// **One glance late in a block answers all three**, with no expanding and no comparing two
+/// screenshots: a self-driving view is visibly advanced near the end of a block, and a thing that does
+/// not render is absent rather than subtle.
 struct TomatoSpike: View {
-  /// The block's span, when there is one. `nil` for a frozen or ended block, which draws nothing that
-  /// claims to be moving.
+  /// The block's span, or `nil` when there is nothing honest to draw.
   let interval: ClosedRange<Date>?
-
-  /// What candidate **C** believes the fraction to be, evaluated once, when this view is rendered.
-  let staticFraction: Double
 
   var body: some View {
     HStack(spacing: Spacing.sm) {
-      labelled("A") { ripenFillUp }
-      labelled("B") { ensoRing }
-      labelled("C") { handoffLiteral }
+      labelled("1") { linearProbe }
+      labelled("2") { circularProbe }
+      labelled("3") { shapeProbe }
     }
   }
 
-  // MARK: The candidates
-
-  /// **A — the candidate that would give the owner exactly what the handoff describes.**
+  /// **Probe 1 — is a self-driving linear progress view drawn here at all?**
   ///
-  /// Nothing here computes a fraction. The system's own linear progress view already knows how to move
-  /// between two dates; it is turned on its side so its bar runs bottom-to-top, stretched thick enough to
-  /// cover the body, and clipped to a circle. If iOS keeps driving it through a rotation and a clip, the
-  /// red rises and the extension never did any arithmetic.
-  fileprivate var ripenFillUp: some View {
-    ZStack {
-      if let interval {
-        ProgressView(timerInterval: interval, countsDown: false)
-          .progressViewStyle(.linear)
-          .tint(Color(.danger))
-          .labelsHidden()
-          // Sized along what will become the vertical axis, then turned. The scale is what makes a
-          // four-point bar tall enough to be a fill rather than a line.
-          .frame(width: Self.size)
-          .scaleEffect(x: 1, y: Self.barStretch, anchor: .bottom)
-          .rotationEffect(.degrees(-90))
-          .frame(width: Self.size, height: Self.size)
-      }
-      shell
+  /// Deliberately bare: no tint, no rotation, no scale, no clip. Every one of those was in the first
+  /// attempt, and any one of them could have been the thing that failed.
+  @ViewBuilder
+  private var linearProbe: some View {
+    if let interval {
+      ProgressView(timerInterval: interval, countsDown: false)
+        .labelsHidden()
+        .frame(width: Self.size * 2)
     }
-    .frame(width: Self.size, height: Self.size)
   }
 
-  /// **B — the fallback that is almost certainly going to move**, because the system draws the whole
-  /// thing and nothing is clipped. A ring around a solid tomato rather than a fill inside an outline.
-  private var ensoRing: some View {
-    ZStack {
-      Circle().fill(Color(.danger)).frame(width: Self.size * 0.62, height: Self.size * 0.62)
-      if let interval {
-        ProgressView(timerInterval: interval, countsDown: false)
-          .progressViewStyle(.circular)
-          .tint(Color(.action))
-          .labelsHidden()
-      }
+  /// **Probe 2 — the ring**, which is the fallback design if a shaped fill proves impossible: a solid
+  /// tomato with a self-driving ring around it.
+  @ViewBuilder
+  private var circularProbe: some View {
+    if let interval {
+      ProgressView(timerInterval: interval, countsDown: false)
+        .progressViewStyle(.circular)
+        .labelsHidden()
+        .frame(width: Self.size, height: Self.size)
     }
-    .frame(width: Self.size, height: Self.size)
   }
 
-  /// **C — the handoff's literal construction, and the one this spike expects to fail.**
-  ///
-  /// *"rect clipped to the circle, scaleY = progress, origin bottom."* The fraction is a number this
-  /// program computed at render time, so it is correct at that instant and frozen afterwards. If it sits
-  /// still on the phone while **A** rises, that is `F2f-M4` demonstrated.
-  private var handoffLiteral: some View {
-    ZStack(alignment: .bottom) {
-      Rectangle()
-        .fill(Color(.danger))
-        .frame(width: Self.size, height: Self.size * staticFraction)
-        .clipShape(Circle().path(in: CGRect(x: 0, y: 0, width: Self.size, height: Self.size)))
-      shell
-    }
-    .frame(width: Self.size, height: Self.size)
-    .clipShape(Circle())
-  }
-
-  // MARK: Shared parts
-
-  /// The outline and the sepal crown, drawn over whatever is filling behind them — which is the handoff's
-  /// own stacking order: *"leaf crown on top drawn over the fill."*
-  ///
-  /// Named `shell` and not `body`, because `body` is `View`'s own requirement and a second one would be
-  /// the kind of shadowing that compiles in some contexts and not others.
-  fileprivate var shell: some View {
+  /// **Probe 3 — does the tomato's geometry draw?** Static, no fill, in `action`, which the first
+  /// attempt proved is visible on the Island's black.
+  private var shapeProbe: some View {
     ZStack {
-      Circle().strokeBorder(Color(.borderStrong), lineWidth: Self.outline)
-      Crown().fill(Color(.action)).frame(width: Self.size * 0.55, height: Self.size * 0.3)
+      Circle().strokeBorder(Color(.action), lineWidth: Self.outline)
+      Crown().fill(Color(.action))
+        .frame(width: Self.size * 0.55, height: Self.size * 0.3)
         .offset(y: -Self.size * 0.42)
     }
+    .frame(width: Self.size, height: Self.size)
   }
 
-  private func labelled(_ letter: String, _ glyph: () -> some View) -> some View {
+  private func labelled(_ number: String, _ probe: () -> some View) -> some View {
     VStack(spacing: 2) {
-      glyph()
-      Text(letter).font(Typography.kicker).foregroundStyle(Color(.textSubtle))
+      probe()
+      Text(number).font(Typography.kicker).foregroundStyle(Color(.textPrimary))
     }
   }
 
@@ -150,17 +104,6 @@ struct TomatoSpike: View {
     }
   }
 
-  /// **Candidate A alone, at compact size**, for the Dynamic Island's leading slot.
-  ///
-  /// The expanded region shows all three side by side; this shows the one whose behaviour is unknown,
-  /// in the one place that needs no gesture to see. `F2f-T1`'s observation is a glance at the pill late
-  /// in a block — by then a self-driving fill is nearly full and a computed one is stuck where it was.
-  static func candidateA(interval: ClosedRange<Date>?) -> some View {
-    TomatoSpike(interval: interval, staticFraction: 0).ripenFillUp
-  }
-
   private static let size: CGFloat = 26
-  private static let outline: CGFloat = 1.2
-  /// Enough to turn the system bar into something the height of the body once rotated.
-  private static let barStretch: CGFloat = 8
+  private static let outline: CGFloat = 1.5
 }
