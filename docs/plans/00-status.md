@@ -79,9 +79,9 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 
 | Register | Rows | Open | Unknown | Closed |
 |---|---|---|---|---|
-| Decisions (`D`) | 57 | 3 | 0 | 54 |
+| Decisions (`D`) | 58 | 4 | 0 | 54 |
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
-| Owner items (`O`) | 52 | 23 | 0 | 29 |
+| Owner items (`O`) | 53 | 24 | 0 | 29 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
 | Mutations (`M`) | 169 | 41 | 0 | 128 |
 | Chores (`C`) | 30 | 5 | 9 | 16 |
@@ -93,13 +93,13 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 
 | Register | Status | Count |
 |---|---|---|
-| `D` | proposed | 3 |
+| `D` | proposed | 4 |
 | `D` | ratified | 51 |
 | `D` | rejected | 2 |
 | `D` | resolved | 1 |
 | `RR` | open | 4 |
 | `O` | closed | 29 |
-| `O` | open | 23 |
+| `O` | open | 24 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
 | `M` | closed | 127 |
@@ -159,6 +159,7 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | owner | D45 | — | proposed | A silent alarm and a haptic on the watch when the phone's sound is off |
 | owner | D46 | — | proposed | The watch fires the same controls as the phone |
 | owner | D54 | — | proposed | A plan can be reordered |
+| owner | D56 | — | proposed | One set of block lengths: fitting writes the settings, and editing a… |
 | unassigned | RR1 | P0 | open | iCloud/CloudKit sync would put the log where a conflict can lose it |
 | unassigned | RR2 | P0 | open | Changing the bundle identifier orphans the SwiftData store holding… |
 | unassigned | RR3 | P1 | open | The shape cursor and `TimerState` advance non-atomically, and control… |
@@ -186,6 +187,7 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | owner | O50 | P2 | open | The owner's real account data is committed to the tree |
 | owner | O51 | P2 | open | Music did not resume after the break, with a playlist selected |
 | owner | O52 | P1 | open | F8's Done when — a real two-hour gap, on the phone |
+| owner | O53 | P2 | open | The watch sounded the end-of-focus alarm three or more times |
 | unassigned | H5 | — | open | the lint gate |
 | unassigned | H6 | — | open | the MusicKit App ID check |
 | unassigned | H7 | — | open | the register renders as tables |
@@ -263,4 +265,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-104 open register rows.
+106 open register rows.
