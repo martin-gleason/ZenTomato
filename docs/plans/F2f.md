@@ -265,8 +265,29 @@ countdown, on focus blocks only — a break keeps its cup and the spike must not
 untouched, because the question is *does it move*, and the expanded region is the one with room to show
 three of anything.
 
-*Awaiting the owner's observation. The question is exactly one sentence: **which of A, B, C actually
-rises as the block runs?***
+**PARTIAL RESULT, 2026-09-28, build `202609280944`, from the owner's two screenshots.**
+
+**The Dynamic Island renders ZenPom's Live Activity, and the spike draws.** The compact pill shows the
+timer glyph and the countdown; the expanded region shows all three candidates, labelled `A`, `B`, `C`.
+
+**THIS RETIRES A BLOCKER THAT WAS ABOUT TO STOP THE FEATURE.** For two days the Island appeared empty and
+three explanations were in play — another app holding the slot, an iOS 27 change, and the widget not
+reaching the Island at all. **All three were wrong, and the real answer is that nobody had looked from
+the right place.** A Live Activity is not shown in the Island while its own app is in the foreground,
+and it is not shown there on the Lock Screen either — where it appears as the card instead. The owner
+had checked both of those and, reasonably, concluded it was broken. It needed the **Home Screen**.
+
+Recorded at length because the cost was not the confusion: it was that the agent proposed *"F2f is
+blocked, there is no point drawing a tomato into a presentation iOS isn't using"* on the strength of two
+observations taken in the two places that cannot show it.
+
+**It also confirms what the tomato replaces**, for the third time and now visually: the compact pill
+draws the **timer glyph**, not the cup.
+
+**STILL UNANSWERED — which of `A`, `B`, `C` actually rises.** A still frame cannot say. The cheap way to
+settle it is two screenshots of the **expanded** Island, taken about two minutes apart inside one focus
+block: the fill levels can then be compared directly rather than remembered. That is the whole of what
+`T1` still owes.
 
 ### `F2f-T2` — The tomato, drawn · owner: **agent**
 
