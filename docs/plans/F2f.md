@@ -259,6 +259,15 @@ question, and it is answered by looking at it.**
 the delta's mechanism stops being unsettled.** If none of the three rises, the owner chooses, and the
 choice is between a ring that moves and a tomato that steps.
 
+**BUILT 2026-09-28.** All three candidates are drawn in the **expanded** Island region, beneath the
+countdown, on focus blocks only — a break keeps its cup and the spike must not imply otherwise. Labelled
+`A`, `B`, `C` so the answer can be given in one letter. The compact and minimal presentations are
+untouched, because the question is *does it move*, and the expanded region is the one with room to show
+three of anything.
+
+*Awaiting the owner's observation. The question is exactly one sentence: **which of A, B, C actually
+rises as the block runs?***
+
 ### `F2f-T2` — The tomato, drawn · owner: **agent**
 
 **THE GEOMETRY IS SPECIFIED AND IS NOT INVENTED HERE.** The handoff gives it twice, at two sizes, and

@@ -81,7 +81,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 |---|---|---|---|---|
 | Decisions (`D`) | 57 | 3 | 0 | 54 |
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
-| Owner items (`O`) | 52 | 24 | 0 | 28 |
+| Owner items (`O`) | 52 | 23 | 0 | 29 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
 | Mutations (`M`) | 169 | 41 | 0 | 128 |
 | Chores (`C`) | 30 | 5 | 9 | 16 |
@@ -98,8 +98,8 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `D` | rejected | 2 |
 | `D` | resolved | 1 |
 | `RR` | open | 4 |
-| `O` | closed | 28 |
-| `O` | open | 24 |
+| `O` | closed | 29 |
+| `O` | open | 23 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
 | `M` | closed | 127 |
@@ -163,7 +163,6 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | unassigned | RR2 | P0 | open | Changing the bundle identifier orphans the SwiftData store holding… |
 | unassigned | RR3 | P1 | open | The shape cursor and `TimerState` advance non-atomically, and control… |
 | unassigned | RR4 | P1 | open | `O1` will be judged against a tally the app itself inflated, and… |
-| owner | O1 | P0 | open | One real day's export, read beside the Rhodia |
 | owner | O8 | P0 | open | VoiceOver on hardware |
 | owner | O9 | P1 | open | The merged stop sheet with taps in it, at AX5 |
 | owner | O12 | P1 | open | Three Todoist API facts, against a live token |
@@ -264,4 +263,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-105 open register rows.
+104 open register rows.
