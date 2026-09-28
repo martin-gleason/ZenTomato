@@ -74,8 +74,9 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D51** | ratified — **v1.5** | no | — | The export leaves as text *and* as a file, so a notes app takes it as a note |
 | **D52** | ratified — **v1.5**, applied | **yes — v1.5** | 1 | `F2f` — the tomato fills by finished pomodoro; the cup stays on breaks |
 | **D53** | ratified — **v2.0** | no | — | Notes apps tied in directly — parked, **not built** |
+| **D54** | **proposed** | **yes — v1.5** | 1 | `F20` — a plan can be reordered |
 
-*55 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*56 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
@@ -2878,3 +2879,70 @@ per-app code. This delta is the version that decides the tag, the title and the 
 leaving them to the receiving app.
 
 **Nothing is built.**
+
+---
+
+## D54 — A plan can be reordered
+
+**Proposed 2026-09-27. NOT RATIFIED, NOT BUILT.** Raised by the owner from the `O52` device run:
+
+> *"I do think we need more testing on task/project selection, as I want to ensure that a user can pick a
+> task or seris of tasks and reorder them."*
+
+**Currently:** nothing in v1.5's ratified order covers it, and the code says so in two places.
+`SessionPlan:40` — *"Stepping over an item moves this number and does nothing else — the item is not
+removed, not marked, and **not reordered**."* `SessionPlanItem:81` — *"Entries are only ever created
+together, when a plan is built, and are **never edited afterwards**."*
+
+> A plan's items may be **reordered by the person who built it**. The order is a property of the list and
+> is written to `SessionPlanItem.position` only; it is never sent to Todoist, and no new column is added
+> to carry it.
+
+### Half of what was asked for is already built, which is why this delta is small
+
+**Picking a series of tasks works today** — `PlanBuilderView:170` holds an *array* of selections and
+hands the lot to `replacePlan(with:)`. **And the order is already stored** — `SessionPlanItem.position`,
+whose own comment says *"an order has to be written down somewhere, and with no links between rows this
+is the only place it can go."*
+
+So this delta adds no column, no model and no concept. It licenses two things: a gesture, and a `move`
+method on a store that currently has `replacePlan`, `stepOver`, `remove` and `clear` and no fifth.
+
+### Why it does not breach the rule the item model is written to defend
+
+`SessionPlanItem`'s header is the most forcefully written comment in this codebase and it is aimed
+squarely here: *"An ordered list of tasks is one field away from being the local copy of Todoist this app
+is forbidden to keep, and the way it happens is never a bad decision — it is four good ones."*
+
+**The distinction that lets this through is in the comment two lines above `position`:** it *"is a
+property of the list, not of the thing in Todoist — it says nothing whatsoever about the task, and
+Todoist neither knows nor cares about it."* Editing a fact about the **list** is not a step toward a copy
+of Todoist. Editing a fact about the **task** — done, due, urgent, tagged — is, and this delta licenses
+none of it. The mechanical fence, `planItemHasFourStoredProperties`, is untouched because no column is
+added.
+
+**What the delta does owe is a correction**: two comments stop being true when this ships, and they are
+corrected with the argument rather than quietly deleted. That is `F20-T4`.
+
+### THE ORDER NEVER REACHES TODOIST
+
+`CLAUDE.md`, non-negotiable: *"The only write to Todoist is complete task. Never call create, update, or
+comment endpoints."* The obvious next thought — *"it should reorder them in Todoist too"* — is forbidden
+rather than merely unplanned, and a pre-commit hook greps for those endpoints. Stated in the delta so it
+is refused before it is built, not after.
+
+### What has to be decided before it can be built
+
+1. **WHEN can it be reordered?** Three answers and they are three different features: while building the
+   plan only (**S**); any time the timer is idle, including between blocks (**M**); or any time at all
+   (**L**, and `docs/plans/F20.md` argues against it — the attachment is frozen onto the timer row when a
+   block begins, so dragging during a block would appear to work and change nothing in front of you).
+   **The plan recommends the first**, because it is the request as stated and because `SessionPlan`'s own
+   header says planning is a separate act from starting.
+2. **A position in v1.5's order**, which edits a ratified baseline and needs the owner's explicit waiver —
+   the same sentence `D52` needed. **`AmendmentRatchetTests` goes red the moment this is marked ratified
+   without it, and the agent may not fix a red ratchet.** The plan proposes position 16, last.
+3. **Does swipe-to-delete come with it?** `SessionPlanStore.remove(_:)` exists and no view calls it. One
+   line, not in the request, asked rather than assumed.
+
+**Nothing is built.** `docs/plans/F20.md` is written and waiting for the owner's yes.

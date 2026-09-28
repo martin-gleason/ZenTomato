@@ -70,6 +70,7 @@ Status is what the unit's own plan file declares. What has landed in git is deli
 | F17 | feature | plan written, awaiting the gate. No code has been written. **Revised 2026-09-09** after the first… | `docs/plans/F17.md` | 6 planned |
 | F18 | feature | plan written, awaiting the gate. No code has been written. | `docs/plans/F18.md` | 5 planned |
 | F19 | feature | **`F19-T2` is built** — search inside a project, shipped 2026-09-24 at the owner's *"keep moving on… | `docs/plans/F19.md` | 6 planned |
+| F20 | feature | **PLANNED, NOT BUILT. AWAITING THE OWNER'S YES, AND IT OWES A DELTA.** Written at the gate… | `docs/plans/F20.md` | 5 planned |
 
 ## Registers
 
@@ -77,7 +78,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 
 | Register | Rows | Open | Unknown | Closed |
 |---|---|---|---|---|
-| Decisions (`D`) | 55 | 2 | 0 | 53 |
+| Decisions (`D`) | 56 | 3 | 0 | 53 |
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
 | Owner items (`O`) | 52 | 24 | 0 | 28 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
@@ -91,7 +92,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 
 | Register | Status | Count |
 |---|---|---|
-| `D` | proposed | 2 |
+| `D` | proposed | 3 |
 | `D` | ratified | 50 |
 | `D` | rejected | 2 |
 | `D` | resolved | 1 |
@@ -156,6 +157,7 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 |---|---|---|---|---|
 | owner | D45 | — | proposed | A silent alarm and a haptic on the watch when the phone's sound is off |
 | owner | D46 | — | proposed | The watch fires the same controls as the phone |
+| owner | D54 | — | proposed | A plan can be reordered |
 | unassigned | RR1 | P0 | open | iCloud/CloudKit sync would put the log where a conflict can lose it |
 | unassigned | RR2 | P0 | open | Changing the bundle identifier orphans the SwiftData store holding… |
 | unassigned | RR3 | P1 | open | The shape cursor and `TimerState` advance non-atomically, and control… |
@@ -261,4 +263,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-104 open register rows.
+105 open register rows.
