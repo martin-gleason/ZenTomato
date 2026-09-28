@@ -1,6 +1,7 @@
 # F2f — The Island tomato fills as the sprint runs
 
-**Status:** **PLANNED, NOT BUILT. AWAITING THE OWNER'S YES, AND RULING A IS BLOCKING.** Written at the
+**Status:** **RULING A IS ANSWERED — `D55`, the handoff's fill. `T1` IS A SPIKE AND STARTS FIRST.**
+Previously: PLANNED, NOT BUILT, RULING A BLOCKING. Written at the
 gate 2026-09-27 and **revised the same evening** once the owner pointed at
 `docs/ZenTomato redesign scope.zip`, which the first draft did not know existed and which specifies this
 feature — differently. The work is scheduled for 2026-09-28. Ratified as `D52` and applied to `docs/specs/zenpom-v1.5.md` as position
@@ -124,13 +125,20 @@ three call sites.
 **Five questions, and Ruling A is new and blocking.** Two are *small* and are asked because guessing
 them wrong is invisible; the rest change what gets built tomorrow.
 
-### Ruling A — THE FILL: the owner's ruling, or the handoff's? **THIS IS THE GATE**
+### Ruling A — THE FILL · **ANSWERED: THE HANDOFF. `D55`.**
 
-Stated in full above. **Finished pomodoros over the sprint** (the owner, today) or **elapsed time over
-the block** (the handoff, commissioned by the owner in August). The agent builds the ruling unless told
-otherwise, and notes that the ruling's version is the one that certainly works with no pushes, while the
-handoff's needs a spike first. **If the answer is the handoff's, this plan's tasks change and its
-mutations change with them.**
+> *"go with the handoff, but keep the coffee icon from today's conversation."*
+
+**Elapsed time over the block**, rising from the base, derived purely from the block's start and end
+instants. `D55` supersedes `D52`'s fill rule; `D52`'s *"finished pomodoro"* is kept in the register
+rather than struck, because it answered the question in front of it before the handoff was read.
+
+**The cup stays on breaks** — now ruled twice, and the handoff agrees independently: it replaces *"the
+compact-leading / minimal `timer` glyph"*, which is the focus glyph.
+
+**This changed the tasks and the mutations below, and it made the spike mandatory rather than
+precautionary.** The fill no longer comes from a count this app already has; it comes from a mechanism
+nobody here has demonstrated.
 
 ### Ruling B — does the tomato appear in the **minimal** presentation?
 
@@ -205,42 +213,51 @@ mean different things.
 
 ## Tasks
 
-Four. The first delivers **nothing user-visible** and is labelled so.
+Five. The first is a **spike** and produces no shippable code; the second delivers nothing user-visible.
 
 | Task | What it delivers | Owner |
 |---|---|---|
-| `F2f-T1` | The fill, as a value — no drawing | **agent** |
-| `F2f-T2` | The tomato shape, in the design system | **agent** |
-| `F2f-T3` | The three Island presentations use it | **agent** |
-| `F2f-T4` | The device check — a sprint watched from the Island | **human** |
+| `F2f-T1` | **The spike** — can a custom-shaped fill self-drive at all? | **agent** |
+| `F2f-T2` | The tomato, drawn, from the handoff's geometry | **agent** |
+| `F2f-T3` | The fill, driven by whatever `T1` established | **agent** |
+| `F2f-T4` | The three Island presentations use it; breaks untouched | **agent** |
+| `F2f-T5` | The device check — a block watched from the Island | **human** |
 
-### `F2f-T1` — How full is the tomato · owner: **agent** · *no user-visible change*
+### `F2f-T1` — THE SPIKE · owner: **agent** · *no shippable code*
 
-One value type that answers *how full, and which glyph* from the numbers already on the activity's
-attributes. No `View`, no drawing, no `Image`.
+**`conventions.md`: a decision about what another system can do is not ratifiable until something has
+run.** The handoff's fill is exactly such a decision, and the agent's reasoning about it has already been
+wrong once — first claiming no self-driving mechanism exists at all, then narrowing to *none for a custom
+shape*, which is better argued and still unrun.
 
-**Why this is a task and not the first half of the drawing task.** There is no UI test target in this
-project, so anything expressed only inside a `View` body is a rule nothing checks — the same reason
-`ShapeSheetActions` exists apart from `ShapeSheet`, and the same reason `F8`'s `onFit` closure is the
-one line no test can reach. A fill fraction computed inside `BlockSymbol` would be untestable by
-construction; computed here it is four assertions and a mutation.
+**What is established:**
 
-**The denominator is the frozen `pomodorosPerSprint` from the attributes, and nothing else.** A tomato
-computing its own total from settings would disagree with the sprint dots drawn beside it the moment a
-shape reduced the count — which is precisely the defect `F8-T4` names for this exact surface, and the
-owner has already confirmed the dots are right on the device.
+- `Text(timerInterval:)` and `ProgressView(timerInterval:)` self-drive in a Live Activity with no pushes.
+- A custom `ProgressViewStyle` reads `fractionCompleted` as **`nil`** for a timer-interval progress view,
+  so it cannot clip a shape to the fraction.
+- A widget's own views are rendered to a snapshot; arithmetic in the extension is evaluated once per
+  render, not per second.
 
-*Edges the tests must cover, because each is reachable and each draws something wrong:*
+**So the handoff's literal construction — *"rect clipped to the circle, scaleY = progress"* — cannot work
+as written**, because `progress` would be whatever it was at the last render.
 
-- **Zero of four** — a sprint just begun. An empty tomato, not a missing one.
-- **Four of four** — the last pomodoro finished, the long break about to run. Full, not overflowing.
-- **A total of zero**, which `:212` already says happens: *"a block with no sprint count in that case
-  rather than inventing a number."* The fill must be *absent*, not `0/0` and not a division by zero.
-- **Three of three**, the shaped sprint, filling in thirds.
-- **`completed` greater than `total`**, which should be impossible and must clamp rather than draw past
-  the rim.
+**The candidate that might.** Put the *system's own* self-driving progress view inside the tomato and let
+it do the moving: a `ProgressView(timerInterval:countsDown:)`, rotated a quarter turn so its bar runs
+bottom-to-top, clipped to the tomato's body. The extension never computes a fraction; iOS moves the bar
+it already knows how to move. **Whether that survives rotation, clipping and a 24-point box is the
+question, and it is answered by looking at it.**
 
-*Checkpoint:* the value, asserted at five counts, with the `0` total returning nothing.
+*What the spike must produce, and it is not an opinion:*
+
+1. A build on the phone whose Island shows the candidate construction during a real focus block.
+2. The owner's answer to one question: **does the red rise during the block, or does it sit still?**
+3. If it sits still, the same for the fallbacks, in order: a system **circular** progress view used as a
+   ring around the tomato; and a fill that steps at boundaries, which is `D52`'s version and is already
+   known to work.
+
+*Checkpoint:* the observed behaviour, written into this plan with the build number — **and if it rises,
+the delta's mechanism stops being unsettled.** If none of the three rises, the owner chooses, and the
+choice is between a ring that moves and a tomato that steps.
 
 ### `F2f-T2` — The tomato, drawn · owner: **agent**
 
@@ -252,65 +269,81 @@ the two agree:
 | body | circle r9, outline `#948F84` at 1.2px | circle r9, **filled** `#C0392B` |
 | fill | `#E06A50` rising from the base | n/a — solid |
 | crown | leaf `#8AA163`, over the fill | sepal crown `#4C5C36`, three triangles from the top point |
-| box | 24×26 viewBox, rendered at glyph size | 24×26, and the icon's is the same shape at r246 with a stem |
+| box | 24×26 viewBox, rendered at glyph size | 24×26, the icon's is the same shape at r246 with a stem |
 
-So this task **ports a specified shape** rather than designing one: a circle, a triangular sepal crown,
-and a clipped fill, in a 24×26 box.
+So this task **ports a specified shape**: a circle, a triangular sepal crown drawn over the fill, and a
+1.2px outline, in a 24×26 box.
 
 **The hex values do not survive contact with the lint rule, and that is correct.**
 `.swiftlint.yml`'s `palette_outside_token_layer` covers `ZenTomatoActivity` explicitly and matches across
-a line break since `F13-M14`, so `#E06A50` cannot appear in this file. Four values need roles, and the
-handoff's own theme section is where they belong — it says *"All colors read from the active theme
-table"* and names `Ripen` as one of seven themes. **`F12` Themes is position 3, before this at 15, and
-owes its own delta.** Two consequences, and the second is a question:
+a line break since `F13-M14`, so `#E06A50` cannot appear in that target. Four values need roles, and the
+handoff's own theme section is where they belong — *"all colors read from the active theme table"*, with
+`Ripen` one of seven. **`F12` Themes is position 3, before this at 15, and owes its own delta**, so until
+it lands there is no theme table to read a tomato red out of: this task adds the roles to the existing
+table, which is a design-system change and is named as such rather than done inside a widget.
 
-- Until `F12` lands there is no theme table to read a tomato red out of. **This task therefore adds the
-  roles to the existing table**, which is a design-system change and is named as such rather than done
-  inside a widget.
-- **Does the Island tomato's red follow the active theme, or is it always Ripen's red?** The handoff
-  implies the former; a tomato that turns teal under the Teal theme is a decision, not a detail.
+**Still open and the owner's:** does the Island tomato's red follow the active theme, or is it always
+Ripen's red? A tomato that turns teal under the Teal theme is a decision, not a detail.
 
-**It is drawn for black.** `islandInk()` forces the dark half of every role because the Island is always
-black; the handoff's own note — *"always dark-resolved roles"* — says the same thing. A fill relying on a
-light ground will look right in a preview and vanish on the phone.
+**It is drawn for black.** `islandInk()` forces the dark half of every role; the handoff says the same —
+*"always dark-resolved roles"*. A fill relying on a light ground will look right in a preview and vanish
+on the phone.
 
-*Checkpoint:* previews at all three sizes and five fill levels, read on a black ground.
+*Checkpoint:* previews at three sizes and five fill levels, read on a black ground.
 
-### `F2f-T3` — The Island uses it · owner: **agent**
+### `F2f-T3` — The fill moves · owner: **agent**
 
-`BlockSymbol` takes the counts as well as the kind: a tomato for `.work`, the cup unchanged for both
-breaks. Three call sites — expanded `:42`, compact leading `:60`, minimal `:72` — and Ruling B decides
-what the third one does.
+Whatever `T1` established, wired to the block's start and end instants — which the readout already
+carries as `.running(from:to:)` (`BlockLiveActivity.swift:205`). **No new data and no `.update()`**: the
+handoff forbids it in the same words `F2` does.
 
-**The break path must be untouched, and a test should say so**, because "the cup stays" is the half of
-this feature that is easiest to break while changing the file it lives in.
+**The one piece of arithmetic worth testing lives outside the view.** Even with the system driving the
+bar, something has to decide *which* interval to hand it, and what to show for a block that is `.frozen`
+or `.ended`. That is a pure function of the readout, it has four cases, and it goes in a value type
+because a rule expressed only inside a `View` body is a rule nothing checks — the same reason
+`ShapeSheetActions` exists apart from `ShapeSheet`.
+
+*Edges:* a block already over when the Island is first drawn · a `.frozen` readout, which has seconds
+remaining and no interval · `.ended` · and a zero-length interval, which must not divide by zero.
+
+*Checkpoint:* the interval decision asserted at four readout states.
+
+### `F2f-T4` — The Island uses it · owner: **agent**
+
+`BlockSymbol` draws the tomato for `.work` and the **unchanged** cup for both breaks. Three call sites —
+expanded `:42`, compact leading `:60`, minimal `:72` — and Ruling B decides the third.
+
+**The break path must be untouched and a test must say so**, because *"keep the coffee icon"* is the half
+of this feature easiest to break while editing the file it lives in.
 
 *Checkpoint:* the Release build, and the previews at `:729`–`:862` still rendering.
 
-### `F2f-T4` — Watched from the Island · owner: **human**
+### `F2f-T5` — Watched from the Island · owner: **human**
 
 `SPEC.md`'s standard: closed on hardware, by the owner, with a build number and their own words.
 
-Run a sprint and glance at the Island, not the app. Answer: **does the tomato say how far through the
-sprint you are without you having to think?** Then run a **shaped** sprint of three pomodoros and check
-it fills in thirds rather than quarters. Then look at it during a break and confirm the cup is there.
+Start a focus block and watch the Island — not the app. **Does the red rise as the block runs?** Then look
+during a break and confirm the cup is there. Then check the minimal presentation by having another app's
+Live Activity running alongside.
 
 *Checkpoint:* recorded as an `O<n>`, closed by the owner with the build number.
-
----
 
 ## Mutations
 
 | Mutation | The named test that must fail |
 |---|---|
-| `F2f-M1` · Compute the denominator from the settings' `pomodorosPerSprint` instead of the frozen attribute | the three-pom shaped-sprint assertion in `T1` — it fills in quarters against a sprint of three |
-| `F2f-M2` · Return a fill of zero for a total of zero instead of no fill at all | the zero-total assertion — a sprint with no count draws an empty tomato as though no work had been done |
-| `F2f-M3` · Draw the tomato for every kind, dropping the cup | the break-path assertion in `T3` — this is the *"you can have the cup on the break"* ruling, and it is one character to break |
-| `F2f-M4` · Let a `completed` above `total` through unclamped | the clamp assertion — a fill past the rim |
+| `F2f-M1` · Hand the fill the *sprint's* span instead of the block's | the interval assertion in `T3` — a tomato that fills once over two hours instead of once per block, which is `D52`'s picture wearing `D55`'s mechanism and looks plausible |
+| `F2f-M2` · Return a zero-length interval for a `.frozen` readout instead of the seconds it carries | the frozen-readout assertion — a divide-by-zero or a tomato stuck empty on a block that is genuinely part-run |
+| `F2f-M3` · Draw the tomato for every kind, dropping the cup | the break-path assertion in `T4` — *"keep the coffee icon"*, and it is one character to break |
+| `F2f-M4` · Compute the fraction in the extension and clip the shape to it, as the handoff literally describes | `T1`'s recorded observation — **this is the mutation that is also the rejected design**, and it fails by sitting still rather than by going red, which is why `T1` records what was seen on the phone and not only what a test said |
 
-**`F2f-M3` is the one most likely to be written toothless.** A test that asserts *the tomato appears on
-a focus block* passes happily while the cup has been replaced everywhere. The assertion has to be on the
-**break** case, which is the one nobody is thinking about while building the tomato.
+**`F2f-M3` is the one most likely to be written toothless.** A test asserting *the tomato appears on a
+focus block* passes happily while the cup has been replaced everywhere. The assertion has to be on the
+**break** case — the one nobody is thinking about while building a tomato.
+
+**`F2f-M4` is the honest one.** It cannot be caught by the suite, because a static fill is not a failing
+assertion — it is a picture nobody looks at. It is listed so that the reason the obvious implementation
+was rejected is written down where the next person will find it, with the observation that rejected it.
 
 ## Evidence
 
@@ -318,8 +351,9 @@ a focus block* passes happily while the cup has been replaced everywhere. The as
 tests, the full suite with its count, and the Release build. Plus `F2f-T4`, closed by the owner with a
 build number.
 
-**Four mutations, run and seen to fail before the tasks are called done.** A test that has never been
-shown to fail is not evidence.
+**Three mutations run and seen to fail before the tasks are called done**, and **the fourth stated as
+uncatchable**. A test that has never been shown to fail is not evidence — and a defect a test *cannot*
+see is worth naming rather than quietly omitting, which is what `F2f-M4` is for.
 
 **And one piece of evidence that is not a test:** the previews, read on a black ground. There is no
 snapshot testing in this project, so the drawing itself is checked by eye at the gate and on the device —
