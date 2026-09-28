@@ -153,7 +153,7 @@ makes the generator refuse to run at all and write nothing.
 | D53 | Notes apps are tied in directly, at v2.0 | — | ratified |  |
 | D54 | A plan can be reordered | — | proposed |  |
 | D55 | The Island tomato fills by elapsed time over the block, per the design handoff | — | ratified |  |
-| D56 | One set of block lengths: fitting writes the settings, and editing a setting wins back | — | proposed |  |
+| D56 | One set of block lengths: fitting writes the settings, and editing a setting wins back | — | ratified |  |
 <!-- END GENERATED: decisions -->
 
 ### Decisions — owner fields

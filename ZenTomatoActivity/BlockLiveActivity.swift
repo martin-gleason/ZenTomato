@@ -70,8 +70,21 @@ struct BlockLiveActivity: Widget {
           .islandInk()
         }
       } compactLeading: {
-        BlockSymbol(kind: readout.kind)
-          .islandInk()
+        // **`F2f-T1`, THE SPIKE, IN THE ONE PLACE THAT NEEDS NO GESTURE.** Candidate A only — the
+        // system's own progress view, turned a quarter and clipped to the tomato. It sits here rather
+        // than only in the expanded region because expanding the Island turned out to be the hard part
+        // of the observation, and because a glance at the pill late in a block is the whole test: a
+        // self-driving fill is near-full by then, and one computed at render time is stuck wherever it
+        // was when iOS last drew it.
+        //
+        // Focus blocks only. A break keeps its cup, which is `D52` and `D55` both.
+        if readout.kind == .work {
+          TomatoSpike.candidateA(interval: readout.spikeInterval)
+            .islandInk()
+        } else {
+          BlockSymbol(kind: readout.kind)
+            .islandInk()
+        }
       } compactTrailing: {
         CountdownNumeral(readout: readout, font: Typography.data)
           // The island's trailing region is narrow, and a two-hour block prints

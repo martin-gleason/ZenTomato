@@ -76,7 +76,7 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D53** | ratified — **v2.0** | no | — | Notes apps tied in directly — parked, **not built** |
 | **D54** | **proposed** | **yes — v1.5** | 1 | `F20` — a plan can be reordered |
 | **D55** | ratified — **v1.5** | no | — | The Island tomato fills by elapsed time per the handoff — supersedes `D52`'s fill rule |
-| **D56** | **proposed** — scope ruled, awaiting the baseline waiver | **yes — v1.5** | 1 | `F8b` — fitting writes the settings; editing a setting wins back |
+| **D56** | ratified — **v1.5**, applied | **yes — v1.5** | 1 | `F8b` — fitting writes the settings; editing a setting wins back |
 
 *58 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
@@ -3024,15 +3024,15 @@ does — *"behavior unchanged (no `.update()` anywhere)"*.
 
 ## D56 — One set of block lengths: fitting writes the settings, and editing a setting wins back
 
-**Proposed 2026-09-28. THE OWNER HAS RULED THE SCOPE AND THE DELTA IS HELD AT `proposed`**, for the
-reason `D52` was held for four hours the day before: ratifying it opens an unapplied amendment to
-`docs/specs/zenpom-v1.5.md`, which is a ratified baseline the agent may not edit, and
-`AmendmentRatchetTests`'s own comment is *"the agent may not fix a red ratchet, and that is why it
-exists."* **One sentence of authorisation makes it ratified** — *"authorised: add `F8b` to v1.5's
-order"* — exactly as `D40` authorised `D33` and the owner's own sentence authorised `D52`.
+**Proposed and Ratified by the owner 2026-09-28** — *"d56 is ratified"* — and **applied the same day**:
+`F8b` takes position 16 of sixteen in `docs/specs/zenpom-v1.5.md`.
 
-Ruled by the owner 2026-09-28, after a sprint ran one pomodoro while the screen said four and Settings
-said six.
+**IT WAS HELD AT `proposed` UNTIL THAT SENTENCE ARRIVED**, for the reason `D52` was held the day before:
+ratifying it opens an unapplied amendment to a ratified baseline the agent may not edit, and
+`AmendmentRatchetTests`' own comment is *"the agent may not fix a red ratchet, and that is why it
+exists."* The instrument made the gap visible; it did not close it, and it was not supposed to.
+
+Ruled after a sprint ran one pomodoro while the screen said four and Settings said six.
 
 > *"1. live until replaced. 2. selecting fit the sprint should replace settings. clicking on settings
 > and changing a setting should default to settings. 3. save to settings saves all the settings."*
@@ -3102,13 +3102,13 @@ run carries what they cannot.**
   `ShapeScreenCopy.saveHint`'s promise, *"leaving this screen without pressing it changes nothing"*,
   becomes true of the whole screen instead of one control.
 
-### It is `F8b`, a retrofit, and it owes a position in v1.5's order
+### ~~It owes a position in v1.5's order~~ — AUTHORISED AND APPLIED 2026-09-28
 
 `F8` shipped `T1`–`T5`; this changes how a shipped feature behaves, which `conventions.md` calls a
-retrofit rather than a new feature. **Adding it to `docs/specs/zenpom-v1.5.md`'s order edits a ratified
-baseline and needs the owner's explicit waiver**, the way `D52` needed and got one. Until that sentence
-exists this delta is ratified as *scope* with no position, and `AmendmentRatchetTests` is the instrument
-that will say so.
+retrofit rather than a new feature. **Adding it to `docs/specs/zenpom-v1.5.md`'s order edited a ratified
+baseline and needed the owner's explicit waiver**, the way `D52` needed and got one. It arrived — *"d56
+is ratified"* — and the order now carries `| 16 | F8b | … | M | yes — D56 |`. The rule stands; nothing
+here licenses the next baseline edit.
 
 ### `D43` is not part of this and is already ratified
 

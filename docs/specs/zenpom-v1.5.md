@@ -89,8 +89,9 @@ ones would be following a rule off a cliff. Everything after that is cheapest-fi
 | 13 | `F16` | The tomato garden | M | **yes** |
 | 14 | `F17` | A watch-face complication | M/L | **yes — `D30`** |
 | 15 | `F2f` | The Island tomato fills as the sprint runs | S | **yes — `D52`** |
+| 16 | `F8b` | Fitting writes the settings; editing a setting wins back | M | **yes — `D56`** |
 
-**Fifteen positions over fourteen units**, because `F19` occupies two, its halves shipping apart.
+**Sixteen positions over fifteen units**, because `F19` occupies two, its halves shipping apart.
 
 **`F2f` was added 2026-09-27 under `D52`**, authorised by the owner in as many words — *"The tomato is
 authorized and ready to go add it to v1.5."* It is a **retrofit of `F2`**, which is where the Lock
@@ -217,7 +218,7 @@ Existing hooks carry forward. Two are added:
 
 ## Amendments applied
 
-D31 D33 D52
+D31 D33 D52 D56
 
 Ratified deltas whose text has been written into this file. `DeltaIntegrityTests` reads this list;
 `docs/specs/V15-AMENDMENT-BASELINE.txt` counts what is still outstanding, and the evidence for each
@@ -231,5 +232,6 @@ the edit legitimate, and `SPEC.md` has carried the same section in the same shap
 September 9, 2026
 Amended September 24, 2026 by `D44`.
 Amended September 27, 2026 by `D52`.
+Amended September 28, 2026 by `D56`.
 
 #AI/Claude
