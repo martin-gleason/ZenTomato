@@ -61,7 +61,7 @@ struct TomatoSpike: View {
   /// between two dates; it is turned on its side so its bar runs bottom-to-top, stretched thick enough to
   /// cover the body, and clipped to a circle. If iOS keeps driving it through a rotation and a clip, the
   /// red rises and the extension never did any arithmetic.
-  private var ripenFillUp: some View {
+  fileprivate var ripenFillUp: some View {
     ZStack {
       if let interval {
         ProgressView(timerInterval: interval, countsDown: false)
@@ -119,7 +119,7 @@ struct TomatoSpike: View {
   ///
   /// Named `shell` and not `body`, because `body` is `View`'s own requirement and a second one would be
   /// the kind of shadowing that compiles in some contexts and not others.
-  private var shell: some View {
+  fileprivate var shell: some View {
     ZStack {
       Circle().strokeBorder(Color(.borderStrong), lineWidth: Self.outline)
       Crown().fill(Color(.action)).frame(width: Self.size * 0.55, height: Self.size * 0.3)
@@ -148,6 +148,15 @@ struct TomatoSpike: View {
       }
       return path
     }
+  }
+
+  /// **Candidate A alone, at compact size**, for the Dynamic Island's leading slot.
+  ///
+  /// The expanded region shows all three side by side; this shows the one whose behaviour is unknown,
+  /// in the one place that needs no gesture to see. `F2f-T1`'s observation is a glance at the pill late
+  /// in a block — by then a self-driving fill is nearly full and a computed one is stuck where it was.
+  static func candidateA(interval: ClosedRange<Date>?) -> some View {
+    TomatoSpike(interval: interval, staticFraction: 0).ripenFillUp
   }
 
   private static let size: CGFloat = 26

@@ -33,7 +33,7 @@ that matched that string anywhere in a document and read the ids out of a passin
 instead of the real section. Two live lists would be that defect with the safety catch removed, so
 this file keeps the evidence and holds no list.
 
-The ids are `D31`, `D33` and `D52`; the authority for that is the spec, not this file.
+The ids are `D31`, `D33`, `D52` and `D56`; the authority for that is the spec, not this file.
 
 ## The evidence, one line each
 
@@ -77,3 +77,17 @@ The ids are `D31`, `D33` and `D52`; the authority for that is the spec, not this
   shipped under `F2` (`SPEC.md:39` — *"A Live Activity on the Lock Screen and in the Dynamic Island is
   required, not optional"*), so changing what its compact presentation draws is a second pass on
   something already shipped. It sits at position 15 because it is the smallest item on the list.
+
+- **`D56`** — `F8b` is a v1.5 unit. The order table gains
+  `| 16 | F8b | Fitting writes the settings; editing a setting wins back | M | yes — D56 |`, and the
+  sentence below it reads **"Sixteen positions over fifteen units"** where it read *"Fifteen positions
+  over fourteen units"*. Applied 2026-09-28.
+
+  **THE WAIVER IS THE OWNER'S:** *"d56 is ratified."* The agent held the delta at `proposed` overnight
+  rather than nudge `AmendmentRatchetTests`' tolerated count, which is the same discipline `D52` was held
+  under the day before and `C31` under `D40` before that. The ratchet is the instrument that made the
+  gap visible; it did not close it, and it was not supposed to.
+
+  **It is `F8b`, a retrofit of `F8`**, because `F8` shipped `T1`–`T5` and this changes how a shipped
+  feature behaves. It sits last because it is the largest of the remaining polish items and because v1.5's
+  order is paced by review capacity rather than build time.
