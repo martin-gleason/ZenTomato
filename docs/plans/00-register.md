@@ -150,6 +150,7 @@ makes the generator refuse to run at all and write nothing.
 | D51 | The export leaves as text *and* as a file, so a notes app can take it as a note | — | ratified |  |
 | D52 | The tomato fills in as the sprint progresses, replacing the coffee cup | — | ratified |  |
 | D53 | Notes apps are tied in directly, at v2.0 | — | ratified |  |
+| D54 | A plan can be reordered | — | proposed |  |
 <!-- END GENERATED: decisions -->
 
 ### Decisions — owner fields
