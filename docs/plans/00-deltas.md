@@ -75,8 +75,9 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D52** | ratified — **v1.5**, applied | **yes — v1.5** | 1 | `F2f` — the tomato fills by finished pomodoro; the cup stays on breaks |
 | **D53** | ratified — **v2.0** | no | — | Notes apps tied in directly — parked, **not built** |
 | **D54** | **proposed** | **yes — v1.5** | 1 | `F20` — a plan can be reordered |
+| **D55** | ratified — **v1.5** | no | — | The Island tomato fills by elapsed time per the handoff — supersedes `D52`'s fill rule |
 
-*56 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*57 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
@@ -2955,3 +2956,65 @@ is refused before it is built, not after.
    line, not in the request, asked rather than assumed.
 
 **Nothing is built.** `docs/plans/F20.md` is written and waiting for the owner's yes.
+---
+
+## D55 — The Island tomato fills by elapsed time over the block, per the design handoff
+
+**Proposed and Ratified by the owner 2026-09-27.** **Supersedes `D52`'s fill rule and nothing else.**
+
+> *"go with the handoff, but keep the coffee icon from today's conversation."*
+
+**Currently** — `D52`, ratified earlier the same day: the tomato *"fills as the sprint progresses"*, by
+**finished pomodoros**, with the gate ruling *"fills by finished pomadoro."*
+
+Replace the fill rule with the handoff's:
+
+> The Island tomato's red fill **rises from the base as the block elapses**, derived purely from the
+> block's start and end instants — `design_handoff_v1.5_upgrade/README.md`: *"circle outline r9
+> (`#948F84` 1.2px), red `#E06A50` fill rising from the base as the block elapses (rect clipped to the
+> circle, scaleY = progress, origin bottom), leaf crown `#8AA163` on top drawn over the fill. 24×26
+> viewBox as drawn; render at glyph size."*
+>
+> **A break keeps the coffee cup.** Unchanged, and now ruled twice.
+
+### What changed and why the earlier ruling is kept rather than deleted
+
+`D52` was ruled before the owner pointed at the design handoff, which the agent had not opened. The
+handoff specifies this feature by name and specifies it differently — *elapsed time over the block*
+rather than *finished pomodoros over the sprint*. Told of the conflict, the owner chose the handoff.
+
+**`D52`'s ruling was not wrong; it answered the question in front of it.** It is superseded rather than
+struck, because a reader who finds only this entry cannot tell a mistake from a change of mind, and it
+was a change of mind made on better information.
+
+**One thing `D52` decided survives untouched and is now doubly ruled:** the cup stays on breaks. The
+handoff agrees — it replaces *"the compact-leading / minimal `timer` glyph"*, which is the focus glyph —
+and the owner said so again in the same sentence that chose the handoff.
+
+### IT OWES A SPIKE BEFORE IT OWES CODE, AND THAT IS `conventions.md`, NOT CAUTION
+
+> *A decision about what another system can do is not ratifiable until something has run.*
+
+**The handoff's fill is a claim about what a Live Activity can do**, and the agent's own analysis of it
+has already been wrong once in twenty-four hours — first asserting that no self-driving mechanism exists
+(false; `ProgressView(timerInterval:)` is one), then narrowing to the claim that no self-driving
+mechanism exists *for a custom-shaped fill*, which is better reasoned and still unrun.
+
+What is established: `Text(timerInterval:)` and `ProgressView(timerInterval:)` self-drive with no
+pushes; a custom `ProgressViewStyle` reads `fractionCompleted` as `nil` for a timer-interval progress
+view, so it cannot clip a shape to the fraction; and a widget's own views are rendered to a snapshot
+rather than animated. **What is not established is whether the handoff's picture can be got anyway** —
+the candidate construction is a *system* progress view rotated a quarter turn and clipped to the tomato's
+body, which would make the system's own self-driving bar into a rising fill without the extension ever
+computing a fraction.
+
+**That is a thing to try, not to argue about**, and this delta is ratified on the *appearance* the owner
+wants while the mechanism is explicitly unsettled. If the spike fails, the owner chooses between a fill
+that steps at boundaries (which is `D52`'s version, already known to work) and something else. **The
+delta does not license guessing**, and `F2f-T1` is the spike.
+
+### Not in scope
+
+The Lock Screen card, which the handoff leaves structurally unchanged · the sprint count, which the Lock
+Screen already prints as *"2 OF 4"* · any `.update()` call, which the handoff forbids as plainly as `F2`
+does — *"behavior unchanged (no `.update()` anywhere)"*.

@@ -151,6 +151,7 @@ makes the generator refuse to run at all and write nothing.
 | D52 | The tomato fills in as the sprint progresses, replacing the FOCUS glyph | — | ratified |  |
 | D53 | Notes apps are tied in directly, at v2.0 | — | ratified |  |
 | D54 | A plan can be reordered | — | proposed |  |
+| D55 | The Island tomato fills by elapsed time over the block, per the design handoff | — | ratified |  |
 <!-- END GENERATED: decisions -->
 
 ### Decisions — owner fields

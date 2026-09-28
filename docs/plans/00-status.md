@@ -46,7 +46,7 @@ Status is what the unit's own plan file declares. What has landed in git is deli
 | F2c | feature | — | `docs/plans/F2c.md` | 5 planned |
 | F2d | feature | — | `docs/plans/F2d.md` | 3 planned |
 | F2e | feature | — | `docs/plans/F2e.md` | 5 planned |
-| F2f | feature | **PLANNED, NOT BUILT. AWAITING THE OWNER'S YES, AND RULING A IS BLOCKING.** Written at the gate… | `docs/plans/F2f.md` | 4 planned |
+| F2f | feature | **RULING A IS ANSWERED — `D55`, the handoff's fill. `T1` IS A SPIKE AND STARTS FIRST.** Previously… | `docs/plans/F2f.md` | 5 planned |
 | F3 | feature | — | `docs/plans/F3.md` | 5 planned |
 | F4 | feature | — | `docs/plans/F4.md` | 4 planned |
 | F4c | feature | — | `docs/plans/F4c.md` | 0 planned |
@@ -79,7 +79,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 
 | Register | Rows | Open | Unknown | Closed |
 |---|---|---|---|---|
-| Decisions (`D`) | 56 | 3 | 0 | 53 |
+| Decisions (`D`) | 57 | 3 | 0 | 54 |
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
 | Owner items (`O`) | 52 | 24 | 0 | 28 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
@@ -94,7 +94,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Register | Status | Count |
 |---|---|---|
 | `D` | proposed | 3 |
-| `D` | ratified | 50 |
+| `D` | ratified | 51 |
 | `D` | rejected | 2 |
 | `D` | resolved | 1 |
 | `RR` | open | 4 |
