@@ -46,6 +46,7 @@ Status is what the unit's own plan file declares. What has landed in git is deli
 | F2c | feature | — | `docs/plans/F2c.md` | 5 planned |
 | F2d | feature | — | `docs/plans/F2d.md` | 3 planned |
 | F2e | feature | — | `docs/plans/F2e.md` | 5 planned |
+| F2f | feature | **PLANNED, NOT BUILT. AWAITING THE OWNER'S YES.** Written at the gate 2026-09-27; the work is… | `docs/plans/F2f.md` | 4 planned |
 | F3 | feature | — | `docs/plans/F3.md` | 5 planned |
 | F4 | feature | — | `docs/plans/F4.md` | 4 planned |
 | F4c | feature | — | `docs/plans/F4c.md` | 0 planned |

@@ -2766,7 +2766,7 @@ build offering only the file — which is today's behaviour and therefore alread
 
 ---
 
-## D52 — The tomato fills in as the sprint progresses, replacing the coffee cup
+## D52 — The tomato fills in as the sprint progresses, replacing the FOCUS glyph
 
 **Proposed and Ratified by the owner 2026-09-27**, with the baseline waiver in the same breath:
 
@@ -2788,9 +2788,18 @@ Activity that had been taking the Island slot, is switched off:
 > *"Also, I see the coffee cup. I want that tomato in v1.5."* · *"the tomato fills in as the sprint
 > progresses, replacing the coffee cup."*
 
-**What it changes, and what it does not.** The Live Activity's compact and minimal presentations draw
-a coffee cup; they would draw a **tomato that fills as the sprint progresses** instead — a picture of
-the sprint's completion, not of the block's countdown, and not a second timer.
+**What it changes, and what it does not.** The Live Activity's presentations draw a **tomato that fills
+as the sprint progresses** — a picture of the sprint's completion, not of the block's countdown, and not
+a second timer.
+
+**CORRECTED 2026-09-27 BY `F2f`'s PLAN, BEFORE ANY CODE: THE COFFEE CUP IS THE *BREAK* SYMBOL AND WAS
+NEVER ON A FOCUS BLOCK.** `BlockLiveActivity.swift:315` is
+`Image(systemName: kind == .work ? "timer" : "cup.and.saucer")`. The owner saw the cup because they were
+looking at a break, and this delta's own title said *"replacing the coffee cup"*. What the tomato replaces
+is **`"timer"`, the focus glyph**; the owner's second sentence — *"you can have the cup on the break"* —
+is consistent with that and the break path does not change at all. Built from the title alone, the first
+commit would have replaced the break symbol and shipped a tomato where the rest is and a timer where the
+work is, inverted, with a green suite.
 
 **No `SPEC.md` wording is replaced.** That file forbids *"widgets beyond the Lock Screen Live
 Activity"*, and this is **inside** that Live Activity rather than beyond it: the presentation shipped
