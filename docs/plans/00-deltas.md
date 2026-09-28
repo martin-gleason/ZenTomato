@@ -78,7 +78,7 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D55** | ratified — **v1.5** | no | — | The Island tomato fills by elapsed time per the handoff — supersedes `D52`'s fill rule |
 | **D56** | **proposed** — scope ruled, awaiting the baseline waiver | **yes — v1.5** | 1 | `F8b` — fitting writes the settings; editing a setting wins back |
 
-*57 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*58 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
