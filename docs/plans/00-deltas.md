@@ -71,8 +71,8 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D48** | ratified | **yes** | 1 | The garden accumulates, and nothing gamified may be lost |
 | **D49** | ratified | no | — | The shape's position gets one hour, not thirty-six — supersedes part of D32 |
 | **D50** | ratified — **v2.0** | no | — | A push reminder about the work in progress — parked, **not built** |
-| **D51** | **proposed** | no | — | The export leaves as text *and* as a file, so a notes app takes it as a note |
-| **D52** | **proposed** — scope ruled v1.5, awaiting the baseline waiver | **yes — v1.5** | 1 | The tomato fills as the sprint progresses, replacing the coffee cup |
+| **D51** | ratified — **v1.5** | no | — | The export leaves as text *and* as a file, so a notes app takes it as a note |
+| **D52** | ratified — **v1.5**, applied | **yes — v1.5** | 1 | `F2f` — the tomato fills by finished pomodoro; the cup stays on breaks |
 | **D53** | ratified — **v2.0** | no | — | Notes apps tied in directly — parked, **not built** |
 
 *55 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
@@ -2705,7 +2705,8 @@ the whole of the work done on it.
 
 ## D51 — The export leaves as text *and* as a file, so a notes app can take it as a note
 
-**Proposed 2026-09-27. NOT RATIFIED, NOT BUILT.** Raised by the owner from the `O52` device run:
+**Proposed and Ratified by the owner 2026-09-27 as v1.5** — *"text and file."* Raised by the owner from
+the `O52` device run:
 
 > *"export to bear: it looks ok — but putting it in bear attaches as a file. i'd prefer it went to
 > bear or notes app straight as a note."*
@@ -2739,9 +2740,9 @@ the only version that does not overturn a decision that was right.
 
 ### What has to be decided
 
-1. **Is this v1.5 or v2.0?** It touches no platform and adds no provider — it changes what an existing
-   share sheet offers about an artefact the app already produces. That reads as polish and therefore
-   v1.5, and this delta proposes it as such. **The owner rules.**
+1. ~~**Is this v1.5 or v2.0?**~~ **RULED v1.5.** It touches no platform and adds no provider — it
+   changes what an existing share sheet offers about an artefact the app already produces. The v2.0
+   form, which puts the note *into* a named app with a tag and a folder, is `D53`.
 2. **Does the plain-text form carry the title line?** The file's name carries the date range today. A
    note pasted into Bear has no filename, so either the first line of the document does that work — it
    already opens `# ZenTomato — 2026-08-10` — or the range is lost on that path. Recommendation: the
@@ -2750,7 +2751,7 @@ the only version that does not overturn a decision that was right.
    page's heading says one and its footer says the other. A note filed in Bear makes that more visible
    than a file did, because the heading becomes the note's title.
 
-### What is explicitly NOT proposed
+### What is explicitly NOT part of this delta
 
 **Bear's own URL scheme.** `bear://x-callback-url/create` would put the note in Bear directly with a
 tag and no share sheet. That is a **provider**, and `CLAUDE.md`'s fence is architectural: *anything
@@ -2758,20 +2759,26 @@ adding a platform or a provider is v2.0*. It would also tie a v1.5 surface to on
 the same one-line change serves Bear, Notes, Drafts, Obsidian and Mail at once. If the owner wants Bear
 specifically, that is a different delta and a v2.0 one.
 
-**Nothing is built.** No file created, no representation added, no stub.
+**A retrofit of `F6`**, whose export shipped in v1.0. It needs no new plan file: the delta names the
+change, the shape is one `Transferable` with two representations, and the mutation that proves it is a
+build offering only the file — which is today's behaviour and therefore already known to be reachable.
 
 ---
 
 ## D52 — The tomato fills in as the sprint progresses, replacing the coffee cup
 
-**Proposed 2026-09-27. THE OWNER HAS RULED THE SCOPE — *"I want that tomato in v1.5"* — AND THE DELTA
-IS HELD AT `proposed` ANYWAY.** Not a hedge, and not a disagreement: ratifying it opens an unapplied
-amendment to `docs/specs/zenpom-v1.5.md`, and `AmendmentRatchetTests` went red the moment it was marked
-ratified. That check's own words are *"the agent may not fix a red ratchet, and that is why it
-exists"* — the agent cannot edit a baseline and cannot raise the tolerated count without defeating the
-instrument. **What is missing is one sentence of authorisation from the owner, the way `D40` authorised
-`D33`'s edit.** With it, this is ratified and its position goes in the order; without it, the ratchet
-would be reporting a real gap that nobody had agreed to open.
+**Proposed and Ratified by the owner 2026-09-27**, with the baseline waiver in the same breath:
+
+> *"I want that tomato in v1.5."* · *"The tomato is authorized and ready to go add it to v1.5."*
+
+**IT WAS HELD AT `proposed` FOR FOUR HOURS, AND THAT IS WORTH KEEPING ON THE RECORD.** The owner ruled
+the scope first; ratifying it on that alone turned `AmendmentRatchetTests` red, because a new v1.5 unit
+owes an edit to `docs/specs/zenpom-v1.5.md` and that file is a ratified baseline. The check's own words
+are *"the agent may not fix a red ratchet, and that is why it exists"* — the agent cannot edit a
+baseline, and raising the tolerated count would have defeated the instrument rather than satisfied it.
+So the delta sat at `proposed` until the authorising sentence arrived, exactly as `C31` waited for
+`D40`. **Applied the same day it was authorised**; the evidence is in
+`docs/specs/V15-AMENDMENTS-APPLIED.md` and the ratchet is back at zero.
 
 Previously pinned by the owner on 2026-09-25 (*"let's put a pin in that"*) and un-pinned now that the
 Dynamic Island has been seen working on the device — and now that *banana mode*, a Reddit-app Live
@@ -2806,32 +2813,46 @@ across a sprint and empties at the next one records nothing, remembers nothing, 
 protected by under-reporting a distraction. There is no quantity to defend, so the mechanism `D48`
 exists to prevent is absent. It is a progress indicator, which the countdown already is.
 
-### ADDING THIS TO v1.5's ORDER EDITS A RATIFIED BASELINE, AND THAT IS THE OWNER'S TO AUTHORISE
+### ~~ADDING THIS TO v1.5's ORDER EDITS A RATIFIED BASELINE~~ — AUTHORISED AND APPLIED 2026-09-27
 
 `docs/specs/zenpom-v1.5.md` states *fourteen positions over thirteen units*. A new unit means the unit
 count and the order table both move, in a file `CLAUDE.md` calls a baseline that is never edited. The
 precedent is `D40`, which authorised `D33`'s edit explicitly and whose commit recorded the waiver
-rather than doing it quietly. **The same waiver is needed here and is not assumed.** Until it is given
-this delta is ratified as *scope* and has no position in the order.
+rather than doing it quietly. **The same waiver was needed here and the owner gave it**: the order table
+now carries `| 15 | F2f | … | S | yes — D52 |` and the sentence below it reads *"Fifteen positions over
+fourteen units"*. The rule stands — nothing here licenses the next baseline edit.
 
-### Open at the gate — this is not buildable from the sentence alone
+### Ruled at the gate, 2026-09-27
 
-1. **What fills — the count of finished pomodoros, or elapsed time?** *"Fills as the sprint
-   progresses"* reads either way, and they differ: four poms of 22 minutes fill in four steps, elapsed
-   time fills smoothly. The first is a picture of work done; the second is a second countdown, which
-   the expanded presentation already provides.
-2. **What happens during a break?** The coffee cup is presumably *how a break is currently shown*. If
-   the tomato replaces it outright, a break and a focus block look the same in the Island — which the
-   compact presentation is the one place a person glances at without unlocking.
-3. **What happens to a shaped sprint of three poms?** The tomato must fill in thirds, not quarters, or
-   it disagrees with the sprint dots the phone already draws correctly (`F8`, confirmed on device).
-4. **Minimal presentation.** It is a single tiny glyph with no room for detail. Does the tomato appear
-   there at all, and if so what does "filling" mean at that size?
-5. **Does it ever appear on the Lock Screen presentation too**, which is the one the owner actually saw
-   working, or is this Island-only?
+> *"fills by finished pomadoro -- you can have the cup on the break."*
 
-**Nothing is built.** This delta is scope; the gate and `docs/plans/F<N>.md` come next, and the owner's
-yes comes before code.
+1. **What fills: the count of FINISHED POMODOROS.** Not elapsed time. Four poms fill in four steps, and
+   each step lands at a boundary the log already records. **This is the answer that makes the feature
+   cheap and honest:** elapsed time would have been a second countdown — the expanded presentation
+   already provides one — and it would have drawn progress during a break, when no work is happening.
+2. **A break keeps the coffee cup.** So the two states stay distinguishable at a glance, which is the
+   whole job of a compact presentation: it is the one thing a person reads without unlocking.
+3. **A shaped sprint of three poms fills in thirds**, and this follows from ruling 1 rather than needing
+   its own. The denominator is `pomodorosPerSprint` as frozen on the timer row — the same number the
+   sprint dots and the Lock Screen already read, which `F8` confirmed correct on device. **A tomato that
+   computed its own denominator from settings would disagree with the dots beside it whenever a shape
+   reduced the count**, and that is the trap `F8-T4` already names for this exact surface.
+
+### Still open, and small enough to settle in the plan rather than at a gate
+
+4. **The minimal presentation** is a single tiny glyph with no room for detail. Whether the tomato
+   appears there at all, and what "a quarter full" means at that size, is a drawing question for
+   `F2f`'s plan.
+5. **Whether the Lock Screen presentation changes too**, or whether this is Island-only. The owner's
+   sentences are about the Island; the Lock Screen is where they actually watched a countdown work.
+
+**It is `F2f`, a retrofit of `F2`**, because the Live Activity shipped there — `SPEC.md:39`, *"A Live
+Activity on the Lock Screen and in the Dynamic Island is required, not optional."* Changing what its
+compact presentation draws is a second pass on something shipped, not a new feature, and
+`conventions.md` is explicit that a retrofit's letter is an identifier and not an index: `F2b`–`F2e`
+are taken, so this is `F2f`.
+
+**Nothing is built.** `docs/plans/F2f.md` comes next and the owner's yes on it comes before code.
 
 ---
 
@@ -2850,10 +2871,10 @@ platform or a provider is v2.0.* It also adds a second outbound integration to a
 rule is *"no network calls except Todoist and MusicKit"* — a URL scheme is not a network call, but a
 list of one-app integrations is the kind of surface that rule exists to keep closed.
 
-**It does not resolve `D51`, which is still proposed and unruled.** `D51` offers the Markdown as
-**text as well as a file** so that Bear, Notes, Drafts, Obsidian and Mail can each take it as a note
-body today, with no integration, no provider and no per-app code. That is a different change with a
-different milestone, and shipping it would not make this one unnecessary — it would make it optional.
-The owner has ruled on the v2.0 half and not on the v1.5 half.
+**It does not make `D51` unnecessary — it makes it optional.** `D51` — *"text and file"*, ratified by
+the owner 2026-09-27 — offers the Markdown as **text as well as a file** so Bear, Notes, Drafts,
+Obsidian and Mail can each take it as a note body today, with no integration, no provider and no
+per-app code. This delta is the version that decides the tag, the title and the folder rather than
+leaving them to the receiving app.
 
 **Nothing is built.**

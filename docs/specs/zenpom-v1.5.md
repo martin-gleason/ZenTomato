@@ -88,8 +88,14 @@ ones would be following a rule off a cliff. Everything after that is cheapest-fi
 | 12 | `F15` | The graphics pass | M | no |
 | 13 | `F16` | The tomato garden | M | **yes** |
 | 14 | `F17` | A watch-face complication | M/L | **yes — `D30`** |
+| 15 | `F2f` | The Island tomato fills as the sprint runs | S | **yes — `D52`** |
 
-**Fourteen positions over thirteen units**, because `F19` occupies two, its halves shipping apart.
+**Fifteen positions over fourteen units**, because `F19` occupies two, its halves shipping apart.
+
+**`F2f` was added 2026-09-27 under `D52`**, authorised by the owner in as many words — *"The tomato is
+authorized and ready to go add it to v1.5."* It is a **retrofit of `F2`**, which is where the Lock
+Screen and Dynamic Island Live Activity shipped, and it sits last because it is the smallest item on
+the list and the one a person can live without.
 
 **The constraint that sets the pace is not build time.** At the 5% dial the owner reviews every PR in
 one fixed afternoon slot. **Review capacity is the bottleneck**, and an order that front-loads small
@@ -211,7 +217,7 @@ Existing hooks carry forward. Two are added:
 
 ## Amendments applied
 
-D31 D33
+D31 D33 D52
 
 Ratified deltas whose text has been written into this file. `DeltaIntegrityTests` reads this list;
 `docs/specs/V15-AMENDMENT-BASELINE.txt` counts what is still outstanding, and the evidence for each
@@ -224,5 +230,6 @@ the edit legitimate, and `SPEC.md` has carried the same section in the same shap
 -----
 September 9, 2026
 Amended September 24, 2026 by `D44`.
+Amended September 27, 2026 by `D52`.
 
 #AI/Claude

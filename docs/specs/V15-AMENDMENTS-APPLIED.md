@@ -33,7 +33,7 @@ that matched that string anywhere in a document and read the ids out of a passin
 instead of the real section. Two live lists would be that defect with the safety catch removed, so
 this file keeps the evidence and holds no list.
 
-The ids are `D31` and `D33`; the authority for that is the spec, not this file.
+The ids are `D31`, `D33` and `D52`; the authority for that is the spec, not this file.
 
 ## The evidence, one line each
 
@@ -59,3 +59,21 @@ The ids are `D31` and `D33`; the authority for that is the spec, not this file.
   `D33`?"* is **False**. `docs/specs/V15-AMENDMENT-BASELINE.txt` records the measurement and `O46`
   holds it open. **So this list is not a formality for `D33` — it is the only record there is**, and
   the next applied v1.5 amendment goes here.
+
+- **`D52`** — the Island tomato is a v1.5 unit. `docs/specs/zenpom-v1.5.md`'s order table gains
+  `| 15 | F2f | The Island tomato fills as the sprint runs | S | yes — D52 |`, and the sentence below
+  it reads **"Fifteen positions over fourteen units"** where it read *"Fourteen positions over
+  thirteen units"*. Applied 2026-09-27, the same day it was ratified.
+
+  **THE WAIVER IS THE OWNER'S AND IT IS QUOTED RATHER THAN SUMMARISED:** *"The tomato is authorized and
+  ready to go add it to v1.5."* The agent does not edit a ratified baseline — `C31` needed `D40` before
+  a character of this file could change, and the same rule applied here. `AmendmentRatchetTests` went
+  **red** when `D52` was first marked ratified without that sentence, which is the instrument working:
+  its own comment says *"the agent may not fix a red ratchet, and that is why it exists."* The delta was
+  held at `proposed` for four hours rather than the baseline nudged, and this line exists because the
+  authorisation arrived.
+
+  **It is `F2f`, a retrofit**, not a new feature: the Lock Screen and Dynamic Island Live Activity
+  shipped under `F2` (`SPEC.md:39` — *"A Live Activity on the Lock Screen and in the Dynamic Island is
+  required, not optional"*), so changing what its compact presentation draws is a second pass on
+  something already shipped. It sits at position 15 because it is the smallest item on the list.
