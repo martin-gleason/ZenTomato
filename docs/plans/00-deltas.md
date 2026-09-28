@@ -76,6 +76,7 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D53** | ratified — **v2.0** | no | — | Notes apps tied in directly — parked, **not built** |
 | **D54** | **proposed** | **yes — v1.5** | 1 | `F20` — a plan can be reordered |
 | **D55** | ratified — **v1.5** | no | — | The Island tomato fills by elapsed time per the handoff — supersedes `D52`'s fill rule |
+| **D56** | **proposed** — scope ruled, awaiting the baseline waiver | **yes — v1.5** | 1 | `F8b` — fitting writes the settings; editing a setting wins back |
 
 *57 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
@@ -3018,3 +3019,100 @@ delta does not license guessing**, and `F2f-T1` is the spike.
 The Lock Screen card, which the handoff leaves structurally unchanged · the sprint count, which the Lock
 Screen already prints as *"2 OF 4"* · any `.update()` call, which the handoff forbids as plainly as `F2`
 does — *"behavior unchanged (no `.update()` anywhere)"*.
+
+---
+
+## D56 — One set of block lengths: fitting writes the settings, and editing a setting wins back
+
+**Proposed 2026-09-28. THE OWNER HAS RULED THE SCOPE AND THE DELTA IS HELD AT `proposed`**, for the
+reason `D52` was held for four hours the day before: ratifying it opens an unapplied amendment to
+`docs/specs/zenpom-v1.5.md`, which is a ratified baseline the agent may not edit, and
+`AmendmentRatchetTests`'s own comment is *"the agent may not fix a red ratchet, and that is why it
+exists."* **One sentence of authorisation makes it ratified** — *"authorised: add `F8b` to v1.5's
+order"* — exactly as `D40` authorised `D33` and the owner's own sentence authorised `D52`.
+
+Ruled by the owner 2026-09-28, after a sprint ran one pomodoro while the screen said four and Settings
+said six.
+
+> *"1. live until replaced. 2. selecting fit the sprint should replace settings. clicking on settings
+> and changing a setting should default to settings. 3. save to settings saves all the settings."*
+> *"The sheet opens on a stored shape. and a use this shape button."*
+
+**SUPERSEDES `F8`'s RULING B**, which said running a shape leaves `AppSettings` untouched and that
+settings are written by the explicit *Save to settings* control and by nothing else.
+
+### What was actually wrong, because the ruling is a response to a defect and not a preference
+
+The owner's phone was running **one-pomodoro sprints**. Three numbers that should have agreed did not:
+Settings said **6** pomodoros, the *Fit a sprint* sheet said **4**, and the timer ran **1**.
+
+The one was right, in the sense that the app was honouring a fifteen-minute shape fitted days earlier —
+which `D32` and `D49` say lives until replaced, correctly. What made it invisible was the rest:
+
+- **The sheet opens on a sixty-minute budget and computes a fresh shape**, so it displayed a shape that
+  was not the stored one and said nothing about the difference.
+- **Fitting happened on a control *moving*, never on the sheet opening** — built that way deliberately,
+  so that looking at the screen could not overwrite yesterday's shape. The cost was that *opening the
+  sheet and pressing Save changed nothing at all*, which is what the owner did.
+- **`Save to settings` writes three block lengths and not the pomodoro count**, so the one control that
+  looks like it should reconcile the two could not.
+
+**The agent flagged the display inconsistency in `docs/plans/F8.md` and under-rated it as cosmetic.** It
+is not cosmetic: it runs a sprint nobody asked for, on a surface too coarse to show it — the sprint
+indicator draws one hairline per pomodoro, so a one-pomodoro sprint is a straight line indistinguishable
+from a divider.
+
+### The ruling, in four parts
+
+> **1 · A fitted shape replaces the settings.** *Fit a sprint* writes the block lengths **and the
+> pomodoro count** into `AppSettings`. It is not a parallel authority; it is the calculator that sets
+> them.
+>
+> **2 · Editing a setting wins back.** Changing any block length or the pomodoro count in Settings
+> discards the stored run, and the app runs on settings from the next block. A settings edit is a
+> statement that plain settings behaviour is wanted.
+>
+> **3 · `Save to settings` saves all the settings**, including `pomodorosPerSprint` — not the three
+> block lengths only.
+>
+> **4 · The sheet opens on the stored shape**, not on a sixty-minute default, and a shape is committed
+> by an explicit **Use this shape** button. Moving a control previews; it does not write.
+
+### What this simplifies, and the one case it does not
+
+**It removes the two-accounts problem at its source.** There is one set of block lengths, and whoever
+wrote last owns them. The shape store stops being a second opinion about what a sprint is.
+
+**The run does not disappear, and here is the case that keeps it.** An absorption preset can produce a
+shape whose pomodoros are **not all the same length** — `ShapeScreenModel.pomodorosDiffer` exists for
+exactly this, and `saveDetail` already warns *"this shape's pomodoros aren't all the same length; the
+first one's length is what's written."* Settings hold one focus length and cannot express that, so a
+shape with uneven blocks still needs its stored sequence. **Part 1 writes what settings can hold; the
+run carries what they cannot.**
+
+### What it reverses, said plainly rather than left for a reader to notice
+
+- **`F8`'s Ruling B** — settings were deliberately read-only to the shape. Reversed.
+- **The sixty-minute opening**, which the owner confirmed on the device on 2026-09-25 (*"Budget starts
+  with 60… I think this is good"*). Part 4 reverses it, on better information: it was good until it was
+  showing a different shape from the one that was running.
+- **The implicit write on a control change**, introduced by `F8-T4` under note 1's ruling *"idle should
+  update when the sprint is fitted."* Note 1's requirement survives — the idle timer must update the
+  moment a shape is committed — but the trigger becomes the button rather than the picker.
+  `ShapeScreenCopy.saveHint`'s promise, *"leaving this screen without pressing it changes nothing"*,
+  becomes true of the whole screen instead of one control.
+
+### It is `F8b`, a retrofit, and it owes a position in v1.5's order
+
+`F8` shipped `T1`–`T5`; this changes how a shipped feature behaves, which `conventions.md` calls a
+retrofit rather than a new feature. **Adding it to `docs/specs/zenpom-v1.5.md`'s order edits a ratified
+baseline and needs the owner's explicit waiver**, the way `D52` needed and got one. Until that sentence
+exists this delta is ratified as *scope* with no position, and `AmendmentRatchetTests` is the instrument
+that will say so.
+
+### `D43` is not part of this and is already ratified
+
+*"You can't change the pomodoro count on the screen — you have to go into settings. I think that needs
+to be fixed."* That is **`D43`, ratified 2026-09-24 and never built** — the screen lets you set the
+count, and refuses with a named floor when a count and a budget cannot both be honoured. It is unbuilt
+work rather than a new decision, and it belongs in the same retrofit as this.
