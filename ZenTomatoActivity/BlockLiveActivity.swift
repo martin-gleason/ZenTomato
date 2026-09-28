@@ -53,8 +53,21 @@ struct BlockLiveActivity: Widget {
           .islandInk()
         }
         DynamicIslandExpandedRegion(.center) {
-          CountdownNumeral(readout: readout, font: Typography.title)
-            .islandInk()
+          VStack(spacing: Spacing.xs) {
+            CountdownNumeral(readout: readout, font: Typography.title)
+            // **`F2f-T1`, THE SPIKE, AND IT IS TEMPORARY.** Three candidate tomatoes side by side so
+            // the owner can see on real hardware which of them actually moves — the handoff's own
+            // instruction (`recreation-notes.md:41`) and `conventions.md`'s rule that a claim about
+            // another system is not ratifiable until something has run. Focus blocks only: a break
+            // keeps its cup and this spike must not imply otherwise.
+            //
+            // `TomatoSpike`'s own header says it cannot survive `F2f-T3`. Removing this call and that
+            // file is the first commit of `T3`.
+            if readout.kind == .work {
+              TomatoSpike(interval: readout.spikeInterval, staticFraction: readout.spikeFraction)
+            }
+          }
+          .islandInk()
         }
       } compactLeading: {
         BlockSymbol(kind: readout.kind)
@@ -205,6 +218,32 @@ private struct BlockReadout {
     case running(from: Date, to: Date)
     case frozen(secondsRemaining: TimeInterval)
     case ended
+  }
+
+  /// The block's span, for `F2f-T1`'s spike, or `nil` when there is nothing honest to draw.
+  ///
+  /// **Temporary, and it goes with `TomatoSpike`.** It lives here rather than inside the view because
+  /// even a spike should keep its arithmetic where a test could reach it — and because `T3` needs this
+  /// decision as a value type anyway: which interval to hand the system, and what to show for a block
+  /// that is frozen or ended, is four cases and a rule.
+  var spikeInterval: ClosedRange<Date>? {
+    guard case .running(let from, let to) = mode, to > from else { return nil }
+    return from...to
+  }
+
+  /// What candidate **C** believes the fraction to be at the instant this view is rendered.
+  ///
+  /// This is the number the handoff's literal construction would use, and the spike exists to show that
+  /// a number computed here stops being true a second later.
+  var spikeFraction: Double {
+    switch mode {
+    case .running(let from, let to):
+      guard to > from else { return 1 }
+      let elapsed = Date.now.timeIntervalSince(from)
+      return min(max(elapsed / to.timeIntervalSince(from), 0), 1)
+    case .frozen, .ended:
+      return 1
+    }
   }
 
   /// What the app sent with the alarm. Absent only if iOS hands back an activity
