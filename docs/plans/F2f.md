@@ -1,7 +1,9 @@
 # F2f — The Island tomato fills as the sprint runs
 
-**Status:** **PLANNED, NOT BUILT. AWAITING THE OWNER'S YES.** Written at the gate 2026-09-27; the work
-is scheduled for 2026-09-28. Ratified as `D52` and applied to `docs/specs/zenpom-v1.5.md` as position
+**Status:** **PLANNED, NOT BUILT. AWAITING THE OWNER'S YES, AND RULING A IS BLOCKING.** Written at the
+gate 2026-09-27 and **revised the same evening** once the owner pointed at
+`docs/ZenTomato redesign scope.zip`, which the first draft did not know existed and which specifies this
+feature — differently. The work is scheduled for 2026-09-28. Ratified as `D52` and applied to `docs/specs/zenpom-v1.5.md` as position
 **15** of fifteen.
 
 **Delta:** `D52`, ratified 2026-09-27, with the baseline waiver in the owner's own words — *"The tomato
@@ -43,23 +45,67 @@ first commit would have gone looking for a cup on a focus block, not found one, 
 cup to replace or replaced the break symbol — shipping a tomato where the rest is and a timer glyph
 where the work is, exactly inverted, with a green test suite.
 
-## The second thing it found: the ruling made the feature possible, not merely cheaper
+## THE DESIGN HANDOFF SPECIFIES THIS FEATURE, AND IT SPECIFIES IT DIFFERENTLY
 
-`F2`'s central design rule is that **the app never pushes an update into the Live Activity**
-(`BlockLiveActivity.swift:4-16`): iOS is handed the instant the block ends and `Text(timerInterval:)`
-counts down by itself, once a second, with the app asleep or not running. The comment is explicit that
-a future change *"wanting to push updates into this card"* has drifted.
+**Read 2026-09-27, after this plan's first draft, at the owner's prompting — and the first draft did not
+know it existed.** `docs/ZenTomato redesign scope.zip` → `design_handoff_v1.5_upgrade/`. It is `F15`'s
+tracked design input, protected by an explicit `.gitignore` negation, and it names this feature by name:
 
-**Filling by elapsed time would have required exactly that** — a smoothly filling tomato is a
-per-second redraw of a value only the app knows, and there is no mechanism for it that does not breach
-the rule the whole feature rests on.
+> **Island tomato ("Ripen")** — the Dynamic Island compact/minimal glyph becomes a tomato that **fills
+> with red as the block runs**, derived purely from start/end dates.
 
-**Filling by finished pomodoro needs no mechanism at all.** An AlarmKit alarm is scheduled per block
-(`TimerEngine.scheduleAlarm(for:)`), so every boundary already replaces the activity's attributes — and
-`completedInSprint` is already on them. The tomato changes when the count changes, for free, on a path
-that already exists and is already exercised. **The owner's ruling is therefore not a simplification of
-the feature; it is the version of the feature that fits the architecture.** That is recorded because it
-is the kind of agreement that looks like luck and is worth understanding before somebody "improves" it.
+> **Island** (always dark-resolved roles): the compact-leading / minimal `timer` glyph and the expanded
+> leading glyph become the **Ripen tomato**: circle outline r9 (`#948F84` 1.2px), red `#E06A50` fill
+> **rising from the base as the block elapses** (rect clipped to the circle, scaleY = progress, origin
+> bottom), leaf crown `#8AA163` on top drawn over the fill. 24×26 viewBox as drawn; render at glyph size.
+
+**Two things follow, and the first is a question only the owner can answer.**
+
+### The conflict: the handoff fills per BLOCK by elapsed time; the owner ruled per SPRINT by finished pomodoro
+
+| | Handoff | Owner, 2026-09-27 |
+|---|---|---|
+| What fills it | **elapsed time** within the block | **finished pomodoros** in the sprint |
+| What it is a picture of | how far through *this block* you are | how far through *the sprint* you are |
+| How it moves | smoothly, continuously | in steps, at boundaries |
+
+These are different features that happen to look similar. **The owner's ruling is later and the owner is
+the authority, so this plan builds the ruling** — but the handoff is a tracked input the owner
+commissioned, and the conflict is surfaced rather than silently resolved in the ruling's favour. `F16`
+hit the same collision over the garden and the owner settled it explicitly (*"go with F16's form"*); this
+one has not been put to them.
+
+**It also confirms one thing this plan worked out independently:** the handoff says the tomato replaces
+*"the compact-leading / minimal `timer` glyph"* — the **timer**, not the cup. Two readings of the code,
+arrived at separately, agreeing.
+
+### THE CORRECTION: THIS PLAN'S FIRST DRAFT MADE A CONFIDENT CLAIM THAT IS FALSE
+
+The first draft said that filling by elapsed time *"would have required"* a per-second push and that
+*"there is no mechanism for it that does not breach the rule the whole feature rests on."* **That is
+overstated, and the handoff knew better** — `recreation-notes.md:33`:
+
+> Countdown is self-driving `Text(timerInterval:)` — app pushes NO updates; any tomato fill must derive
+> purely from start/end dates (**`ProgressView(timerInterval:)` idiom**).
+
+`ProgressView(timerInterval:)` is real, is self-driving in a Live Activity exactly as
+`Text(timerInterval:)` is, and needs no pushes. So *a* self-driving elapsed-time indicator is available
+and the claim that none exists was wrong.
+
+**What survives the correction, stated narrowly this time.** A self-driving *bar* exists; a self-driving
+*custom-shaped fill* does not. `ProgressViewStyle.Configuration.fractionCompleted` is `nil` for a
+timer-interval progress view, so a custom style cannot read the fraction and clip a tomato to it — which
+is precisely what the handoff's *"rect clipped to the circle, scaleY = progress"* needs. The handoff's
+tomato would therefore be **static between the system's own occasional re-renders**, not smoothly
+rising, unless it is built out of the system bar rather than out of a clipped shape.
+
+**So the honest position is narrower and more useful than the first draft's:** filling by finished
+pomodoro is *certainly* free, because an alarm is scheduled per block
+(`TimerEngine.scheduleAlarm(for:)`), every boundary already replaces the activity's attributes, and
+`completedInSprint` is already on them. Filling by elapsed time is *possible* but needs a construction
+nobody has demonstrated in this app, and `conventions.md` is explicit that a claim about what another
+system can do is not ratifiable until something has run. **If the owner prefers the handoff's version, a
+spike comes before the delta.**
 
 ## What is already true, and needs no work
 
@@ -75,12 +121,20 @@ three call sites.
 
 ## The rulings this plan needs · owner: **human**
 
-Four questions. Two are *small* and are asked because guessing them wrong is invisible; two are
-*ordering* questions that change what gets built tomorrow.
+**Five questions, and Ruling A is new and blocking.** Two are *small* and are asked because guessing
+them wrong is invisible; the rest change what gets built tomorrow.
 
-### Ruling A — does the tomato appear in the **minimal** presentation?
+### Ruling A — THE FILL: the owner's ruling, or the handoff's? **THIS IS THE GATE**
 
-`minimal` is one glyph roughly twenty points square, shown when another app's activity shares the
+Stated in full above. **Finished pomodoros over the sprint** (the owner, today) or **elapsed time over
+the block** (the handoff, commissioned by the owner in August). The agent builds the ruling unless told
+otherwise, and notes that the ruling's version is the one that certainly works with no pushes, while the
+handoff's needs a spike first. **If the answer is the handoff's, this plan's tasks change and its
+mutations change with them.**
+
+### Ruling B — does the tomato appear in the **minimal** presentation?
+
+(Was Ruling A.) `minimal` is one glyph roughly twenty points square, shown when another app's activity shares the
 Island. At that size *"a quarter full"* is a few pixels of difference.
 
 - **Option 1 — the tomato appears, filling.** Consistent, and probably unreadable.
@@ -93,7 +147,7 @@ Island. At that size *"a quarter full"* is a few pixels of difference.
 once that a distinction nobody can see is not worth drawing, and the same logic applies to a fill
 fraction at twenty points. Stated rather than assumed because it is a visible difference.
 
-### Ruling B — what does the tomato do when the block has **ended** or is **paused**?
+### Ruling C — what does the tomato do when the block has **ended** or is **paused**?
 
 The readout has `.ended` and `.paused` modes (`:188`, `:179`) and `BlockSymbol` currently ignores both —
 it draws by `kind` alone. A tomato that keeps its fill through the alert is honest; one that fills the
@@ -103,19 +157,32 @@ last quarter *as the alarm rings* would be claiming a pomodoro that has not been
 attributes arrive, which is the same thing the sprint dots already do. It is one line either way and it
 is the one place this feature could tell a small lie about how much work was done.
 
-### Ruling C — does the **Lock Screen** presentation change too?
+### Ruling D — does the **Lock Screen** presentation change too?
 
 The owner's sentences are about the Island. The Lock Screen is the presentation they actually watched
 work, and it has room for words and a `SprintCount` already. This plan proposes **Island only**, on the
 grounds that the Lock Screen is not short of space and already says the same thing in numerals. **If the
 tomato is wanted there as well it is a fifth task**, not a free extension of the third.
 
-### Ruling D — THE ORDERING QUESTION, AND IT IS THE ONE THAT MATTERS
+### Ruling E — THE ORDERING QUESTION · **MOSTLY ANSWERED BY THE HANDOFF**
 
-**`F16`, the tomato garden, also draws tomatoes, and it sits at position 13 — before this at 15.**
+**`F16`, the tomato garden, also draws tomatoes, and it sits at position 13 — before this at 15.** The
+first draft of this plan asked whether that meant one tomato or two and called it the expensive,
+irreversible decision.
 
-Two units in one milestone drawing the same fruit is one tomato or two, and the choice is made by
-whichever is built first:
+**The handoff answers it: one shape.** It specifies the same circle-plus-sepal-crown in a 24×26 box for
+the garden's glyph, the Island's glyph and the app icon, differing only in radius, whether the body is
+filled or outlined, and the crown's colour. So the shape is shared by construction and neither feature
+invents it.
+
+**What is left of the question is small and is still the owner's:** the Island's version is *outlined*
+with a rising fill, the garden's is *solid*. One type with a style parameter, or two drawings of one
+specified shape? The agent would write one type — the handoff describes one object seen twice — and
+would put it in the shared design system from the first commit so `F16` reuses it rather than matching it.
+
+~~Two units in one milestone drawing the same fruit is one tomato or two, and the choice is made by
+whichever is built first:~~ **The remaining ordering considerations, kept because they still bear on
+which to build tomorrow:**
 
 - **Build `F2f` tomorrow** → it invents the tomato, and `F16` must reuse it or the app has two tomatoes
   that do not match. The Island's is tiny, monochrome-ish and drawn on black; the garden's is large, on
@@ -126,11 +193,13 @@ whichever is built first:
 - **Build `F2f` tomorrow and accept two drawings**, with a note that `F15`'s graphics pass (position 12)
   reconciles them. Honest, and it front-loads a small win.
 
-**The agent's recommendation is the third**, narrowly, and only because the owner asked for this
-tomorrow: extract the shape into the shared design system from the first commit so `F16` has something
-to reuse rather than something to match. **But this is the owner's to decide and it is the one thing on
-this page that cannot be undone cheaply** — a tomato shipped in the Island sets the app's visual idea of
-a tomato, and the garden is the feature where a person will actually look at one.
+**The agent's recommendation is the third**, and the handoff makes it much safer than it looked: the
+shape is specified, so building the Island first cannot set a *different* visual idea of a tomato from
+the garden's. Extract it into the shared design system from the first commit and `F16` reuses it.
+
+**The one thing on this page that still cannot be undone cheaply is Ruling A** — whether the fill
+follows the owner's ruling or the handoff's — because it decides what the tomato *means*, and the two
+mean different things.
 
 ---
 
@@ -175,27 +244,42 @@ owner has already confirmed the dots are right on the device.
 
 ### `F2f-T2` — The tomato, drawn · owner: **agent**
 
-A `Shape` or `Canvas` tomato that fills from the bottom to a fraction, at the three sizes the Island
-uses.
+**THE GEOMETRY IS SPECIFIED AND IS NOT INVENTED HERE.** The handoff gives it twice, at two sizes, and
+the two agree:
 
-**It names a `ColorRole` and never a `Palette` step.** `.swiftlint.yml`'s `palette_outside_token_layer`
-rule covers `ZenTomatoActivity` explicitly, and it matches across a line break since `F13-M14`. **If no
-existing role means *tomato red*, this task stops and asks** — a new semantic role is a design-system
-change, and inventing one inside a widget is how a token layer stops being one.
+| | Island tomato | Garden / icon tomato |
+|---|---|---|
+| body | circle r9, outline `#948F84` at 1.2px | circle r9, **filled** `#C0392B` |
+| fill | `#E06A50` rising from the base | n/a — solid |
+| crown | leaf `#8AA163`, over the fill | sepal crown `#4C5C36`, three triangles from the top point |
+| box | 24×26 viewBox, rendered at glyph size | 24×26, and the icon's is the same shape at r246 with a stem |
+
+So this task **ports a specified shape** rather than designing one: a circle, a triangular sepal crown,
+and a clipped fill, in a 24×26 box.
+
+**The hex values do not survive contact with the lint rule, and that is correct.**
+`.swiftlint.yml`'s `palette_outside_token_layer` covers `ZenTomatoActivity` explicitly and matches across
+a line break since `F13-M14`, so `#E06A50` cannot appear in this file. Four values need roles, and the
+handoff's own theme section is where they belong — it says *"All colors read from the active theme
+table"* and names `Ripen` as one of seven themes. **`F12` Themes is position 3, before this at 15, and
+owes its own delta.** Two consequences, and the second is a question:
+
+- Until `F12` lands there is no theme table to read a tomato red out of. **This task therefore adds the
+  roles to the existing table**, which is a design-system change and is named as such rather than done
+  inside a widget.
+- **Does the Island tomato's red follow the active theme, or is it always Ripen's red?** The handoff
+  implies the former; a tomato that turns teal under the Teal theme is a decision, not a detail.
 
 **It is drawn for black.** `islandInk()` forces the dark half of every role because the Island is always
-black; a fill that relies on a light surface for contrast will look right in a preview and vanish on the
-phone.
-
-**Where it lives decides Ruling D.** If the owner takes the recommendation, this type goes in the shared
-design system where `F16` can reuse it, not in `BlockLiveActivity.swift`.
+black; the handoff's own note — *"always dark-resolved roles"* — says the same thing. A fill relying on a
+light ground will look right in a preview and vanish on the phone.
 
 *Checkpoint:* previews at all three sizes and five fill levels, read on a black ground.
 
 ### `F2f-T3` — The Island uses it · owner: **agent**
 
 `BlockSymbol` takes the counts as well as the kind: a tomato for `.work`, the cup unchanged for both
-breaks. Three call sites — expanded `:42`, compact leading `:60`, minimal `:72` — and Ruling A decides
+breaks. Three call sites — expanded `:42`, compact leading `:60`, minimal `:72` — and Ruling B decides
 what the third one does.
 
 **The break path must be untouched, and a test should say so**, because "the cup stays" is the half of
