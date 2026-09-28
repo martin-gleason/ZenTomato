@@ -180,7 +180,13 @@ struct StatsScreen: View {
   @ViewBuilder
   private var exportControl: some View {
     if let exportURL {
-      ShareLink(item: exportURL, preview: SharePreview(model.sharePreviewTitle)) {
+      // **`D51`: text AND file.** The share sheet is handed a `StatsExport` rather than a bare URL, so
+      // Bear and Notes take the page as the note's body while Files still gets the named `.md`. See
+      // `StatsExport` for why the file is the first representation and not the second.
+      ShareLink(
+        item: StatsExport(
+          document: model.document, fileURL: exportURL, title: model.sharePreviewTitle),
+        preview: SharePreview(model.sharePreviewTitle)) {
         Text(model.exportButtonTitle)
       }
       .buttonStyle(SecondaryButtonStyle())

@@ -127,4 +127,37 @@ struct ExportEdgeTests {
     #expect(asTokyo.day == 24)
     #expect(asLondon != asTokyo)
   }
+
+  // MARK: D51 — text as well as a file
+
+  /// **The value handed to the share sheet carries the page itself, not only a path to it.**
+  ///
+  /// `D51`, ratified 2026-09-27: the export arrived in Bear as an *attachment* because a file URL was
+  /// the only thing offered. `StatsExport` offers the Markdown too, so a notes app can take it as the
+  /// note's body while Files still gets the named `.md`.
+  ///
+  /// **WHAT THIS TEST CANNOT SEE, SAID PLAINLY RATHER THAN IMPLIED BY ITS NAME.** `Transferable`'s
+  /// representations are declared, not enumerable: there is no supported way from a test to ask which
+  /// content types a value offers or in what order, and the **order is the whole implementation** — the
+  /// file is first so that an app which can only take a file is not handed text and left writing
+  /// `Untitled.txt`. So this asserts the two things a test can reach, that the page and the named file
+  /// both travel, and **the ordering claim is verified on the device**: if Bear takes the page as a
+  /// note body and Files still receives `ZenPom-….md`, both representations are present and in the
+  /// right order. `O1`'s re-review is where that is read.
+  ///
+  /// A test that asserted only the fields and was *named* as though it proved the behaviour would be
+  /// worse than this one, because its green tick would stand in for a check nobody ran.
+  @Test("theExportCarriesThePageAndTheNamedFile")
+  func theExportCarriesThePageAndTheNamedFile() throws {
+    let document = "# ZenPom — 2026-08-10\n\nNo pomodoros in this range.\n"
+    let url = try StatsExportFile.write(document: document, filename: Self.exportName("d51"))
+
+    let export = StatsExport(document: document, fileURL: url, title: "ZenPom — 2026-08-10")
+
+    // The page travels as text, byte for byte — not a summary of it and not a second rendering.
+    #expect(export.document == document)
+    // And the file it points at is the one on disk with the app's own name on it.
+    #expect(export.fileURL.lastPathComponent.hasPrefix(StatsMarkdown.filenamePrefix))
+    #expect(try String(contentsOf: export.fileURL, encoding: .utf8) == document)
+  }
 }
