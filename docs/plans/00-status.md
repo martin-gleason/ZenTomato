@@ -85,7 +85,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
 | Mutations (`M`) | 169 | 41 | 0 | 128 |
 | Chores (`C`) | 30 | 5 | 9 | 16 |
-| Agent items (`A`) | 23 | 9 | 0 | 14 |
+| Agent items (`A`) | 24 | 10 | 0 | 14 |
 
 `Unknown` is not a third kind of open. It means the source document said nothing about status, so this page will not guess — the row is a question for the owner.
 
@@ -109,7 +109,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `C` | open | 5 |
 | `C` | unknown | 9 |
 | `A` | closed | 14 |
-| `A` | open | 9 |
+| `A` | open | 10 |
 
 ## Hooks
 
@@ -261,7 +261,8 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | unassigned | A19 | P2 | open | Five `F8` mutation IDs are defined only in commit messages and cannot… |
 | unassigned | A20 | P2 | open | Seven open owner items carry no mode, so they sit in the owner's… |
 | unassigned | A22 | P2 | open | A plan's prose can contradict the register and nothing notices |
+| unassigned | A24 | P1 | open | The Lock Screen card may be AlarmKit's, not ours — `LockScreenCard`… |
 
 ---
 
-105 open register rows.
+106 open register rows.
