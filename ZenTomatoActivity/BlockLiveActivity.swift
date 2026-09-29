@@ -39,7 +39,7 @@ struct BlockLiveActivity: Widget {
       return DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
           HStack(spacing: Spacing.xs) {
-            BlockSymbol(kind: readout.kind)
+            BlockSymbol(kind: readout.kind, sprintFill: readout.metadata?.sprintFill)
             BlockKicker(readout: readout)
           }
           .islandInk()
@@ -53,21 +53,8 @@ struct BlockLiveActivity: Widget {
           .islandInk()
         }
         DynamicIslandExpandedRegion(.center) {
-          VStack(spacing: Spacing.xs) {
-            CountdownNumeral(readout: readout, font: Typography.title)
-            // **`F2f-T1`, THE SPIKE, AND IT IS TEMPORARY.** Three candidate tomatoes side by side so
-            // the owner can see on real hardware which of them actually moves — the handoff's own
-            // instruction (`recreation-notes.md:41`) and `conventions.md`'s rule that a claim about
-            // another system is not ratifiable until something has run. Focus blocks only: a break
-            // keeps its cup and this spike must not imply otherwise.
-            //
-            // `TomatoSpike`'s own header says it cannot survive `F2f-T3`. Removing this call and that
-            // file is the first commit of `T3`.
-            if readout.kind == .work {
-              TomatoSpike(interval: readout.spikeInterval)
-            }
-          }
-          .islandInk()
+          CountdownNumeral(readout: readout, font: Typography.title)
+            .islandInk()
         }
       } compactLeading: {
         // **`F2f-T1`, THE SPIKE, IN THE ONE PLACE THAT NEEDS NO GESTURE.** Candidate A only — the
@@ -78,7 +65,7 @@ struct BlockLiveActivity: Widget {
         // was when iOS last drew it.
         //
         // Focus blocks only. A break keeps its cup, which is `D52` and `D55` both.
-        BlockSymbol(kind: readout.kind)
+        BlockSymbol(kind: readout.kind, sprintFill: readout.metadata?.sprintFill)
           .islandInk()
       } compactTrailing: {
         CountdownNumeral(readout: readout, font: Typography.data)
@@ -90,7 +77,7 @@ struct BlockLiveActivity: Widget {
           .frame(maxWidth: Self.compactNumeralWidth)
           .islandInk()
       } minimal: {
-        BlockSymbol(kind: readout.kind)
+        BlockSymbol(kind: readout.kind, sprintFill: readout.metadata?.sprintFill)
           .accessibilityLabel(Text("\(readout.kind.displayName) block running"))
           .islandInk()
       }
@@ -240,17 +227,6 @@ private struct BlockReadout {
     case ended
   }
 
-  /// The block's span, for `F2f-T1`'s spike, or `nil` when there is nothing honest to draw.
-  ///
-  /// **Temporary, and it goes with `TomatoSpike`.** It lives here rather than inside the view because
-  /// even a spike should keep its arithmetic where a test could reach it — and because `T3` needs this
-  /// decision as a value type anyway: which interval to hand the system, and what to show for a block
-  /// that is frozen or ended, is four cases and a rule.
-  var spikeInterval: ClosedRange<Date>? {
-    guard case .running(let from, let to) = mode, to > from else { return nil }
-    return from...to
-  }
-
   /// What the app sent with the alarm. Absent only if iOS hands back an activity
   /// with nothing attached, which it should never do; the views draw a focus
   /// block with no sprint count in that case rather than inventing a number.
@@ -355,10 +331,21 @@ private struct CountdownNumeral: View {
 private struct BlockSymbol: View {
   let kind: BlockKind
 
+  /// How much of the sprint is done, for a focus block's tomato. `nil` when the activity carried no
+  /// sprint count, which `BlockReadout.metadata` says should never happen and which is drawn as an
+  /// empty tomato rather than as no tomato — a focus block is still a focus block.
+  let sprintFill: Double?
+
   var body: some View {
-    Image(systemName: kind == .work ? "timer" : "cup.and.saucer")
-      .font(Typography.data)
-      .foregroundStyle(Color(.action))
+    if kind == .work {
+      // **`D52`, restored by `D57`: the tomato fills by finished pomodoro.** A break keeps the cup, and
+      // that branch is the half of this feature easiest to break while editing the tomato beside it.
+      TomatoGlyph(fill: sprintFill ?? 0)
+    } else {
+      Image(systemName: "cup.and.saucer")
+        .font(Typography.data)
+        .foregroundStyle(Color(.action))
+    }
   }
 }
 

@@ -53,6 +53,25 @@ struct FocusAlarmMetadata: AlarmMetadata {
   /// from it.
   let kind: BlockKind
 
+  /// How much of the sprint is finished, from 0 to 1 — **the tomato's fill** under `D52`, restored by
+  /// `D57`.
+  ///
+  /// **`nil` when there is no sprint count to divide by.** That is the same absence `SprintCount`
+  /// refuses to invent a number for, and the reason is the same: zero is not *no answer*, it is the
+  /// claim *no pomodoros finished yet*, and this is the case where the activity cannot make a claim.
+  /// The glyph draws an empty fruit rather than a wrong one. It is also the divide-by-zero.
+  ///
+  /// **IT LIVES ON THE METADATA AND NOT IN THE VIEW, AND THAT IS THE WHOLE REASON IT IS TESTABLE.**
+  /// This project has no UI test target, so anything expressed inside a SwiftUI `body` is beyond every
+  /// instrument the repository owns — and the widget is the surface where that already cost something
+  /// (`A25`, a sprint count squeezed to zero width for the life of the card, invisible to a green
+  /// suite). The arithmetic is four cases and belongs where a test can reach it; the drawing is checked
+  /// on hardware by `F2f-T5` and nowhere else, which is stated rather than implied.
+  var sprintFill: Double? {
+    guard pomodorosPerSprint > 0 else { return nil }
+    return min(max(Double(completedInSprint) / Double(pomodorosPerSprint), 0), 1)
+  }
+
   /// How many focus blocks of this sprint have been *finished* by the time this
   /// block started. Skipped blocks do not count, exactly as they do not count in
   /// the app's own progress indicator — the Lock Screen and the app cannot be

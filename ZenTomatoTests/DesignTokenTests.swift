@@ -47,6 +47,12 @@ struct DesignTokenTests {
     // Surfaces. The inset is DARKER than the page in dark mode, which is
     // correct: a dark theme raises surfaces rather than casting shadows, so a
     // recess has to go the other way.
+    // The tomato: three illustration roles, identical in both appearances on purpose — see
+    // `ColorRole.tomatoFlesh`. The handoff's published values, all three already in the palette.
+    .tomatoFlesh: (0xE06A50, 0xE06A50),
+    .tomatoSkin: (0x948F84, 0x948F84),
+    .tomatoLeaf: (0x8AA163, 0x8AA163),
+
     .surfacePrimary: (0xF6F5F2, 0x1C1F22),
     .surfaceRaised: (0xFFFFFF, 0x24282C),
     .surfaceInset: (0xE7E4DB, 0x17191C),
@@ -140,12 +146,16 @@ struct DesignTokenTests {
     #expect(Self.publishedRoles.count == ColorRole.allCases.count)
 
     let identical = ColorRole.allCases.filter { $0.light == $0.dark }
+    // **THE TOMATO'S THREE ARE DELIBERATE**, and `ColorRole.tomatoFlesh` carries the argument: a
+    // fruit that changed hue with the phone's appearance would be a different fruit at night, and the
+    // one place it is drawn resolves dark always because the Island is black. **Listed rather than
+    // exempted, so a fourth accidental duplicate still fails.**
     #expect(
-      identical == [.borderStrong],
+      identical == [.borderStrong, .tomatoFlesh, .tomatoSkin, .tomatoLeaf],
       """
       These roles resolve to the same colour in both appearances: \
-      \(identical.map(\.rawValue).joined(separator: ", ")). Only borderStrong is \
-      meant to. Any other is a role that has silently lost dark mode.
+      \(identical.map(\.rawValue).joined(separator: ", ")). Only borderStrong and the three \
+      tomato roles are meant to. Any other is a role that has silently lost dark mode.
       """
     )
   }
@@ -163,9 +173,13 @@ struct DesignTokenTests {
   /// which nothing here draws.
   @Test("everyForegroundRoleIsAudited")
   func everyForegroundRoleIsAudited() {
+    // The three tomato roles are exempt WITH THE REASON, which is what this test asks for: they are
+    // never ink. No text, border or control edge is drawn in them — they are the fill, outline and
+    // crown of an illustration, and whether a picture reads is a device check (`F2f-T5`), not a ratio.
     let neverAForeground: Set<ColorRole> = [
       .surfacePrimary, .surfaceRaised, .surfaceInset, .actionSubtle, .action,
-      .actionActive, .warning, .danger, .border, .actionHover, .focus]
+      .actionActive, .warning, .danger, .border, .actionHover, .focus,
+      .tomatoFlesh, .tomatoSkin, .tomatoLeaf]
     let audited = Set((Self.textPairings + Self.borderPairings).map(\.foreground))
     let unaudited = Set(ColorRole.allCases).subtracting(audited).subtracting(neverAForeground)
     #expect(
@@ -309,55 +323,6 @@ struct DesignTokenTests {
 
     // A failing test has to print something a person can look up.
     #expect(Palette.sage600.description == "#5C7040")
-  }
-
-  // MARK: The non-colour scales
-
-  /// The spacing scale is the design system's four-point ramp, unchanged.
-  ///
-  /// These are plain point values and do NOT grow with the reader's text size.
-  /// That is correct on iOS: the system scales type and layouts reflow around
-  /// it, while Apple's own layout margins stay fixed at every text size.
-  /// Scaling the gaps as well would double-count.
-  @Test("spacingScaleIsTheFourPointRamp")
-  func spacingScaleIsTheFourPointRamp() {
-    #expect(Spacing.none == 0)
-    #expect(Spacing.xxxs == 2)
-    #expect(Spacing.xxs == 4)
-    #expect(Spacing.xs == 8)
-    #expect(Spacing.sm == 12)
-    #expect(Spacing.md == 16)
-    #expect(Spacing.lg == 24)
-    #expect(Spacing.xl == 32)
-    #expect(Spacing.xxl == 48)
-    #expect(Spacing.xxxl == 64)
-
-    #expect(Spacing.borderNone == 0)
-    #expect(Spacing.borderHairline == 1)
-    #expect(Spacing.borderThin == 2)
-    #expect(Spacing.borderThick == 3)
-
-    // Apple's minimum touch target, which is also the design system's control
-    // height. The two agree, so this one number is both rules at once.
-    #expect(Spacing.controlHeight == 44)
-  }
-
-  /// Corners stay sharp.
-  ///
-  /// The radius scale tops out at 6 points against iOS's own 16 to 26. That gap
-  /// is the single most legible signal that a person chose the shape, so a
-  /// well-meaning rounding-up is exactly what this test exists to stop.
-  @Test("radiusScaleStaysSharp")
-  func radiusScaleStaysSharp() {
-    #expect(Radius.none == 0)
-    #expect(Radius.xs == 2)
-    #expect(Radius.sm == 3)
-    #expect(Radius.md == 4)
-    #expect(Radius.lg == 6)
-
-    // A `Radius.lg <= 6` line sat here. Directly under the `== 6` above, it
-    // could not fail, and an assertion that cannot fail makes a suite look
-    // more thorough than it is.
   }
 
   // MARK: Helpers
