@@ -284,10 +284,42 @@ observations taken in the two places that cannot show it.
 **It also confirms what the tomato replaces**, for the third time and now visually: the compact pill
 draws the **timer glyph**, not the cup.
 
-**STILL UNANSWERED — which of `A`, `B`, `C` actually rises.** A still frame cannot say. The cheap way to
-settle it is two screenshots of the **expanded** Island, taken about two minutes apart inside one focus
-block: the fill levels can then be compared directly rather than remembered. That is the whole of what
-`T1` still owes.
+**`T1` IS ANSWERED, 2026-09-29, build `202609281755`, from one expanded-Island screenshot.**
+
+The second spike asked three questions with nothing composed, and all three came back:
+
+| Probe | Result |
+|---|---|
+| **1 · a bare linear `ProgressView(timerInterval:)`** | **renders**, with a visibly filled portion |
+| **2 · the same, circular** | **renders**, as a ring with the countdown inside it |
+| **3 · the tomato shape, static, in `action`** | **renders** — circle and sepal crown both |
+
+**So three things are established that were guesses an hour earlier.** A self-driving progress view
+does work in this Live Activity, in both forms, with no pushes. The tomato's geometry draws. And the
+first spike's invisible circle was a colour, not a capability — `borderStrong` resolves dark, the Island
+is black, and `islandInk()` forces the dark half of every role.
+
+**AND THE ONE THING THAT DID NOT WORK IS THE HANDOFF'S OWN CONSTRUCTION.** The first spike's candidate
+A — a system bar *rotated, scaled and clipped* to the tomato's body — drew nothing but its crown, while
+probe 1 shows the same bar rendering perfectly when left alone. The fill used `danger`, a visible red,
+so the colour explanation does not cover it. **What fails is the composition**, which is exactly what
+the handoff asks for: *"rect clipped to the circle, scaleY = progress, origin bottom."*
+
+### What this means for the design, and it needs the owner
+
+**A rising fill inside a tomato outline is not available.** A self-driving **ring** is, and it is one of
+the handoff's own three named metaphors — `recreation-notes.md:41`, *"ripen fill-up, ensō ring draw,
+drain down."* So the choice is between:
+
+- **The ring** — a solid tomato with a self-driving ring around it, moving smoothly, no pushes. Works
+  today; probe 2 is a photograph of it working.
+- **The stepped fill** — `D52`'s original version, filling by finished pomodoro at each boundary. Also
+  works, also no pushes, and it is the version the owner ruled first before the handoff was read.
+
+**Nothing else is on the table**, and that is a finding rather than a preference: the smooth shaped fill
+the handoff draws cannot be built the way it is drawn.
+
+
 
 ### `F2f-T2` — The tomato, drawn · owner: **agent**
 

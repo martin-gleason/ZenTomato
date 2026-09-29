@@ -27,18 +27,7 @@ import WidgetKit
 struct BlockLiveActivity: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: AlarmAttributes<FocusAlarmMetadata>.self) { context in
-      // **`A24`'s one-build test, and it is temporary.** Four of the owner's Lock Screen screenshots
-      // show a kicker and a countdown and no sprint count, which `SprintCount` renders
-      // unconditionally — so either this view is not what the Lock Screen draws, or the metadata is
-      // absent, and the kicker saying SHORT BREAK rules the second out. The word below is
-      // unmistakable and is not a colour: if it appears on the Lock Screen this card is ours and the
-      // missing count is a different bug; if it does not, this whole view draws for nobody.
-      VStack(spacing: 0) {
-        Text("OURS")
-          .font(Typography.kicker)
-          .foregroundStyle(Color(.action))
-        LockScreenCard(readout: BlockReadout(context.state, context.attributes.metadata))
-      }
+      LockScreenCard(readout: BlockReadout(context.state, context.attributes.metadata))
         // The card's own ground and the tint iOS uses for the controls it draws
         // itself. Both come from the design system's roles, so a Lock Screen card
         // and the app screen cannot end up different colours.
@@ -180,7 +169,19 @@ private struct LockScreenCard: View {
       if let metadata = readout.metadata {
         // Left at the default priority, so this is what gives way: it shrinks
         // rather than clipping, while the countdown beside it never gives.
+        //
+        // **`.fixedSize` IS `A25`'S FIX, AND THE BUG IT ANSWERS WAS INVISIBLE FOR THE LIFE OF THIS
+        // CARD.** `Text(timerInterval:)` does not size to its content the way an ordinary `Text`
+        // does — it expands to fill whatever it is offered. Beside a column carrying
+        // `.layoutPriority(1)`, that meant the countdown asked for everything, got it, and left this
+        // view zero width. **Five of the owner's screenshots across three days show a card with no
+        // count on it**, and nothing in the suite could see it: the count's own tests assert the
+        // string it renders, which was always right, and there is no UI test target in this project.
+        //
+        // `minimumScaleFactor` could not save it either. That governs how small the *type* may get
+        // inside an allotted width; it has nothing to say about an allotment of nothing.
         SprintCount(completed: metadata.completedInSprint, total: metadata.pomodorosPerSprint)
+          .fixedSize()
       }
     }
     .padding(Spacing.md)
