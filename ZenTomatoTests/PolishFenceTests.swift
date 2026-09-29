@@ -41,7 +41,13 @@ struct PolishFenceTests {
   /// than absorbing.
   @Test("theTokenLayerDoesNotGrow")
   func theTokenLayerDoesNotGrow() throws {
-    #expect(try Self.count("^  case [a-z]", in: "ZenTomato/DesignSystem/Semantic/ColorRole.swift") == 20)
+    // **MOVED FROM 20 TO 23 ON 2026-09-29, DELIBERATELY AND IN ONE CHANGE.** `F2f` needs a tomato,
+    // the Live Activity extension may not name a `Palette` step, and the handoff's three published
+    // values were already in the palette — so this is three names over existing colours rather than
+    // three new colours. The fence's own warning is about "one reasonable-looking case at a time,
+    // each defensible on its own"; three added together, in the commit that draws the thing they are
+    // for, is the opposite of that pattern and is why the number moves here rather than three times.
+    #expect(try Self.count("^  case [a-z]", in: "ZenTomato/DesignSystem/Semantic/ColorRole.swift") == 23)
     #expect(try Self.count("^  static (let|func) ", in: "ZenTomato/DesignSystem/Semantic/Typography.swift") == 13)
     #expect(try Self.count("^  static let ", in: "ZenTomato/DesignSystem/Semantic/Spacing.swift") == 15)
     #expect(try Self.count("^  static let ", in: "ZenTomato/DesignSystem/Semantic/Radius.swift") == 6)

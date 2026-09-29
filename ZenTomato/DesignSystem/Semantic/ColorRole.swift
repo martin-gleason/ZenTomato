@@ -242,6 +242,41 @@ enum ColorRole: String, CaseIterable, Sendable {
   /// navigation. Use this role only where a custom ring is drawn by hand.
   case focus
 
+  // MARK: The tomato
+
+  /// The tomato's flesh — the part that fills as a sprint is worked through.
+  ///
+  /// **THREE ILLUSTRATION ROLES, ADDED TOGETHER, AND THE FENCE THEY TRIP IS THE POINT.**
+  /// `PolishFenceTests` pinned this file at twenty cases and says why: *"one reasonable-looking
+  /// `ColorRole` case at a time, each defensible on its own."* A tomato is exactly that shape of
+  /// request, so the count is moved to twenty-three in the same change, deliberately and visibly,
+  /// rather than one case at a time across three commits.
+  ///
+  /// **They earn a role rather than a literal because of where they are drawn.** The Live Activity
+  /// extension may not name a `Palette` step — `palette_outside_token_layer` covers `ZenTomatoActivity`
+  /// explicitly — and that rule exists so one colour decision can be changed in one place. A tomato
+  /// drawn from hex values in a widget is the drift that rule was written against.
+  ///
+  /// **AND THE VALUES ARE ALREADY HERE, WHICH IS THE FINDING.** `design_handoff_v1.5_upgrade` specifies
+  /// `#E06A50`, `#948F84` and `#8AA163`; the palette already holds them as `red500`, `stone500` and
+  /// `sage400`. The design system and the handoff were built from one source, so this adds three names
+  /// and not one colour.
+  ///
+  /// **Light and dark are the same value, on purpose.** The tomato is an illustration of a thing that
+  /// is red; it is not a surface, and a tomato that changed hue with the phone's appearance would be a
+  /// different fruit at night. `D48`'s garden and `F2f`'s Island draw the same one. The one place this
+  /// matters today is the Dynamic Island, which `islandInk()` resolves dark always because the capsule
+  /// is black — and a tomato must look like a tomato there.
+  ///
+  /// `F12` gives these per-theme values; until then they are the handoff's.
+  case tomatoFlesh
+
+  /// The tomato's outline, and the skin of an unfilled one.
+  case tomatoSkin
+
+  /// The sepal crown above the fruit.
+  case tomatoLeaf
+
   // MARK: Internal
 
   /// The colour to use when the device is in light appearance.
@@ -288,6 +323,10 @@ enum ColorRole: String, CaseIterable, Sendable {
     case .danger: (light: Palette.red600, dark: Palette.red500)
     case .onDanger: (light: Palette.stone0, dark: Palette.slate900)
     case .dangerText: (light: Palette.red600, dark: Palette.red400)
+
+    case .tomatoFlesh: (light: Palette.red500, dark: Palette.red500)
+    case .tomatoSkin: (light: Palette.stone500, dark: Palette.stone500)
+    case .tomatoLeaf: (light: Palette.sage400, dark: Palette.sage400)
 
     case .focus: (light: Palette.sage600, dark: Palette.sage400)
     }
