@@ -125,7 +125,33 @@ three call sites.
 **Five questions, and Ruling A is new and blocking.** Two are *small* and are asked because guessing
 them wrong is invisible; the rest change what gets built tomorrow.
 
-### Ruling A — THE FILL · **ANSWERED: THE HANDOFF. `D55`.**
+### Ruling A — THE FILL · **ANSWERED TWICE. FINAL: `D52`'s STEPPED FILL, VIA `D57`.**
+
+> *"d52 original is the one i want."* — the owner, 2026-09-29, after `T1` ran.
+
+**The tomato fills by finished pomodoro, stepping at each boundary.** `D55` chose the handoff's
+elapsed-time fill; `T1` then found that construction is the one thing that does not render. `D57`
+restores `D52` and keeps `D55` in the register rather than striking it, because it was the right reading
+of a document the agent had failed to open, and what overturned it was evidence.
+
+**The research makes this the easy answer rather than the fallback.** Apple's own `DynamicIsland` and
+Live Activities pages are JavaScript-rendered and return nothing to a fetcher; these figures are from
+secondary sources and are marked as such:
+
+- Each compact region is roughly **60 × 36 points** — *"barely enough for an icon and a short label."* A
+  26-point tomato fits with room, and anything subtler than a quarter-fill will not read there.
+- The **minimal** presentation appears whenever more than one Live Activity is live, which on this
+  owner's phone is the ordinary case — a Reddit activity held the slot for two days.
+- The expanded view appears on long-press **and automatically for a couple of seconds after an update**,
+  so a boundary already produces the moment the tomato's step happens.
+- **"iOS animates content-state transitions itself; you cannot drive keyframes, and elaborate animations
+  are dropped."** This is the sentence that settles the whole question: a smooth elapsed-time fill is an
+  elaborate animation and was always going to be dropped, while a stepped fill **is** a content-state
+  transition — which iOS animates for nothing.
+
+So the stepped rule is not a compromise. It is the form the platform is built to update.
+
+### ~~Ruling A — THE FILL · ANSWERED: THE HANDOFF. `D55`.~~ *(superseded above)*
 
 > *"go with the handoff, but keep the coffee icon from today's conversation."*
 

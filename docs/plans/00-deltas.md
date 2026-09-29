@@ -77,8 +77,9 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D54** | **proposed** | **yes — v1.5** | 1 | `F20` — a plan can be reordered |
 | **D55** | ratified — **v1.5** | no | — | The Island tomato fills by elapsed time per the handoff — supersedes `D52`'s fill rule |
 | **D56** | ratified — **v1.5**, applied | **yes — v1.5** | 1 | `F8b` — fitting writes the settings; editing a setting wins back |
+| **D57** | ratified — **v1.5** | no | — | The tomato fills by finished pomodoro after all — supersedes `D55`, restores `D52` |
 
-*58 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*59 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
@@ -3116,3 +3117,71 @@ here licenses the next baseline edit.
 to be fixed."* That is **`D43`, ratified 2026-09-24 and never built** — the screen lets you set the
 count, and refuses with a named floor when a count and a budget cannot both be honoured. It is unbuilt
 work rather than a new decision, and it belongs in the same retrofit as this.
+
+---
+
+## D57 — The tomato fills by finished pomodoro after all, and the handoff's look is the target
+
+**Proposed and Ratified by the owner 2026-09-29.** **Supersedes `D55`'s fill rule and restores `D52`'s.**
+The appearance `D55` was ratified for is unchanged and is now stated more broadly.
+
+> *"d52 original is the one i want."* · *"Stick with the originals designed in Claude Design — that is
+> what I want the system to look like by the end of the 1.5 sprint."*
+
+### The fill returns to `D52`: finished pomodoros, stepping at boundaries
+
+`D55` chose the handoff's *"red fill rising from the base as the block elapses"*. **`F2f-T1` then ran it
+and found that construction is the one thing that does not work** — a system progress view rotated,
+scaled and clipped to the tomato's body drew nothing, while the same view left alone renders perfectly.
+So the owner has returned to the rule they gave first.
+
+**`D52` is restored rather than re-proposed.** Its text stands as written: the tomato fills **by finished
+pomodoro**, in steps, and the cup stays on breaks. `D55` is superseded and kept, because it was not a
+mistake — it was the right reading of a design document the agent had failed to open, and the thing that
+overturned it was evidence rather than argument.
+
+### WHAT THE RESEARCH SAYS, AND IT MAKES THE RULING THE EASY ONE
+
+Apple's own `DynamicIsland` and Live Activities pages are JavaScript-rendered and return nothing to a
+fetcher; the figures below come from secondary sources and are marked as such rather than presented as
+Apple's words.
+
+| Fact | Consequence here |
+|---|---|
+| Each compact region is roughly **60 × 36 points** — *"barely enough for an icon and a short label"* | A 26-point tomato fits with room. The fill must read at that size or not be drawn. |
+| The **minimal** presentation appears only when more than one Live Activity is live | It is the *common* case on this owner's phone, not an edge — a Reddit activity took the slot for two days |
+| The expanded view appears on long-press **and automatically for a couple of seconds after an update** | A boundary already produces that moment. The tomato's step lands exactly when the Island shows itself. |
+| **"iOS animates content-state transitions itself; you cannot drive keyframes, and elaborate animations are dropped"** | **This is the sentence that settles it.** A smooth elapsed-time fill is an elaborate animation and was always going to be dropped. A stepped fill is a content-state transition, which iOS animates *for free*. |
+| A Live Activity supports a tap and, since iOS 17, App Intent buttons — no drags, scrolling or swipes | Nothing here wants one; recorded so nobody proposes a control |
+
+**So `D52`'s rule is not a compromise forced by a failed experiment.** It is the form that matches how
+the platform actually updates a Live Activity: the fill changes when the content state changes, and the
+content state changes at a block boundary, which is the only moment the app has anything new to say.
+
+### The handoff's look is the target for the whole milestone
+
+> *"Stick with the originals designed in Claude Design — that is what I want the system to look like by
+> the end of the 1.5 sprint."*
+
+`design_handoff_v1.5_upgrade/` is the visual target for v1.5: the tomato's geometry and colours, the
+seven theme tables behind the existing `ColorRole`, the Ensō block style, and the Settings restructure.
+Where the prototype and the repo's conventions differ, the handoff itself already defers — *"the repo's
+conventions win"* — and that stands.
+
+**ONE CONFLICT IS NAMED RATHER THAN SILENTLY RESOLVED, BECAUSE IT IS WITH A RATIFIED DELTA.** The
+handoff's **garden** specifies a 14-day bed, a per-day count, and a **wilted stem on a zero day**. `D48`
+forbids every one of those by name — *"it may not shrink, decay, reset, break, or read differently
+because of when the poms happened, and it may not be shown per day"* — and the owner already chose
+between them on 2026-09-24: *"go with F16's form."*
+
+**This delta does not reopen that.** *The handoff's look* means its visual language — shapes, colour,
+type, spacing. It does not mean its behavioural specifications where a later ratified delta has replaced
+them. `F16`'s garden remains `F16`'s, drawn in the handoff's tomato.
+
+### What it changes in the plan
+
+`F2f-T1` is answered and `T3` builds the stepped fill, which needs **no self-driving view at all** — the
+fraction is `completedInSprint / pomodorosPerSprint`, both already on the activity's attributes, both
+already proven correct by `F8-T4` and by the owner's sprint indicator on the device. `F2f-M4`, written to
+demonstrate that a computed fraction goes stale, is **withdrawn**: under a stepped rule a fraction that
+holds between boundaries is correct rather than defective.
