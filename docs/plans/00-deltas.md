@@ -78,8 +78,9 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D55** | ratified — **v1.5** | no | — | The Island tomato fills by elapsed time per the handoff — supersedes `D52`'s fill rule |
 | **D56** | ratified — **v1.5**, applied | **yes — v1.5** | 1 | `F8b` — fitting writes the settings; editing a setting wins back |
 | **D57** | ratified — **v1.5** | no | — | The tomato fills by finished pomodoro after all — supersedes `D55`, restores `D52` |
+| **D58** | **proposed** | **yes — v1.5** | 2 | `F12` — themes: a fixed, audited set, chosen in Settings; the tomato and the Lock Screen follow it |
 
-*59 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
+*60 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
 
 ---
@@ -3185,3 +3186,51 @@ fraction is `completedInSprint / pomodorosPerSprint`, both already on the activi
 already proven correct by `F8-T4` and by the owner's sprint indicator on the device. `F2f-M4`, written to
 demonstrate that a computed fraction goes stale, is **withdrawn**: under a stepped rule a fraction that
 holds between boundaries is correct rather than defective.
+
+---
+
+## D58 — Themes: a fixed, audited set, chosen in Settings
+
+**Proposed 2026-09-30. NOT RATIFIED.** Built under `F12` on the owner's instruction the same day —
+*"let's build out the theme picker"* — and the PR asks for the word. This is the delta `F12`'s plan
+called *the theme delta* and left unnumbered so the owner would allocate it; `F16` and `F17` no longer
+contest the number.
+
+> *"Tomato colors shouldn't ignore themes — the themes selected are based on real tomato colors; not
+> just red."* — the owner, 2026-09-30
+
+**Currently, `SPEC.md` line 58 (out of scope):** *…widgets beyond the Lock Screen Live Activity and a
+watch-face complication showing the running block · themes · streaks, badges…*
+
+**Proposed:** *…widgets beyond the Lock Screen Live Activity and a watch-face complication showing the
+running block · user-authored or downloadable themes, and any colour the user picks by hand ·
+streaks, badges…*
+
+**And a new row in *Locked decisions*, after `Timer customization`:**
+
+> | Theme | A fixed set of built-in themes — Auto, Sage, Ripen, Teal, Plum, Matcha, Ink — chosen in Settings
+> and stored as the eighth `AppSettings` field. Each defines every colour role in **both** light and
+> dark; light and dark still follow the phone, and a theme is not an appearance. Auto chooses by the
+> clock and the season. The Lock Screen and the Dynamic Island follow the theme, the tomato included.
+> No theme is constructed from data at runtime and no colour is chosen by hand. Every theme is held to
+> the same contrast floors as the default: 4.5:1 for text, 3:1 for a control's boundary. Nothing else. |
+
+**And a row in `definitions.md`:** **Theme** — a complete set of colours behind the roles the app
+already names. Every theme defines both appearances; light and dark remain the phone's choice.
+
+**A baseline correction rides with it.** `zenpom-v1.5.md` says the design system has *"42 semantic
+colour roles"*. It had twenty when that was written and has twenty-three since `F2f`. `F12`'s cost
+estimate rested on the figure, so the correction is owed here rather than made as a typo fix.
+
+**What it moves, on the record.** `PolishFenceTests.noNewStoredShape`: `AppSettings` 7 → 8 fields.
+`nothingFromTheParkedList` and `StatsFenceTests`' `\bTheme\b` keep guarding what stays refused — a
+theme built from data — rather than being deleted because they fired. The `@Model` count stays 12 and
+the `ColorRole` count stays 23: a theme is a new table behind the roles, not a new role.
+
+**The two values that were adjusted, and why that is not fitting to the test.** Ripen's dark accent
+measured 4.49:1 and Matcha's light subtle text 4.46:1. Each moved one step, once — the rule `F12`'s plan
+proposed (*"adjusted once, then refused"*). Full measurements are in `docs/plans/F12.md`.
+
+**What ratifying the other way costs.** Refusing it refuses `F12`: the branch does not merge and the
+seam stays unused.
+
