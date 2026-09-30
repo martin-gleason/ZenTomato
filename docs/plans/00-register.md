@@ -155,6 +155,7 @@ makes the generator refuse to run at all and write nothing.
 | D55 | The Island tomato fills by elapsed time over the block, per the design handoff | — | ratified |  |
 | D56 | One set of block lengths: fitting writes the settings, and editing a setting wins back | — | ratified |  |
 | D57 | The tomato fills by finished pomodoro after all, and the handoff's look is the target | — | ratified |  |
+| D58 | Themes: a fixed, audited set, chosen in Settings | — | proposed |  |
 <!-- END GENERATED: decisions -->
 
 ### Decisions — owner fields
