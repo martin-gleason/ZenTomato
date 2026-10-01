@@ -1324,6 +1324,22 @@ extension TimerEngine {
 /// a seam rather than raise the number.
 @MainActor
 extension TimerEngine {
+  /// The theme the app is drawing in right now, for the Lock Screen to match (`D58`).
+  ///
+  /// Read from the settings row at the moment of scheduling rather than snapshotted into
+  /// `TimerState`: a theme changes no block's arithmetic, so it has no business in the record of
+  /// one. A store that cannot be read gives Auto's answer, which is what an unset choice means —
+  /// the alarm still gets set, and a wrong colour on the Lock Screen is the whole cost.
+  ///
+  /// **Resolved at every schedule, which is almost always the block's start.** The one exception is
+  /// the clock-skew repair, which reschedules mid-block; under Auto across 9pm that repaints the
+  /// card, which is the right answer at that moment rather than a defect.
+  ///
+  /// Reads the engine's clock, not the wall clock, so a test can pin which theme a block gets.
+  private func currentTheme() -> Theme {
+    ThemeChoice.stored(try? AppSettings.current(in: context).themeRawValue).resolved(at: clock.now)
+  }
+
   /// Asks for an alarm at the block's end instant. Everything the Lock Screen
   /// will draw travels with it, because the Lock Screen is drawn by a separate
   /// program that cannot open this database.
@@ -1332,7 +1348,8 @@ extension TimerEngine {
       id: state.sessionID, kind: state.kind, endsAt: state.endsAt,
       soundEnabled: state.soundEnabled, alertSound: AlertSound.stored(state.alertSoundRawValue),
       completedInSprint: state.completedInSprint,
-      pomodorosPerSprint: state.pomodorosPerSprint)
+      pomodorosPerSprint: state.pomodorosPerSprint,
+      theme: currentTheme())
     do {
       // The block that just ended, whose alarm is ringing or about to. Consumed
       // here so it cannot leak into a later, unrelated schedule.

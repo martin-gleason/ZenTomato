@@ -27,12 +27,18 @@ import WidgetKit
 struct BlockLiveActivity: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: AlarmAttributes<FocusAlarmMetadata>.self) { context in
-      LockScreenCard(readout: BlockReadout(context.state, context.attributes.metadata))
+      let readout = BlockReadout(context.state, context.attributes.metadata)
+      LockScreenCard(readout: readout)
+        // `D58`: everything on the card resolves under the theme the block started in.
+        .environment(\.theme, readout.theme)
         // The card's own ground and the tint iOS uses for the controls it draws
         // itself. Both come from the design system's roles, so a Lock Screen card
-        // and the app screen cannot end up different colours.
-        .activityBackgroundTint(Color(.surfacePrimary))
-        .activitySystemActionForegroundColor(Color(.action))
+        // and the app screen cannot end up different colours. **Baked to the theme
+        // rather than left to the environment**, because iOS may read these two
+        // outside the view tree the line above themes — and a Sage ground under a
+        // Plum card is exactly the mismatch the theme exists to prevent.
+        .activityBackgroundTint(Color(.surfacePrimary, in: readout.theme))
+        .activitySystemActionForegroundColor(Color(.action, in: readout.theme))
     } dynamicIsland: { context in
       let readout = BlockReadout(context.state, context.attributes.metadata)
 
@@ -42,7 +48,7 @@ struct BlockLiveActivity: Widget {
             BlockSymbol(kind: readout.kind, sprintFill: readout.metadata?.sprintFill)
             BlockKicker(readout: readout)
           }
-          .islandInk()
+          .islandInk(readout.theme)
         }
         DynamicIslandExpandedRegion(.trailing) {
           Group {
@@ -50,23 +56,17 @@ struct BlockLiveActivity: Widget {
               SprintCount(completed: metadata.completedInSprint, total: metadata.pomodorosPerSprint)
             }
           }
-          .islandInk()
+          .islandInk(readout.theme)
         }
         DynamicIslandExpandedRegion(.center) {
           CountdownNumeral(readout: readout, font: Typography.title)
-            .islandInk()
+            .islandInk(readout.theme)
         }
       } compactLeading: {
-        // **`F2f-T1`, THE SPIKE, IN THE ONE PLACE THAT NEEDS NO GESTURE.** Candidate A only — the
-        // system's own progress view, turned a quarter and clipped to the tomato. It sits here rather
-        // than only in the expanded region because expanding the Island turned out to be the hard part
-        // of the observation, and because a glance at the pill late in a block is the whole test: a
-        // self-driving fill is near-full by then, and one computed at render time is stuck wherever it
-        // was when iOS last drew it.
-        //
-        // Focus blocks only. A break keeps its cup, which is `D52` and `D55` both.
+        // The tomato, filled by finished pomodoros (`D57`), in the theme's fruit colour (`D58`).
+        // Focus blocks only: a break keeps its cup.
         BlockSymbol(kind: readout.kind, sprintFill: readout.metadata?.sprintFill)
-          .islandInk()
+          .islandInk(readout.theme)
       } compactTrailing: {
         CountdownNumeral(readout: readout, font: Typography.data)
           // The island's trailing region is narrow, and a two-hour block prints
@@ -75,11 +75,11 @@ struct BlockLiveActivity: Widget {
           // never allowed to lose a digit.
           .minimumScaleFactor(Self.compactMinimumScale)
           .frame(maxWidth: Self.compactNumeralWidth)
-          .islandInk()
+          .islandInk(readout.theme)
       } minimal: {
         BlockSymbol(kind: readout.kind, sprintFill: readout.metadata?.sprintFill)
           .accessibilityLabel(Text("\(readout.kind.displayName) block running"))
-          .islandInk()
+          .islandInk(readout.theme)
       }
     }
   }
@@ -238,6 +238,11 @@ private struct BlockReadout {
     metadata?.kind ?? .work
   }
 
+  /// The theme the block started in; Sage when there is no metadata.
+  var theme: Theme {
+    metadata?.theme ?? .sage
+  }
+
   /// Whether the block has finished and the alarm is sounding.
   var isEnded: Bool {
     if case .ended = mode { return true }
@@ -365,7 +370,10 @@ extension View {
   /// accordingly" — so telling one small part of the screen that its
   /// surroundings are dark changes which half is chosen. Nothing is hard-coded
   /// and the values still come from the one token table.
-  func islandInk() -> some View {
-    environment(\.colorScheme, .dark)
+  ///
+  /// **And the block's theme (`D58`)**, so the Island's tomato and accent are the theme's — its dark
+  /// half, for the same reason.
+  func islandInk(_ theme: Theme) -> some View {
+    environment(\.colorScheme, .dark).environment(\.theme, theme)
   }
 }

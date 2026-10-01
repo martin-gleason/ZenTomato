@@ -16,13 +16,17 @@ import AlarmKit
 /// draws. They are decided once, at the moment the block starts, and are frozen
 /// for the life of that block.
 ///
-/// THREE FIELDS, AND WHY THERE IS NOT A FOURTH
-/// A later version of this screen will name what is being worked on rather than
-/// which kind of block is running, and it would be easy to add an empty field
-/// for that now. It is deliberately not done: a field that is always empty looks
-/// finished, so the next person to read this file would believe the work was
-/// already half done. Three fields today; a fourth arrives with the thing that
-/// fills it in.
+/// FOUR FIELDS, AND THE FOURTH ARRIVED WITH THE THING THAT FILLS IT IN
+/// This said three, and refused an empty fourth for a later screen naming the
+/// work: a field that is always empty looks finished. The fourth is the theme
+/// (`D58`), and it is filled in at every block start. The refusal stands for
+/// anything else.
+///
+/// **The fourth is optional, and that is what keeps the Lock Screen from going
+/// blank across an update.** An alarm scheduled by the previous build carries no
+/// theme. If the field were required, decoding that alarm would fail — and the
+/// failure mode described below is a blank card with no error anywhere. Optional,
+/// it decodes as `nil` and draws Sage.
 ///
 /// THIS FILE IS COMPILED INTO BOTH PROGRAMS
 /// It is listed in the sources of the app *and* of the widget extension, so
@@ -82,4 +86,17 @@ struct FocusAlarmMetadata: AlarmMetadata {
   /// and 12. Carried rather than looked up because the widget has no settings to
   /// look it up in.
   let pomodorosPerSprint: Int
+
+  /// The theme the block started in, as `Theme`'s raw value (`D58`) — already
+  /// resolved, so Auto never reaches the widget. `nil` from an alarm scheduled
+  /// before themes existed.
+  ///
+  /// **A `String`, not the enum, for the reason `AppSettings` stores one:** a
+  /// theme name this build does not know must draw Sage, not fail to decode.
+  var themeRawValue: String?
+
+  /// The theme to draw the Lock Screen and the Island in. Sage when absent or unknown.
+  var theme: Theme {
+    themeRawValue.flatMap(Theme.init(rawValue:)) ?? .sage
+  }
 }
