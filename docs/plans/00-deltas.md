@@ -3231,6 +3231,15 @@ the `ColorRole` count stays 23: a theme is a new table behind the roles, not a n
 measured 4.49:1 and Matcha's light subtle text 4.46:1. Each moved one step, once — the rule `F12`'s plan
 proposed (*"adjusted once, then refused"*). Full measurements are in `docs/plans/F12.md`.
 
+**Two things to ratify with it, both found by `F12`'s adversarial review and not settled by the owner:**
+
+1. **A theme picked mid-block reaches the Lock Screen and the Island at the next block.** The handoff
+   says *"applies instantly."* It cannot: AlarmKit's metadata is fixed once handed over, and this
+   project pushes no updates to a Live Activity. The app itself repaints at once.
+2. **An install that predates themes is on Auto**, the handoff's default — so the owner's phone turns
+   Ripen in September daylight and Ink after 9pm without having chosen either. The alternative is
+   Sage, one line.
+
 **What ratifying the other way costs.** Refusing it refuses `F12`: the branch does not merge and the
 seam stays unused.
 
