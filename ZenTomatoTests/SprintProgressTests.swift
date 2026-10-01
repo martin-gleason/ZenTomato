@@ -35,13 +35,17 @@ struct SprintProgressTests {
   @Test("filledAndEmptySegmentsAreNotDistinguishedByColourAlone")
   func filledAndEmptySegmentsAreNotDistinguishedByColourAlone() {
     // Each segment is visible against the page it is drawn on, in both
-    // appearances. That part was always true and stays checked.
-    DesignTokenTests.expectContrast(
-      DesignTokenTests.Pairing(
-        foreground: .action, background: .surfacePrimary, minimum: ContrastRatio.nonTextMinimum))
-    DesignTokenTests.expectContrast(
-      DesignTokenTests.Pairing(
-        foreground: .borderStrong, background: .surfacePrimary, minimum: ContrastRatio.nonTextMinimum))
+    // appearances and under every theme. That part was always true and stays checked.
+    for theme in Theme.allCases {
+      DesignTokenTests.expectContrast(
+        DesignTokenTests.Pairing(
+          foreground: .action, background: .surfacePrimary, minimum: ContrastRatio.nonTextMinimum),
+        in: theme)
+      DesignTokenTests.expectContrast(
+        DesignTokenTests.Pairing(
+          foreground: .borderStrong, background: .surfacePrimary, minimum: ContrastRatio.nonTextMinimum),
+        in: theme)
+    }
 
     // Against each other they are not, which is the finding this records.
     let light = ContrastRatio.between(ColorRole.action.light, and: ColorRole.borderStrong.light)

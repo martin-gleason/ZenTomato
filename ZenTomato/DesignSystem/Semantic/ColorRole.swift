@@ -262,13 +262,17 @@ enum ColorRole: String, CaseIterable, Sendable {
   /// `sage400`. The design system and the handoff were built from one source, so this adds three names
   /// and not one colour.
   ///
-  /// **Light and dark are the same value, on purpose.** The tomato is an illustration of a thing that
-  /// is red; it is not a surface, and a tomato that changed hue with the phone's appearance would be a
+  /// **Light and dark are the same value, on purpose.** The tomato is an illustration of a fruit;
+  /// it is not a surface, and a tomato that changed hue with the phone's appearance would be a
   /// different fruit at night. `D48`'s garden and `F2f`'s Island draw the same one. The one place this
   /// matters today is the Dynamic Island, which `islandInk()` resolves dark always because the capsule
   /// is black — and a tomato must look like a tomato there.
   ///
-  /// `F12` gives these per-theme values; until then they are the handoff's.
+  /// **Per theme since `F12` (`D58`).** The owner, 2026-09-30: *"Tomato colors shouldn't ignore themes
+  /// — the themes selected are based on real tomato colors; not just red."* Each theme's fruit is its
+  /// accent as drawn on dark, so under **Sage — the values below — the tomato is green**, `sage400`,
+  /// and its crown is the handoff's garden crown `sage700`: a `sage400` crown on a `sage400` fruit
+  /// measures 1.00:1 and vanishes. Ripen keeps the handoff's red exactly. See `Theme.override(for:)`.
   case tomatoFlesh
 
   /// The tomato's outline, and the skin of an unfilled one.
@@ -279,14 +283,28 @@ enum ColorRole: String, CaseIterable, Sendable {
 
   // MARK: Internal
 
-  /// The colour to use when the device is in light appearance.
+  /// The colour to use when the device is in light appearance, under Sage.
   var light: RGBColor {
     pair.light
   }
 
-  /// The colour to use when the device is in dark appearance.
+  /// The colour to use when the device is in dark appearance, under Sage.
   var dark: RGBColor {
     pair.dark
+  }
+
+  /// This role's colour in light appearance under a given theme.
+  ///
+  /// **The theme is a parameter, never ambient.** The contrast audit calls this once per theme; if
+  /// it read a "current" theme instead, the audit would loop over six names while measuring the
+  /// same colours six times — green, and worth nothing.
+  func light(in theme: Theme) -> RGBColor {
+    (theme.override(for: self) ?? pair).light
+  }
+
+  /// This role's colour in dark appearance under a given theme. See `light(in:)`.
+  func dark(in theme: Theme) -> RGBColor {
+    (theme.override(for: self) ?? pair).dark
   }
 
   // MARK: Private
@@ -324,9 +342,9 @@ enum ColorRole: String, CaseIterable, Sendable {
     case .onDanger: (light: Palette.stone0, dark: Palette.slate900)
     case .dangerText: (light: Palette.red600, dark: Palette.red400)
 
-    case .tomatoFlesh: (light: Palette.red500, dark: Palette.red500)
+    case .tomatoFlesh: (light: Palette.sage400, dark: Palette.sage400)
     case .tomatoSkin: (light: Palette.stone500, dark: Palette.stone500)
-    case .tomatoLeaf: (light: Palette.sage400, dark: Palette.sage400)
+    case .tomatoLeaf: (light: Palette.sage700, dark: Palette.sage700)
 
     case .focus: (light: Palette.sage600, dark: Palette.sage400)
     }
