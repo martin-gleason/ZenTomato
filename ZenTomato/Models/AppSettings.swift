@@ -5,16 +5,21 @@ import SwiftData
 ///
 /// WHAT A READER WHO DOES NOT WRITE SWIFT NEEDS TO KNOW
 /// `@Model` is SwiftData's marker for "this is a thing to save to disk". The
-/// six properties below become six columns in a local database file on the
+/// eight properties below become eight columns in a local database file on the
 /// phone; changing one of them in memory and calling `save()` writes it. There
 /// is no server, no account, and nothing leaves the device.
 ///
-/// EXACTLY SIX PROPERTIES, AND WHY THAT IS A RULE RATHER THAN A COINCIDENCE
-/// `SPEC.md`'s locked decisions table reads:
+/// EXACTLY EIGHT PROPERTIES, AND WHY THAT IS A RULE RATHER THAN A COINCIDENCE
+/// This heading said six until `F12`, two fields after it stopped being true:
+/// `D24` admitted the alert sound and `D58` the theme, each as a ratified
+/// amendment to `SPEC.md`'s locked decisions, whose timer row reads:
 ///
 ///   > Timer customization | Work length, short break, long break,
 ///   > pomodoros-per-sprint, sound on/off, auto-start next block on/off.
 ///   > **Nothing else.**
+///
+/// The theme has its own row there rather than joining that one, because a
+/// colour changes nothing the timer does.
 ///
 /// Two absences are deliberate and worth naming, because both look reasonable
 /// and both would be scope creep:
@@ -22,9 +27,10 @@ import SwiftData
 ///   * There is no `musicEnabled`. The spec describes music on/off as a toggle
 ///     "before a sprint", which makes it session state belonging to the music
 ///     feature, not a stored timer preference.
-///   * There is no `theme` or `appearance`. Light and dark follow the system
-///     setting, with no control anywhere in the app. Themes are explicitly out
-///     of scope for v0.1.
+///   * There is no `appearance`. Light and dark follow the system setting, with
+///     no control anywhere in the app. **A theme is not an appearance** — since
+///     `D58` there is a `themeRawValue`, and every theme defines both light and
+///     dark; the phone still chooses which one is drawn.
 ///
 /// WHY SWIFTDATA AND NOT `UserDefaults`
 /// So there is one store to reason about, one backup story, and one place to
@@ -78,6 +84,22 @@ final class AppSettings {
   /// is a timer that lies about how long you worked.
   var autoStartNextBlock: Bool
 
+  /// Which theme the app draws in, as `ThemeChoice`'s raw value (`D58`).
+  ///
+  /// **The eighth setting**, and `PolishFenceTests.noNewStoredShape` moves from
+  /// seven to eight in the same change, which is that fence doing its job.
+  ///
+  /// **Optional and a `String` for exactly the reasons `alertSoundRawValue` is.**
+  /// Every row already on a phone has no value here and SwiftData fills it with
+  /// `nil` rather than refusing to open the store; and a theme written by a later
+  /// version reads back as the default rather than failing to decode.
+  ///
+  /// **`nil` means Auto — the one place this migration changes what is seen.** An
+  /// install that draws Sage today draws Ink after 9pm. Auto is the handoff's
+  /// default and the choice is recorded in `docs/plans/F12.md`; `ThemeChoice.stored`
+  /// is the one line that would change it.
+  var themeRawValue: String?
+
   // MARK: Initialisation
 
   /// Creates a settings row.
@@ -92,7 +114,8 @@ final class AppSettings {
     pomodorosPerSprint: Int = 4,
     soundEnabled: Bool = true,
     alertSoundRawValue: String? = nil,
-    autoStartNextBlock: Bool = false
+    autoStartNextBlock: Bool = false,
+    themeRawValue: String? = nil
   ) {
     self.workMinutes = workMinutes
     self.shortBreakMinutes = shortBreakMinutes
@@ -101,6 +124,7 @@ final class AppSettings {
     self.soundEnabled = soundEnabled
     self.alertSoundRawValue = alertSoundRawValue
     self.autoStartNextBlock = autoStartNextBlock
+    self.themeRawValue = themeRawValue
   }
 
   // MARK: The single-row accessor

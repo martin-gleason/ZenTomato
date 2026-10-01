@@ -82,8 +82,10 @@ struct MusicFenceTests {
     let entity = try #require(Schema([AppSettings.self]).entities.first)
     let columns = entity.properties.map(\.name)
 
-    #expect(columns.count == 7)
+    // EIGHT SINCE `D58`, and the eighth is named for the reason the seventh is.
+    #expect(columns.count == 8)
     #expect(columns.contains("alertSoundRawValue"), "The seventh column is D24's alert sound, or the count is wrong.")
+    #expect(columns.contains("themeRawValue"), "The eighth column is D58's theme, or the count is wrong.")
     for column in columns {
       for word in ["music", "playlist", "song", "audio", "volume"] {
         #expect(

@@ -214,6 +214,9 @@ private struct SettingsForm: View {
       }
       .disabled(isBlockRunning)
 
+      // `D58`. Outside the locked group: a colour changes no block's arithmetic.
+      ThemePickerSection(settings: settings)
+
       // NOT LOCKED, AND NOT AN EXCEPTION. Music and Todoist are not timer
       // settings: neither is in `AppSettings`, neither is snapshotted at block
       // start, and `SPEC.md` gives music its own row explicitly permitting
