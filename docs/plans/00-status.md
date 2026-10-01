@@ -83,9 +83,9 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
 | Owner items (`O`) | 53 | 24 | 0 | 29 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
-| Mutations (`M`) | 169 | 41 | 0 | 128 |
+| Mutations (`M`) | 180 | 41 | 0 | 139 |
 | Chores (`C`) | 30 | 5 | 9 | 16 |
-| Agent items (`A`) | 25 | 10 | 0 | 15 |
+| Agent items (`A`) | 31 | 16 | 0 | 15 |
 
 `Unknown` is not a third kind of open. It means the source document said nothing about status, so this page will not guess — the row is a question for the owner.
 
@@ -102,14 +102,14 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `O` | open | 24 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
-| `M` | closed | 127 |
+| `M` | closed | 138 |
 | `M` | open | 41 |
 | `M` | superseded | 1 |
 | `C` | closed | 16 |
 | `C` | open | 5 |
 | `C` | unknown | 9 |
 | `A` | closed | 15 |
-| `A` | open | 10 |
+| `A` | open | 16 |
 
 ## Hooks
 
@@ -263,7 +263,13 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | unassigned | A20 | P2 | open | Seven open owner items carry no mode, so they sit in the owner's… |
 | unassigned | A22 | P2 | open | A plan's prose can contradict the register and nothing notices |
 | unassigned | A25 | P1 | open | The sprint count is missing from a Lock Screen card that is… |
+| unassigned | A26 | P1 | open | Nothing tests that a break keeps the cup — `F2f-M3` runs green |
+| unassigned | A27 | P2 | open | `F2f`'s plan still describes the fill `D57` replaced |
+| unassigned | A28 | P1 | open | `A25`'s fix may have moved the squeeze from the count to the countdown |
+| unassigned | A29 | P2 | open | The Island's minimal tomato may have lost its spoken label |
+| unassigned | A30 | P2 | open | The ordinal on the current plan row is below AA, and was before themes |
+| unassigned | A31 | P2 | open | Two hops of the theme's journey have no test: the app root and the… |
 
 ---
 
-107 open register rows.
+113 open register rows.
