@@ -49,9 +49,11 @@ struct DesignTokenTests {
     // recess has to go the other way.
     // The tomato: three illustration roles, identical in both appearances on purpose — see
     // `ColorRole.tomatoFlesh`. The handoff's published values, all three already in the palette.
-    .tomatoFlesh: (0xE06A50, 0xE06A50),
+    // Sage's tomato is green since `F12` (`D58`): the owner ruled the fruit follows the theme, and
+    // Sage's accent is green. The handoff's red is Ripen's, and `ThemeTests` pins it there.
+    .tomatoFlesh: (0x8AA163, 0x8AA163),
     .tomatoSkin: (0x948F84, 0x948F84),
-    .tomatoLeaf: (0x8AA163, 0x8AA163),
+    .tomatoLeaf: (0x4C5C36, 0x4C5C36),
 
     .surfacePrimary: (0xF6F5F2, 0x1C1F22),
     .surfaceRaised: (0xFFFFFF, 0x24282C),
@@ -238,6 +240,9 @@ struct DesignTokenTests {
     Pairing(foreground: .action, background: .surfacePrimary, minimum: ContrastRatio.textMinimum),
     Pairing(foreground: .action, background: .surfaceRaised, minimum: ContrastRatio.textMinimum),
     Pairing(foreground: .textPrimary, background: .actionSubtle, minimum: ContrastRatio.textMinimum),
+    // The CURRENT kicker on the plan's current row (`PlanRowView`): the accent printed on the
+    // accent's own tint. Unaudited until `F12`'s review measured it failing under Ripen and Plum.
+    Pairing(foreground: .action, background: .actionSubtle, minimum: ContrastRatio.textMinimum),
 
     // Ink on a filled control, at rest and pressed.
     Pairing(foreground: .onAction, background: .action, minimum: ContrastRatio.textMinimum),
@@ -260,10 +265,15 @@ struct DesignTokenTests {
     Pairing(foreground: .borderStrong, background: .surfaceInset, minimum: ContrastRatio.nonTextMinimum)
   ]
 
-  /// Every audited text pairing clears 4.5:1 in BOTH appearances.
-  @Test("textOnSurfaceMeetsAA", arguments: textPairings)
-  func textOnSurfaceMeetsAA(pairing: Pairing) {
-    Self.expectContrast(pairing)
+  /// Every audited text pairing clears 4.5:1 in BOTH appearances, under EVERY theme.
+  ///
+  /// **The cross-product is the point (`F12-T2`).** A pairing measured once, against one theme, is
+  /// not measured: six themes × seventeen pairings × two appearances, each reported by name.
+  /// `F12-M1` puts the brand sage — 4.33:1 — behind Teal's light accent, and this must fail naming
+  /// Teal. If it stays green, the loop is measuring one theme six times.
+  @Test("textOnSurfaceMeetsAA", arguments: textPairings, Theme.allCases)
+  func textOnSurfaceMeetsAA(pairing: Pairing, theme: Theme) {
+    Self.expectContrast(pairing, in: theme)
   }
 
   /// The outline that draws a control clears 3:1 against every ground, in both
@@ -277,9 +287,9 @@ struct DesignTokenTests {
   /// the only thing that draws that button, and it has to be seen against the
   /// page on one side and against its own fill on the other. That is why all
   /// three grounds are checked rather than just the page.
-  @Test("borderOnSurfaceMeetsNonTextMinimum", arguments: borderPairings)
-  func borderOnSurfaceMeetsNonTextMinimum(pairing: Pairing) {
-    Self.expectContrast(pairing)
+  @Test("borderOnSurfaceMeetsNonTextMinimum", arguments: borderPairings, Theme.allCases)
+  func borderOnSurfaceMeetsNonTextMinimum(pairing: Pairing, theme: Theme) {
+    Self.expectContrast(pairing, in: theme)
   }
 
   // MARK: The primitive layer
@@ -336,27 +346,28 @@ struct DesignTokenTests {
     case light = "light mode"
     case dark = "dark mode"
 
-    /// The colour this role takes in this appearance.
-    func color(of role: ColorRole) -> RGBColor {
+    /// The colour this role takes in this appearance, under a theme passed in — never an ambient
+    /// one, or a loop over themes would measure the same colours every time.
+    func color(of role: ColorRole, in theme: Theme) -> RGBColor {
       switch self {
-      case .light: role.light
-      case .dark: role.dark
+      case .light: role.light(in: theme)
+      case .dark: role.dark(in: theme)
       }
     }
   }
 
-  /// Measures one pairing in both appearances and reports a failure that names
-  /// the measurement, the threshold, and which appearance failed.
-  static func expectContrast(_ pairing: Pairing) {
+  /// Measures one pairing in both appearances under one theme and reports a failure that names
+  /// the theme, the measurement, the threshold, and which appearance failed.
+  static func expectContrast(_ pairing: Pairing, in theme: Theme) {
     for appearance in Appearance.allCases {
       let ratio = ContrastRatio.between(
-        appearance.color(of: pairing.foreground),
-        and: appearance.color(of: pairing.background)
+        appearance.color(of: pairing.foreground, in: theme),
+        and: appearance.color(of: pairing.background, in: theme)
       )
       #expect(
         ratio >= pairing.minimum,
         """
-        \(pairing) measures \(ContrastRatio.format(ratio)):1 in \(appearance.rawValue), \
+        \(theme.name): \(pairing) measures \(ContrastRatio.format(ratio)):1 in \(appearance.rawValue), \
         below the \(ContrastRatio.format(pairing.minimum)):1 required.
         """
       )

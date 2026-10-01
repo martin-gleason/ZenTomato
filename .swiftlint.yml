@@ -159,7 +159,10 @@ custom_rules:
     # and that wrapped form is exactly what a line-length fix produces. Found by
     # F13's adversarial review, which also found the doc comment claiming the rule
     # covered what it did not. `F13-M14`.
-    regex: "\\b(Palette|TodoistPalette)\\s*\\."
+    # THREE since F12-T1: `ThemePalette` holds the five non-default themes'
+    # values (`D58`), and was added to this rule in the commit that created it,
+    # for the reason the paragraph above gives.
+    regex: "\\b(Palette|TodoistPalette|ThemePalette)\\s*\\."
     message: "Screens may only name a ColorRole or a TodoistTint, never a raw palette step."
     severity: error
 

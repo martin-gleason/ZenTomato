@@ -25,6 +25,11 @@ extension Color {
   /// 3. It works in Xcode's previews, so the light and dark previews on
   ///    `TimerView` are a real check on this mechanism rather than a decoration.
   ///
+  /// **Since `F12`, the rule has a second input: the theme** (`D58`). It arrives the same way the
+  /// appearance does — as a trait iOS hands the rule at draw time — so a theme change repaints every
+  /// screen live, exactly as a switch to dark mode does, and not one of the app's `Color(.role)`
+  /// call sites had to change. See `ThemeTrait` below for how SwiftUI passes it in.
+  ///
   /// An appearance that is neither light nor dark — which iOS reports as
   /// "unspecified" in a handful of edge cases — falls through to light. That
   /// matches the design system, where light is defined as the default and dark is
@@ -36,11 +41,29 @@ extension Color {
     self = ColorRoleTable.colors[role] ?? Color(building: role)
   }
 
+  /// A role's colour under one named theme, still following light and dark on its own.
+  ///
+  /// **For the few places a colour leaves this app's view tree** — the alarm's tint, which AlarmKit
+  /// carries to the system, and the Lock Screen card's ground, which iOS may read outside the views
+  /// that set a theme. Everywhere else a screen writes `Color(role)` and the theme arrives through
+  /// the environment. Not cached: it is built once per block, not once per frame.
+  init(_ role: ColorRole, in theme: Theme) {
+    self.init(uiColor: UIColor { traits in
+      let value = traits.userInterfaceStyle == .dark ? role.dark(in: theme) : role.light(in: theme)
+      return UIColor(
+        red: CGFloat(value.red),
+        green: CGFloat(value.green),
+        blue: CGFloat(value.blue),
+        alpha: 1)
+    })
+  }
+
   /// Builds the colour for a role from scratch. Private because every screen
   /// goes through `init(_:)` above, which hands back a prepared one.
   fileprivate init(building role: ColorRole) {
     self.init(uiColor: UIColor { traits in
-      let value = traits.userInterfaceStyle == .dark ? role.dark : role.light
+      let theme = traits[ThemeTrait.self]
+      let value = traits.userInterfaceStyle == .dark ? role.dark(in: theme) : role.light(in: theme)
       return UIColor(
         red: CGFloat(value.red),
         green: CGFloat(value.green),
@@ -71,4 +94,51 @@ private enum ColorRoleTable {
   /// role added later joins this table automatically with nothing to remember.
   static let colors: [ColorRole: Color] = Dictionary(
     uniqueKeysWithValues: ColorRole.allCases.map { ($0, Color(building: $0)) })
+}
+
+// MARK: - The theme, carried as a trait
+
+/// The theme a colour rule resolves under, as a UIKit trait.
+///
+/// **Why a trait, for a reader who does not write Swift.** iOS already hands every colour rule a
+/// description of its surroundings when it draws — "the phone is in dark mode", "the text is extra
+/// large". A trait is one entry in that description. Registering the theme as one more entry means
+/// the rule above can read it the same way it reads light/dark, at the moment of drawing, which is
+/// what makes a theme change repaint live instead of waiting for a relaunch.
+///
+/// **Verified before it was built on, 2026-09-30.** That SwiftUI passes a bridged trait into colour
+/// resolution was a claim about Apple's framework, so a throwaway test resolved one colour with the
+/// value unset and then set, and saw `#0000FF` become `#FF0000`. `ThemeResolutionTests` keeps that
+/// check standing against the real rule.
+///
+/// `affectsColorAppearance` tells UIKit that a change to this trait changes colours, so anything
+/// UIKit draws redraws too.
+struct ThemeTrait: UITraitDefinition {
+  static let defaultValue = Theme.sage
+  static let affectsColorAppearance = true
+  static let name = "ZenTomato theme"
+}
+
+/// The same value on the SwiftUI side. A screen sets it once, near the root, with
+/// `.environment(\.theme, …)`, and SwiftUI copies it into the trait above for everything beneath.
+struct ThemeEnvironmentKey: EnvironmentKey {
+  static let defaultValue = Theme.sage
+}
+
+extension ThemeEnvironmentKey: UITraitBridgedEnvironmentKey {
+  static func read(from traitCollection: UITraitCollection) -> Theme {
+    traitCollection[ThemeTrait.self]
+  }
+
+  static func write(to mutableTraits: inout UIMutableTraits, value: Theme) {
+    mutableTraits[ThemeTrait.self] = value
+  }
+}
+
+extension EnvironmentValues {
+  /// The theme every `Color(.role)` beneath this point resolves under. Sage when nothing sets it.
+  var theme: Theme {
+    get { self[ThemeEnvironmentKey.self] }
+    set { self[ThemeEnvironmentKey.self] = newValue }
+  }
 }
