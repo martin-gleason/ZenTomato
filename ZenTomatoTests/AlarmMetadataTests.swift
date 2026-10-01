@@ -52,6 +52,32 @@ struct AlarmMetadataTests {
     }
   }
 
+  /// **An alarm scheduled by the build before themes still draws (`D58`).** Its bytes have no theme
+  /// field. If decoding required one, the card would fail to decode and iOS would draw nothing,
+  /// with no error anywhere — so this decodes the old shape, written out by hand, and expects Sage.
+  @Test("anAlarmFromBeforeThemesStillDecodes")
+  func anAlarmFromBeforeThemesStillDecodes() throws {
+    let previousBuild = Data(#"{"kind":"work","completedInSprint":1,"pomodorosPerSprint":4}"#.utf8)
+    let readBack = try JSONDecoder().decode(FocusAlarmMetadata.self, from: previousBuild)
+    #expect(readBack.themeRawValue == nil)
+    #expect(readBack.theme == .sage)
+    #expect(readBack.completedInSprint == 1)
+  }
+
+  /// Every theme travels, and a name this build has never heard of draws Sage rather than failing.
+  @Test("everyThemeSurvivesRoundTrip")
+  func everyThemeSurvivesRoundTrip() throws {
+    for theme in Theme.allCases {
+      let original = FocusAlarmMetadata(
+        kind: .work, completedInSprint: 0, pomodorosPerSprint: 4, themeRawValue: theme.rawValue)
+      let readBack = try JSONDecoder().decode(
+        FocusAlarmMetadata.self, from: try JSONEncoder().encode(original))
+      #expect(readBack.theme == theme)
+    }
+    let later = Data(#"{"kind":"work","completedInSprint":0,"pomodorosPerSprint":4,"themeRawValue":"sepia"}"#.utf8)
+    #expect(try JSONDecoder().decode(FocusAlarmMetadata.self, from: later).theme == .sage)
+  }
+
   /// The widest sprint the settings allow, and the narrowest, both travel.
   ///
   /// A sprint of one is a real setting and the sprint counter on the Lock Screen

@@ -108,13 +108,11 @@ final class AlarmKitScheduler: AlarmScheduling {
 
     let attributes = AlarmAttributes(
       presentation: Self.presentation(for: request.kind),
-      metadata: FocusAlarmMetadata(
-        kind: request.kind,
-        completedInSprint: request.completedInSprint,
-        pomodorosPerSprint: request.pomodorosPerSprint),
+      metadata: Self.metadata(for: request),
       // A plain colour, taken from the design system's action role rather than
-      // written as a value. iOS tints the buttons it draws for us with it.
-      tintColor: Color(.action))
+      // written as a value. iOS tints the buttons it draws for us with it — in
+      // the block's theme, baked in, because this colour leaves the app.
+      tintColor: Color(.action, in: request.theme))
 
     let configuration = AlarmManager.AlarmConfiguration.timer(
       duration: secondsFromNow,
@@ -359,5 +357,17 @@ final class AlarmKitScheduler: AlarmScheduling {
     case .shortBreak: "Short break over"
     case .longBreak: "Long break over"
     }
+  }
+
+  /// Everything the Lock Screen and the Island are handed for one block.
+  ///
+  /// **A function of its own so a test can read it** — the widget is a separate process no test
+  /// reaches, so this is the last point at which the theme's journey can be checked (`F12`).
+  static func metadata(for request: BlockAlarmRequest) -> FocusAlarmMetadata {
+    FocusAlarmMetadata(
+      kind: request.kind,
+      completedInSprint: request.completedInSprint,
+      pomodorosPerSprint: request.pomodorosPerSprint,
+      themeRawValue: request.theme.rawValue)
   }
 }

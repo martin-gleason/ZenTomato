@@ -43,4 +43,10 @@ struct BlockAlarmRequest: Equatable, Sendable {
   /// How many focus blocks make up this sprint. Travels for the same reason as
   /// `completedInSprint`.
   let pomodorosPerSprint: Int
+
+  /// The theme the Lock Screen and the Island draw this block in (`D58`), resolved when the alarm
+  /// is scheduled — at the block's start, and again only if the clock-skew repair reschedules it.
+  /// **A theme picked mid-block reaches the Lock Screen at the next block, not at once.** AlarmKit's
+  /// metadata is fixed once handed over and this app pushes no updates; see `D58`.
+  let theme: Theme
 }
