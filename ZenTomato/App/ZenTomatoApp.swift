@@ -245,15 +245,19 @@ struct ZenTomatoApp: App {
   private var rootView: some View {
     switch bootstrapResult {
     case .success(let running):
-      TimerView(
-        tokens: running.tokens,
-        cache: running.cache,
-        plan: running.plan,
-        completion: running.completion,
-        music: running.music,
-        library: running.library,
-        musicCache: running.musicCache,
-        shapes: running.shapes)
+      // `D58`: the theme is set here, once, for everything beneath — inside the container,
+      // because the choice is read from the settings row.
+      ThemedRoot {
+        TimerView(
+          tokens: running.tokens,
+          cache: running.cache,
+          plan: running.plan,
+          completion: running.completion,
+          music: running.music,
+          library: running.library,
+          musicCache: running.musicCache,
+          shapes: running.shapes)
+      }
         .modelContainer(running.container)
         .environment(running.engine)
         // Handed down rather than reached for, so the picker, the plan and the

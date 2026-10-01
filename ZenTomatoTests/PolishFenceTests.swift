@@ -79,7 +79,10 @@ struct PolishFenceTests {
     // rather than the database.
     //
     // `Schema` reports the persisted columns wherever the source lives.
-    #expect(try #require(Schema([AppSettings.self]).entities.first).properties.count == 7)
+    //
+    // **EIGHT SINCE `D58` (`F12-T3`)** — the theme, moved here in the commit that adds the
+    // column, which is this fence working rather than being worked around.
+    #expect(try #require(Schema([AppSettings.self]).entities.first).properties.count == 8)
     // TimerState is the other stored shape F2c touched: it carries the block's
     // chosen sound, so a block runs under the setting it started with. Fenced
     // here for the same reason AppSettings is — a schema change is a migration

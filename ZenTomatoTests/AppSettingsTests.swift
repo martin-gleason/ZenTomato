@@ -68,6 +68,31 @@ struct AppSettingsTests {
     #expect(settings.pomodorosPerSprint == 4)
   }
 
+  /// The theme choice survives the store being closed and opened again (`F12-T3`, `F12-M5`).
+  ///
+  /// A fresh store is Auto — the handoff's default, and what `nil` means for every install that
+  /// predates the column. Ink is written because it is not the default, so a reader that ignored
+  /// the stored value and always answered Auto fails here.
+  @Test("themeChoiceRoundTrip")
+  func themeChoiceRoundTrip() throws {
+    let store = try TestStore.temporaryFileStore()
+    defer { store.remove() }
+
+    do {
+      let container = try AppModelContainer.make(.file(store.storeURL))
+      let settings = try AppSettings.current(in: container.mainContext)
+      #expect(settings.themeRawValue == nil)
+      #expect(settings.themeChoice == .auto)
+      settings.themeChoice = .ink
+      try container.mainContext.save()
+    }
+
+    let reopened = try AppModelContainer.make(.file(store.storeURL))
+    let settings = try AppSettings.current(in: reopened.mainContext)
+    #expect(settings.themeChoice == .ink)
+    #expect(settings.workMinutes == 25)
+  }
+
   /// Asking for the settings twice must return the same single row.
   ///
   /// The accessor creates a row when it does not find one. If it ever failed to

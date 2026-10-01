@@ -55,6 +55,19 @@ struct SettingsLockTests {
     #expect(group.contains("todoist") == false)
   }
 
+  /// **The theme picker stays live mid-block (`D58`)** — a colour changes no block's arithmetic, so
+  /// `D27`'s lock does not reach it. It must be on the screen, outside the locked group, and must not
+  /// carry a lock of its own.
+  @Test("theThemePickerIsNotLocked")
+  func theThemePickerIsNotLocked() throws {
+    let source = try Self.settingsSource()
+    let group = try #require(Self.slice(of: source, from: "Group {", to: ".disabled(isBlockRunning)"))
+
+    #expect(source.contains("ThemePickerSection(settings: settings)"))
+    #expect(group.contains("ThemePickerSection") == false)
+    #expect(try Self.source(of: "ZenTomato/Views/ThemePickerSection.swift").contains(".disabled(") == false)
+  }
+
   /// The note must not still promise that changes take effect later — nothing
   /// can be changed.
   @Test("theRunningNoteSaysLockedRatherThanLater")
