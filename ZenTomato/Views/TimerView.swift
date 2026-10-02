@@ -164,7 +164,7 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       // The garden (`F16-T3`). Handed the lifetime count rather than the store: the garden's own
       // files may not see a database, and this file is where the app's sheets are wired anyway.
       .sheet(isPresented: $showingGarden, onDismiss: presentReflectionIfPossible) {
-        GardenView(countFinishedPoms: { StatsQuery(context: modelContext).lifetimePomodoroCount() })
+        GardenView(countFinishedPoms: { Self.gardenCount(in: modelContext) })
       }
       // The Music sheet: the switch, what is chosen, and the library to choose
       // from. Reached from the music row's line, which is a control only while
@@ -1039,6 +1039,15 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
   /// a future caller who wires the sheet to something else. The shape store has a single slot, so a
   /// shape written mid-sprint would silently rewrite the remaining blocks of the sprint already
   /// going — the engine reads the running shape at every boundary.
+  /// The garden's one number: finished poms, ever, from the counting path every other screen uses.
+  ///
+  /// Named rather than written inline in the sheet so `GardenBadDayTests` drives *this* function — a
+  /// rule about dates added here would change the garden on the assembled screen, and that test is what
+  /// would see it (`F16-T5`, `F16-M3`).
+  static func gardenCount(in context: ModelContext) -> Int {
+    StatsQuery(context: context).lifetimePomodoroCount()
+  }
+
   private func openShape() {
     guard engine.isRunning == false, engine.ringingAlarmID == nil else { return }
     showingShape = true
