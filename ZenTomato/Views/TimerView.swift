@@ -161,6 +161,11 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       .sheet(isPresented: $showingHistory, onDismiss: presentReflectionIfPossible) {
         StatsView()
       }
+      // The garden (`F16-T3`). Handed the lifetime count rather than the store: the garden's own
+      // files may not see a database, and this file is where the app's sheets are wired anyway.
+      .sheet(isPresented: $showingGarden, onDismiss: presentReflectionIfPossible) {
+        GardenView(countFinishedPoms: { StatsQuery(context: modelContext).lifetimePomodoroCount() })
+      }
       // The Music sheet: the switch, what is chosen, and the library to choose
       // from. Reached from the music row's line, which is a control only while
       // the timer is idle — D19 says music is set before a sprint, and a screen
@@ -417,6 +422,12 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
   /// Whether the pomodoro history sheet is up.
   @State private var showingHistory = false
 
+  /// Whether the garden sheet is up.
+  @State private var showingGarden = false
+
+  /// The store, read for one thing: the garden's lifetime count, through `StatsQuery`.
+  @Environment(\.modelContext) private var modelContext
+
   /// Whether F8's shape sheet is up.
   @State private var showingShape = false
 
@@ -470,6 +481,7 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       onOpenSettings: { self.showingSettings = true },
       onSilenceAlarm: { Task { await engine.silenceAlarm() } },
       onOpenHistory: { self.showingHistory = true },
+      onOpenGarden: { self.showingGarden = true },
       onOpenPlan: { self.openPlan() },
       // Called and finished on the spot. No `Task`, no `await`, nothing queued.
       onInternalDistraction: { self.record(.internalInterruption) },
@@ -1038,6 +1050,7 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       isAskingWhyStopping == false,
       showingSettings == false,
       showingHistory == false,
+      showingGarden == false,
       showingShape == false,
       reflection == nil,
       // **AND NOT WHILE THE ALARM IS RINGING.** `D26`'s whole complaint was that
