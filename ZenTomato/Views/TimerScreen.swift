@@ -1231,6 +1231,10 @@ extension TimerScreen {
   /// different feature"* — so the door does not open then. It stays on screen, dimmed, so the corner
   /// does not change shape at a boundary; the same reason the history door is always there.
   ///
+  /// **Not disabled while the alarm rings** — nothing on this screen is (`SilenceControlFenceTests`).
+  /// The sheet must still not cover the Silence button, so `TimerView.openGarden` refuses then, the
+  /// way `openShape` does. Found by `F16`'s adversarial review.
+  ///
   /// **No badge, ever**, for the history door's reason: a number on a chrome glyph is a scoreboard.
   private var gardenButton: some View {
     Button { onOpenGarden() } label: {

@@ -25,8 +25,13 @@ import SwiftUI
 struct GardenView: View {
   // MARK: Internal
 
-  /// Asked once per open, from `.task` — never from `body`, which runs on every redraw.
-  let countFinishedPoms: @MainActor () -> Int
+  /// Asked once per open, from `.task` — never from `body`, which runs on every redraw. `nil` means
+  /// the database would not answer, which is not the same as nothing having grown.
+  ///
+  /// **The only thing this screen is handed** — `GardenFenceTests` counts its inputs. A second one, a
+  /// date or a "days since" handed in beside the count, is how a rule about time would reach the
+  /// picture without the garden's own files ever naming one.
+  let countFinishedPoms: @MainActor () -> Int?
 
   var body: some View {
     NavigationStack {
@@ -42,8 +47,8 @@ struct GardenView: View {
         .background(Color(.surfacePrimary).ignoresSafeArea())
     }
     .task {
-      guard finishedPoms == nil else { return }
-      finishedPoms = countFinishedPoms()
+      guard load == .waiting else { return }
+      load = Load(countFinishedPoms())
     }
   }
 
@@ -51,15 +56,26 @@ struct GardenView: View {
 
   @Environment(\.dismiss) private var dismiss
 
-  /// `nil` for the one frame before the count arrives. That frame paints the page colour: roughly
+  /// `.waiting` for the one frame before the count arrives. That frame paints the page colour: roughly
   /// fifty milliseconds at a year of work (`Q5`) is nothing worth a spinner.
-  @State private var finishedPoms: Int?
+  @State private var load = Load.waiting
 
   /// The first row's tomato, in points, grown with the reader's text size.
   @ScaledMetric(relativeTo: .body) private var tomatoSide: CGFloat = 22
 
   @ViewBuilder private var content: some View {
-    if let finishedPoms {
+    switch load {
+    case .waiting:
+      Color.clear
+    case .unreadable:
+      // The counting screen's own words: a claim about the app, never about the reader's work.
+      ContentUnavailableView {
+        Label(StatsScreenModel.unreadableHeading, systemImage: "exclamationmark.triangle")
+      } description: {
+        Text("Nothing is missing — the garden just couldn't reach your history. Close it and open it again.")
+      }
+      .foregroundStyle(Color(.textMuted))
+    case .counted(let finishedPoms):
       let garden = Garden(finishedPoms: finishedPoms)
       if garden.itemCount == 0 {
         ContentUnavailableView {
@@ -71,7 +87,9 @@ struct GardenView: View {
       } else {
         GeometryReader { proxy in
           ScrollView {
-            GardenBed(garden: garden, width: proxy.size.width - 2 * Spacing.md, firstSide: tomatoSide)
+            // Clamped: the first layout pass can offer no width at all, and a negative frame is an
+            // error SwiftUI logs on every open (found at review).
+            GardenBed(garden: garden, width: max(proxy.size.width - 2 * Spacing.md, 0), firstSide: tomatoSide)
               .padding(Spacing.md)
               .accessibilityElement()
               .accessibilityLabel(Text("Garden"))
@@ -79,8 +97,17 @@ struct GardenView: View {
           }
         }
       }
-    } else {
-      Color.clear
+    }
+  }
+
+  /// What the screen has to draw: nothing yet, a count, or the honest failure.
+  enum Load: Equatable {
+    case waiting
+    case counted(Int)
+    case unreadable
+
+    init(_ count: Int?) {
+      self = count.map(Load.counted) ?? .unreadable
     }
   }
 
@@ -165,6 +192,10 @@ private struct GardenBed: View {
 
 #Preview("Nothing yet") {
   GardenView(countFinishedPoms: { 0 })
+}
+
+#Preview("Could not read") {
+  GardenView(countFinishedPoms: { nil })
 }
 
 #Preview("Largest text") {

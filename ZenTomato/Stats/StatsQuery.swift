@@ -59,7 +59,10 @@ struct StatsQuery {
   /// clock: a range ending today would append empty days whenever the last block was a while ago, and
   /// would make the count's own test depend on when it ran.
   func recordedDayBounds() -> (first: StatsDay, last: StatsDay)? {
-    guard let first = edgeBlock(newest: false), let last = edgeBlock(newest: true) else { return nil }
+    guard
+      let first = try? edgeBlock(newest: false),
+      let last = try? edgeBlock(newest: true)
+    else { return nil }
     return (StatsDay.containing(first.startedAt, in: calendar),
             StatsDay.containing(last.startedAt, in: calendar))
   }
@@ -69,11 +72,11 @@ struct StatsQuery {
   /// **Bounded by `fetchLimit` rather than by date, which is right here and nowhere else in this
   /// file.** Every other read narrows by a span; this one's whole job is to discover what the span
   /// should be, so SwiftData is asked to sort and return one object however long the history is.
-  private func edgeBlock(newest: Bool) -> PomodoroSession? {
+  private func edgeBlock(newest: Bool) throws -> PomodoroSession? {
     var descriptor = FetchDescriptor<PomodoroSession>(
       sortBy: [SortDescriptor(\.startedAt, order: newest ? .reverse : .forward)])
     descriptor.fetchLimit = 1
-    return (try? context.fetch(descriptor))?.first
+    return try context.fetch(descriptor).first
   }
 
   /// **Finished poms, ever** — the one number the garden grows from (`F16-T1`).
@@ -85,13 +88,28 @@ struct StatsQuery {
   /// a second account of a number the log already answers.
   ///
   /// `0` when nothing has been recorded, which is a real answer: a new install has grown no tomatoes.
+  /// **`nil` when the database would not answer**, which is a different answer and must stay one. The
+  /// first version turned a refused read into `0`, and the garden then drew *"Nothing has grown here
+  /// yet"* over forty recorded poms — a reset, on screen, which `D48` forbids. Found by `F16`'s
+  /// adversarial review; `aRefusedReadIsNotAnEmptyGarden` keeps it found.
   ///
   /// **The cost is measured and not assumed.** `ExportCostTests` times this path over a seeded year
   /// beside the fortnight and all-time figures, and `F16`'s `Q5` is where the owner rules on the
   /// number. No cache, no actor and no stored total is introduced on the strength of a suspicion.
-  func lifetimePomodoroCount() -> Int {
-    guard let bounds = recordedDayBounds() else { return 0 }
-    return period(StatsRange(first: bounds.first, last: bounds.last)).pomodoroCount
+  func lifetimePomodoroCount() -> Int? {
+    let first: PomodoroSession?
+    let last: PomodoroSession?
+    do {
+      first = try edgeBlock(newest: false)
+      last = try edgeBlock(newest: true)
+    } catch {
+      return nil
+    }
+    guard let first, let last else { return 0 }
+    let span = period(StatsRange(
+      first: StatsDay.containing(first.startedAt, in: calendar),
+      last: StatsDay.containing(last.startedAt, in: calendar)))
+    return span.couldNotBeRead ? nil : span.pomodoroCount
   }
 
   // MARK: The only question

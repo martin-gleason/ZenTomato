@@ -164,7 +164,7 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       // The garden (`F16-T3`). Handed the lifetime count rather than the store: the garden's own
       // files may not see a database, and this file is where the app's sheets are wired anyway.
       .sheet(isPresented: $showingGarden, onDismiss: presentReflectionIfPossible) {
-        GardenView(countFinishedPoms: { Self.gardenCount(in: modelContext) })
+        Self.gardenSheet(in: modelContext)
       }
       // The Music sheet: the switch, what is chosen, and the library to choose
       // from. Reached from the music row's line, which is a control only while
@@ -481,7 +481,7 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
       onOpenSettings: { self.showingSettings = true },
       onSilenceAlarm: { Task { await engine.silenceAlarm() } },
       onOpenHistory: { self.showingHistory = true },
-      onOpenGarden: { self.showingGarden = true },
+      onOpenGarden: { self.openGarden() },
       onOpenPlan: { self.openPlan() },
       // Called and finished on the spot. No `Task`, no `await`, nothing queued.
       onInternalDistraction: { self.record(.internalInterruption) },
@@ -1009,6 +1009,42 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
     presentReflectionIfPossible()
   }
 
+  /// The garden's one number: finished poms, ever, from the counting path every other screen uses.
+  /// `nil` when the database would not answer, so the garden can say so instead of drawing nothing.
+  static func gardenCount(in context: ModelContext) -> Int? {
+    StatsQuery(context: context).lifetimePomodoroCount()
+  }
+
+  /// **The garden sheet, exactly as the app opens it.** Named so the tests draw *this* — the first
+  /// version had the tests build their own `GardenView`, and `F16`'s adversarial review wired a date
+  /// rule into the real sheet that every test then walked past. `GardenFenceTests` checks the sheet
+  /// below calls this and nothing else; `GardenBadDayTests` renders what this returns.
+  static func gardenSheet(in context: ModelContext) -> GardenView {
+    GardenView(countFinishedPoms: { gardenCount(in: context) })
+  }
+
+  /// Opens the garden, and not over a ringing alarm (`F16`, found at review).
+  ///
+  /// The door is not disabled then — nothing on the timer screen is while the alarm rings — so this is
+  /// the guard: a sheet over the Silence button hides the one control that stops a noise this app
+  /// started. The door is already shut during a focus block (`TimerScreen.gardenButton`).
+  private func openGarden() {
+    guard engine.ringingAlarmID == nil else { return }
+    showingGarden = true
+  }
+
+  /// Opens the shape sheet, and only while nothing is running.
+  ///
+  /// **The second of two guards, and the one that holds for callers rather than for eyes.** The
+  /// control itself is structurally absent while a block runs; this is what makes the rule true for
+  /// a future caller who wires the sheet to something else. The shape store has a single slot, so a
+  /// shape written mid-sprint would silently rewrite the remaining blocks of the sprint already
+  /// going — the engine reads the running shape at every boundary.
+  private func openShape() {
+    guard engine.isRunning == false, engine.ringingAlarmID == nil else { return }
+    showingShape = true
+  }
+
   /// Presents the end-of-block prompt if one is waiting and nothing is in the way.
   ///
   /// **WHY THIS IS A FUNCTION AND NOT JUST AN `onChange`.** The engine offers a
@@ -1032,27 +1068,6 @@ struct TimerView: View { // swiftlint:disable:this type_body_length
   /// to ask; presenting a second modal over somebody who has just decided to quit
   /// is the exact thing D14 exists to prevent. Its offer is left unconsumed and
   /// is harmlessly replaced when the next block ends.
-  /// Opens the shape sheet, and only while nothing is running.
-  ///
-  /// **The second of two guards, and the one that holds for callers rather than for eyes.** The
-  /// control itself is structurally absent while a block runs; this is what makes the rule true for
-  /// a future caller who wires the sheet to something else. The shape store has a single slot, so a
-  /// shape written mid-sprint would silently rewrite the remaining blocks of the sprint already
-  /// going — the engine reads the running shape at every boundary.
-  /// The garden's one number: finished poms, ever, from the counting path every other screen uses.
-  ///
-  /// Named rather than written inline in the sheet so `GardenBadDayTests` drives *this* function — a
-  /// rule about dates added here would change the garden on the assembled screen, and that test is what
-  /// would see it (`F16-T5`, `F16-M3`).
-  static func gardenCount(in context: ModelContext) -> Int {
-    StatsQuery(context: context).lifetimePomodoroCount()
-  }
-
-  private func openShape() {
-    guard engine.isRunning == false, engine.ringingAlarmID == nil else { return }
-    showingShape = true
-  }
-
   private func presentReflectionIfPossible() {
     guard
       engine.pendingReflection != nil,
