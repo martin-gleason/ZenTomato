@@ -83,9 +83,9 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
 | Owner items (`O`) | 53 | 24 | 0 | 29 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
-| Mutations (`M`) | 185 | 37 | 0 | 148 |
+| Mutations (`M`) | 187 | 37 | 0 | 150 |
 | Chores (`C`) | 30 | 5 | 9 | 16 |
-| Agent items (`A`) | 31 | 16 | 0 | 15 |
+| Agent items (`A`) | 32 | 17 | 0 | 15 |
 
 `Unknown` is not a third kind of open. It means the source document said nothing about status, so this page will not guess — the row is a question for the owner.
 
@@ -102,14 +102,14 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `O` | open | 24 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
-| `M` | closed | 147 |
+| `M` | closed | 149 |
 | `M` | open | 37 |
 | `M` | superseded | 1 |
 | `C` | closed | 16 |
 | `C` | open | 5 |
 | `C` | unknown | 9 |
 | `A` | closed | 15 |
-| `A` | open | 16 |
+| `A` | open | 17 |
 
 ## Hooks
 
@@ -264,7 +264,8 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | unassigned | A29 | P2 | open | The Island's minimal tomato may have lost its spoken label |
 | unassigned | A30 | P2 | open | The ordinal on the current plan row is below AA, and was before themes |
 | unassigned | A31 | P2 | open | Two hops of the theme's journey have no test: the app root and the… |
+| unassigned | A32 | P2 | open | `aScreenOpenedMidAlarmStillSeesIt` failed once in a full run and… |
 
 ---
 
-108 open register rows.
+109 open register rows.
