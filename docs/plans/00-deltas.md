@@ -78,7 +78,7 @@ and `DeltaIntegrityTests` fails if that number grows.
 | **D55** | ratified — **v1.5** | no | — | The Island tomato fills by elapsed time per the handoff — supersedes `D52`'s fill rule |
 | **D56** | ratified — **v1.5**, applied | **yes — v1.5** | 1 | `F8b` — fitting writes the settings; editing a setting wins back |
 | **D57** | ratified — **v1.5** | no | — | The tomato fills by finished pomodoro after all — supersedes `D55`, restores `D52` |
-| **D58** | **proposed** | **yes — v1.5** | 2 | `F12` — themes: a fixed, audited set, chosen in Settings; the tomato and the Lock Screen follow it |
+| **D58** | ratified — **v1.5** | yes | 2 | `F12` — themes: a fixed, audited set, chosen in Settings; the tomato and the Lock Screen follow it |
 
 *60 deltas. Regenerate this table whenever one is added — `DeltaIntegrityTests`
 asserts every delta appears here.*
@@ -3191,7 +3191,8 @@ holds between boundaries is correct rather than defective.
 
 ## D58 — Themes: a fixed, audited set, chosen in Settings
 
-**Proposed 2026-09-30. NOT RATIFIED.** Built under `F12` on the owner's instruction the same day —
+**Proposed 2026-09-30. Ratified by the owner 2026-10-02** — *"58 was ratified"* — as written,
+with both riders below. Built under `F12` on the owner's instruction the same day —
 *"let's build out the theme picker"* — and the PR asks for the word. This is the delta `F12`'s plan
 called *the theme delta* and left unnumbered so the owner would allocate it; `F16` and `F17` no longer
 contest the number.
