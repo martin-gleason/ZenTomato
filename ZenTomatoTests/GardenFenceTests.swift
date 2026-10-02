@@ -152,6 +152,38 @@ struct GardenFenceTests {
     let rest = screen[declaration.upperBound...]
     let end = rest.range(of: "\n  }\n", options: .regularExpression)?.lowerBound ?? rest.endIndex
     #expect(rest[..<end].contains(".disabled(model.capture != nil)"), "The door opens during a focus block.")
+
+    // And the sheet does not open over a ringing alarm. Not by disabling the door — nothing on the
+    // timer screen is disabled while the alarm rings — but in the function the door calls.
+    let wiring = try Self.code(of: Self.repositoryRoot.appending(path: "ZenTomato/Views/TimerView.swift"))
+    #expect(wiring.contains("onOpenGarden: { self.openGarden() }"))
+    let opener = try #require(wiring.range(of: "private func openGarden()"))
+    #expect(
+      wiring[opener.upperBound...].prefix(120).contains("guard engine.ringingAlarmID == nil else { return }"),
+      "The garden can open over the Silence button.")
+  }
+
+  /// **The sheet the app opens is the sheet the tests draw, and it is handed one thing.**
+  ///
+  /// Found by `F16`'s adversarial review: the tests built their own `GardenView`, so a rule about dates
+  /// passed in beside the count from `TimerView`'s sheet — a second, defaulted input — walked past all
+  /// three parts of this fence and past `GardenBadDayTests`. Now the sheet must be
+  /// `TimerView.gardenSheet`, which the bad-day test renders, and `GardenView` may declare exactly one
+  /// input.
+  @Test("theSheetIsTheOneTheTestsDraw")
+  func theSheetIsTheOneTheTestsDraw() throws {
+    let wiring = try Self.code(of: Self.repositoryRoot.appending(path: "ZenTomato/Views/TimerView.swift"))
+    let sheet = try #require(wiring.range(of: ".sheet(isPresented: $showingGarden"))
+    let body = wiring[sheet.upperBound...].prefix(200)
+    #expect(body.contains("Self.gardenSheet(in: modelContext)"), "The garden sheet is not the tested one.")
+    #expect(try Self.matches("GardenView\\(", in: wiring) == 1, "TimerView builds a second GardenView.")
+
+    let view = try Self.code(of: Self.repositoryRoot.appending(path: "ZenTomato/Views/GardenView.swift"))
+    let start = try #require(view.range(of: "struct GardenView: View {"))
+    let end = try #require(view.range(of: "private struct GardenBed", range: start.upperBound..<view.endIndex))
+    // Stored inputs only: a line that opens a brace is a computed property such as `body`.
+    let inputs = try Self.matches("(?m)^  (let|var) [^{\\n]*$", in: String(view[start.upperBound..<end.lowerBound]))
+    #expect(inputs == 1, "GardenView is handed \(inputs) things; it may be handed only the count.")
   }
 
   /// **VoiceOver hears the real count**, not the number of tomatoes drawn — at a year of work they
@@ -225,31 +257,37 @@ struct GardenFenceTests {
     return FileManager.default.fileExists(atPath: screen.path) ? files + [screen] : files
   }
 
-  /// Every word in some code, lowercased, **with identifiers split where their words join.**
+  /// Every word in some code, lowercased and singular, **with identifiers split where their words join.**
   ///
   /// `consecutiveDays` is two words, and a whole-word search for `consecutive` cannot see it — the
-  /// first draft of this fence searched that way, and `F16-M1` walked straight past it (recorded in
-  /// `docs/plans/F16.md`). Splitting at each lower-to-upper change and at underscores and digits makes
-  /// the camel-cased name and the prose word the same thing to the fence.
+  /// first draft of this fence searched that way, and `F16-M1` walked straight past it. The second
+  /// draft split only at a lower-to-upper change, and `F16`'s adversarial review walked past *that*
+  /// with `XPTotal`, `"5 days in a row"` and `streaks`: an acronym never split, so `inARow` read as
+  /// `in`·`arow`; and a plural was a different word. So a run of capitals ends where a capital is
+  /// followed by a small letter (`XPTotal` is `xp`·`total`), and a trailing *s* is dropped before
+  /// comparing (`streaks` is `streak`).
   private static func words(in text: String) -> [String] {
+    let characters = Array(text)
     var words: [String] = []
     var current = ""
-    var previous: Character?
-    for character in text {
-      if character.isLetter {
-        if character.isUppercase, let last = previous, last.isLowercase, !current.isEmpty {
+    for (index, character) in characters.enumerated() {
+      guard character.isLetter else {
+        if !current.isEmpty { words.append(current) }
+        current = ""
+        continue
+      }
+      if character.isUppercase, !current.isEmpty {
+        let previous = characters[index - 1]
+        let next = index + 1 < characters.count ? characters[index + 1] : " "
+        if previous.isLowercase || (previous.isUppercase && next.isLowercase) {
           words.append(current)
           current = ""
         }
-        current.append(Character(character.lowercased()))
-      } else if !current.isEmpty {
-        words.append(current)
-        current = ""
       }
-      previous = character
+      current.append(Character(character.lowercased()))
     }
     if !current.isEmpty { words.append(current) }
-    return words
+    return words.map { $0.count > 3 && $0.hasSuffix("s") ? String($0.dropLast()) : $0 }
   }
 
   private static func code(of file: URL) throws -> String {
@@ -269,7 +307,8 @@ struct GardenFenceTests {
       context.insert(StatsStoreFixture.work(200_000 + index, from: start(index)))
     }
     try context.save()
-    let count = StatsQuery(context: context, calendar: StatsStoreFixture.calendar).lifetimePomodoroCount()
+    let count = try #require(
+      StatsQuery(context: context, calendar: StatsStoreFixture.calendar).lifetimePomodoroCount())
     return (count, Garden(finishedPoms: count))
   }
 }

@@ -16,6 +16,13 @@ struct Screenshot: Equatable, CustomStringConvertible {
   /// Only the test's own window. A sheet is drawn inside the window that presents it, and the app
   /// this suite runs inside has a window of its own underneath — the first draft drew every window
   /// and found the host app's Sage button behind the garden.
+  /// Whether this exact colour, as `#RRGGBB`, is anywhere on screen.
+  func contains(_ hex: String) -> Bool {
+    stride(from: 0, to: pixels.count, by: 4).contains {
+      String(format: "#%02X%02X%02X", pixels[$0], pixels[$0 + 1], pixels[$0 + 2]) == hex
+    }
+  }
+
   @MainActor
   init?(window: UIWindow) {
     let image = UIGraphicsImageRenderer(size: window.bounds.size).image { _ in

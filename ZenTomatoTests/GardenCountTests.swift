@@ -32,6 +32,37 @@ struct GardenCountTests {
     #expect(query.lifetimePomodoroCount() == 0)
   }
 
+  /// **A refused read is not an empty garden.** Forty poms on disk, the database files overwritten so
+  /// SQLite refuses: the count is `nil`, never `0`, and the screen draws its failure, not *"Nothing has
+  /// grown here yet"*. Found by `F16`'s adversarial review — the first version said zero, which on
+  /// screen is a reset `D48` forbids, and the Pomodoros sheet over the same store said it could not read.
+  ///
+  /// The files are overwritten the way `WatchTapInboxTests`' `CorruptibleStore` does it, all three:
+  /// leaving the write-ahead log intact lets SQLite answer from it, and then nothing is refused.
+  @Test("aRefusedReadIsNotAnEmptyGarden")
+  func aRefusedReadIsNotAnEmptyGarden() throws {
+    let store = try TestStore.temporaryFileStore()
+    let container = try AppModelContainer.make(.file(store.storeURL))
+    let context = container.mainContext
+    for index in 0..<40 {
+      context.insert(StatsStoreFixture.work(400_000 + index, from: StatsStoreFixture.at(2026, 3, 2, 9, 0)
+        .addingTimeInterval(Double(index) * 1_800)))
+    }
+    try context.save()
+    #expect(TimerView.gardenCount(in: context) == 40, "The precondition: the store is readable first.")
+
+    for suffix in ["", "-wal", "-shm"] {
+      let url = URL(fileURLWithPath: store.storeURL.path(percentEncoded: false) + suffix)
+      if FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) {
+        try Data(repeating: 0x41, count: 4096).write(to: url)
+      }
+    }
+
+    let count = TimerView.gardenCount(in: context)
+    #expect(count == nil, "A refused read came back as \(String(describing: count)).")
+    #expect(GardenView.Load(count) == .unreadable)
+  }
+
   /// **The span comes from the data, not from a date somebody typed.**
   ///
   /// A hardcoded start is a claim about a person's history that stops being true the moment they

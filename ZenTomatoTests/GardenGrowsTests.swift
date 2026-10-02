@@ -30,15 +30,17 @@ struct GardenGrowsTests {
   func aFinishedPomMakesTheGardenOneBigger() async throws {
     let clock = TestClock()
     let engine = TimerEngine(context: context, clock: clock, alarms: SpyAlarmScheduler())
-    let before = query.lifetimePomodoroCount()
+    let before = try #require(query.lifetimePomodoroCount())
 
     await engine.start()
     let due = try #require(engine.endsAt)
     clock.advance(by: due.timeIntervalSince(clock.now))
     await engine.boundaryReached()
 
-    let after = query.lifetimePomodoroCount()
+    let after = try #require(query.lifetimePomodoroCount())
     #expect(after == before + 1)
+    // Visible here because the store starts empty. From 24 poms on, three in four grow nothing you can
+    // see — the T2 design, and `Q9` in the plan. The count still rises by one every time.
     #expect(Garden(finishedPoms: after) == Garden(finishedPoms: before + 1))
     #expect(Garden(finishedPoms: after) != Garden(finishedPoms: before))
 
@@ -53,14 +55,14 @@ struct GardenGrowsTests {
   func aStoppedBlockLeavesTheGardenAlone() async throws {
     let clock = TestClock()
     let engine = TimerEngine(context: context, clock: clock, alarms: SpyAlarmScheduler())
-    let before = query.lifetimePomodoroCount()
+    let before = try #require(query.lifetimePomodoroCount())
 
     await engine.start()
     clock.advance(by: 30)
     await engine.stop(reason: "Phone call")
 
     #expect(query.lifetimePomodoroCount() == before)
-    #expect(Garden(finishedPoms: query.lifetimePomodoroCount()) == Garden(finishedPoms: before))
+    #expect(Garden(finishedPoms: try #require(query.lifetimePomodoroCount())) == Garden(finishedPoms: before))
 
     let rows = try context.fetch(FetchDescriptor<PomodoroSession>())
     #expect(rows.count == 1, "The stopped block is not in the log.")

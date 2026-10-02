@@ -83,7 +83,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
 | Owner items (`O`) | 53 | 24 | 0 | 29 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
-| Mutations (`M`) | 187 | 37 | 0 | 150 |
+| Mutations (`M`) | 192 | 37 | 0 | 155 |
 | Chores (`C`) | 30 | 5 | 9 | 16 |
 | Agent items (`A`) | 32 | 17 | 0 | 15 |
 
@@ -102,7 +102,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `O` | open | 24 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
-| `M` | closed | 149 |
+| `M` | closed | 154 |
 | `M` | open | 37 |
 | `M` | superseded | 1 |
 | `C` | closed | 16 |
@@ -264,7 +264,7 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | unassigned | A29 | P2 | open | The Island's minimal tomato may have lost its spoken label |
 | unassigned | A30 | P2 | open | The ordinal on the current plan row is below AA, and was before themes |
 | unassigned | A31 | P2 | open | Two hops of the theme's journey have no test: the app root and the… |
-| unassigned | A32 | P2 | open | `aScreenOpenedMidAlarmStillSeesIt` failed once in a full run and… |
+| unassigned | A32 | P2 | open | `SilenceAlarmTests` fails intermittently in full runs — three test… |
 
 ---
 
