@@ -138,6 +138,42 @@ struct GardenFenceTests {
     }
   }
 
+  // MARK: The door and the voice
+
+  /// **The door is beside the history, and it is shut while a focus block counts** (`Q1`; `F16`'s
+  /// scope fence: no reward in the eyeline during work). Read from the timer screen's source, the way
+  /// `StatsFenceTests.theWayIntoTheHistoryIsAlwaysThere` reads the history door.
+  @Test("theGardenDoorIsBesideTheHistoryAndShutDuringFocus")
+  func theGardenDoorIsBesideTheHistoryAndShutDuringFocus() throws {
+    let screen = try Self.code(of: Self.repositoryRoot.appending(path: "ZenTomato/Views/TimerScreen.swift"))
+    #expect(screen.contains(".overlay(alignment: .topLeading) { gardenButton }"))
+    #expect(try Self.matches("if [^\n]*gardenButton", in: screen) == 0, "The door is drawn conditionally.")
+    let declaration = try #require(screen.range(of: "private var gardenButton"))
+    let rest = screen[declaration.upperBound...]
+    let end = rest.range(of: "\n  }\n", options: .regularExpression)?.lowerBound ?? rest.endIndex
+    #expect(rest[..<end].contains(".disabled(model.capture != nil)"), "The door opens during a focus block.")
+  }
+
+  /// **VoiceOver hears the real count**, not the number of tomatoes drawn — at a year of work they
+  /// differ by nearly a thousand.
+  ///
+  /// **Two halves, and why the second reads source.** The words come from `GardenView.spoken`, checked
+  /// directly. *Which number* reaches it is decided where the screen calls it, and the first version of
+  /// this test only checked the words — `F16-M9` handed VoiceOver the tomato count and it stayed green.
+  /// Reading the rendered accessibility tree would be better and is not possible here: SwiftUI builds
+  /// that tree only when an assistive technology asks, and this project has no UI test target (`A31`).
+  /// So the call site is read as text, the way the door is.
+  @Test("theGardenSaysTheCountNotTheTomatoes")
+  func theGardenSaysTheCountNotTheTomatoes() throws {
+    #expect(GardenView.spoken(1) == "1 finished pomodoro")
+    #expect(GardenView.spoken(1_044) == "1044 finished pomodoros")
+    #expect(Garden(finishedPoms: 1_044).itemCount != 1_044, "The fixture cannot tell count from tomatoes.")
+
+    let view = try Self.code(of: Self.repositoryRoot.appending(path: "ZenTomato/Views/GardenView.swift"))
+    #expect(try Self.matches("\\.accessibilityValue\\(", in: view) == 1)
+    #expect(view.contains(".accessibilityValue(Text(Self.spoken(finishedPoms)))"), "VoiceOver is not given the count.")
+  }
+
   // MARK: The stated shape
 
   /// The shapes the plan's checkpoint asks for, stated rather than described: 0, 1, 40 and a year.

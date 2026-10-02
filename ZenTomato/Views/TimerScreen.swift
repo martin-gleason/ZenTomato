@@ -45,6 +45,9 @@ struct TimerScreen: View {
   /// block runs — see `historyButton`.
   var onOpenHistory: () -> Void = { }
 
+  /// The garden control was tapped (`F16-T3`). Reachable whenever a focus block is not counting.
+  var onOpenGarden: () -> Void = { }
+
   /// The attachment line was tapped. Only reachable while idle or on a break —
   /// see `TimerScreenModel.Attachment`.
   var onOpenPlan: () -> Void = { }
@@ -106,6 +109,10 @@ struct TimerScreen: View {
     // point, and the ratified rule that the countdown moves exactly once in a
     // cycle is untouched.
     .overlay(alignment: .topLeading) { historyButton }
+    // The garden's door, beside the history (`Q1`, ruled 2026-09-24). Its own overlay, set one
+    // control's width in from the corner, so the history overlay above stays exactly as its fence
+    // reads it and the numeral still moves by zero points.
+    .overlay(alignment: .topLeading) { gardenButton }
     // SAID OUT LOUD, NOT JUST DRAWN.
     // When an alarm cannot be set, a sighted reader sees an amber line appear
     // in the middle of the screen. A VoiceOver reader's attention is on the
@@ -1210,4 +1217,34 @@ private extension MusicRowModel {
     isEnabled: true,
     availability: .noSubscription,
     selection: previewChoice)
+}
+
+// MARK: - The garden's door
+
+/// Kept apart from the struct's body, which is at the length the linter allows; this is the one control
+/// `F16` adds to the timer screen.
+extension TimerScreen {
+  /// The way into the garden (`F16-T3`): a leaf, beside the history.
+  ///
+  /// **Off while a focus block counts, and still drawn.** `F16`'s scope fence keeps the garden out of
+  /// the eyeline during work — *"a reward in the eyeline while you are meant to be working is a
+  /// different feature"* — so the door does not open then. It stays on screen, dimmed, so the corner
+  /// does not change shape at a boundary; the same reason the history door is always there.
+  ///
+  /// **No badge, ever**, for the history door's reason: a number on a chrome glyph is a scoreboard.
+  private var gardenButton: some View {
+    Button { onOpenGarden() } label: {
+      Image(systemName: "leaf")
+        .font(Typography.label)
+        .foregroundStyle(Color(.textMuted))
+        .frame(width: Spacing.controlHeight, height: Spacing.controlHeight)
+        .contentShape(Rectangle())
+    }
+    .disabled(model.capture != nil)
+    .padding(.leading, Spacing.md + Spacing.controlHeight)
+    .padding(.top, Spacing.xs)
+    .accessibilityLabel(Text("Garden"))
+    .accessibilityHint(Text("Everything you have finished, grown as tomatoes."))
+    .accessibilitySortPriority(0.4)
+  }
 }
