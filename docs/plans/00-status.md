@@ -83,7 +83,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
 | Owner items (`O`) | 53 | 24 | 0 | 29 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
-| Mutations (`M`) | 181 | 41 | 0 | 140 |
+| Mutations (`M`) | 182 | 37 | 0 | 145 |
 | Chores (`C`) | 30 | 5 | 9 | 16 |
 | Agent items (`A`) | 31 | 16 | 0 | 15 |
 
@@ -102,8 +102,8 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 | `O` | open | 24 |
 | `H` | closed | 13 |
 | `H` | open | 19 |
-| `M` | closed | 139 |
-| `M` | open | 41 |
+| `M` | closed | 144 |
+| `M` | open | 37 |
 | `M` | superseded | 1 |
 | `C` | closed | 16 |
 | `C` | open | 5 |
@@ -227,10 +227,6 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | unassigned | F15-M4 | — | open | Restore one `Font.system(size: 11)` in… |
 | unassigned | F15-M5 | — | open | Change one hex in `Design/icon/AppIcon-dark.svg` and leave the PNG… |
 | unassigned | F15-M6 | — | open | *(only if Ruling A admits `F15-T4`)* make the running segment's fill… |
-| unassigned | F16-M1 | — | open | Add a `consecutiveDays` value derived from the day rows and let it… |
-| unassigned | F16-M2 | — | open | Change the growth function to take `[StatsDayRow]` instead of `Int`… |
-| unassigned | F16-M3 | — | open | Make the garden shrink by one plant when the most recent pom is more… |
-| unassigned | F16-M4 | — | open | Feed the garden from a stored count written at each block boundary… |
 | unassigned | F17-M1 | — | open | Change the App Group identifier in one target's entitlement and not… |
 | unassigned | F17-M2 | — | open | Delete the `dependencies:` embed entry that puts this extension… |
 | unassigned | F17-M3 | — | open | Add `ZenTomato/Timer/TimerEngine.swift` to the complication target's… |
@@ -271,4 +267,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-112 open register rows.
+108 open register rows.

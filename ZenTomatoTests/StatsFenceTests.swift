@@ -327,7 +327,8 @@ struct StatsFenceTests {
     StatsFenceTests.stripComments(from: try String(contentsOf: file, encoding: .utf8))
   }
 
-  private static func stripComments(from source: String) -> String {
+  /// Not private: `GardenFenceTests` strips comments the same way, so there is one stripper to trust.
+  static func stripComments(from source: String) -> String {
     var output = ""
     var characters = Array(source)
     var index = 0
