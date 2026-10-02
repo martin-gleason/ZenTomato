@@ -79,7 +79,7 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 
 | Register | Rows | Open | Unknown | Closed |
 |---|---|---|---|---|
-| Decisions (`D`) | 60 | 4 | 0 | 56 |
+| Decisions (`D`) | 60 | 3 | 0 | 57 |
 | Risks (`RR`) | 4 | 4 | 0 | 0 |
 | Owner items (`O`) | 53 | 24 | 0 | 29 |
 | Hooks (`H`) | 32 | 19 | 0 | 13 |
@@ -93,8 +93,8 @@ Counted from `docs/plans/00-register.md`. A register with no rows still gets a l
 
 | Register | Status | Count |
 |---|---|---|
-| `D` | proposed | 4 |
-| `D` | ratified | 53 |
+| `D` | proposed | 3 |
+| `D` | ratified | 54 |
 | `D` | rejected | 2 |
 | `D` | resolved | 1 |
 | `RR` | open | 4 |
@@ -159,7 +159,6 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 | owner | D45 | — | proposed | A silent alarm and a haptic on the watch when the phone's sound is off |
 | owner | D46 | — | proposed | The watch fires the same controls as the phone |
 | owner | D54 | — | proposed | A plan can be reordered |
-| owner | D58 | — | proposed | Themes: a fixed, audited set, chosen in Settings |
 | unassigned | RR1 | P0 | open | iCloud/CloudKit sync would put the log where a conflict can lose it |
 | unassigned | RR2 | P0 | open | Changing the bundle identifier orphans the SwiftData store holding… |
 | unassigned | RR3 | P1 | open | The shape cursor and `TimerState` advance non-atomically, and control… |
@@ -272,4 +271,4 @@ Every open row in the register. Owner is `owner` for the two registers whose own
 
 ---
 
-113 open register rows.
+112 open register rows.
